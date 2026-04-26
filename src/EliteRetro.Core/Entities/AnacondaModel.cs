@@ -36,6 +36,14 @@ public class AnacondaModel : ShipModel
         // 25 edges
         var edges = new (int a, int b, Color? c)[]
         {
+            // Nose edges (orange)
+            (7, 12, Color.Orange),   // 14
+            (8, 12, Color.Orange),   // 15
+            (11, 12, Color.Orange),  // 22
+            (12, 13, Color.Orange),  // 23
+            (12, 14, Color.Orange),  // 24
+            (10, 12, Color.Orange),  // 21
+            // Rest of hull
             (0, 1, null),   // 0
             (1, 2, null),   // 1
             (2, 3, null),   // 2
@@ -50,17 +58,10 @@ public class AnacondaModel : ShipModel
             (6, 10, null),  // 11
             (6, 11, null),  // 12
             (7, 11, null),  // 13
-            (7, 12, null),  // 14
-            (8, 12, null),  // 15
-            (8, 13, null),  // 16
             (9, 13, null),  // 17
             (9, 14, null),  // 18
             (5, 14, null),  // 19
             (10, 14, null), // 20
-            (10, 12, null), // 21
-            (11, 12, null), // 22
-            (12, 13, null), // 23
-            (12, 14, null), // 24
         };
 
         // 12 faces

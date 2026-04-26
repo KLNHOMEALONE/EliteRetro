@@ -38,35 +38,33 @@ public class MissileModel : ShipModel
         // 24 edges
         var edges = new (int a, int b, Color? c)[]
         {
-            // Nose cone edges
-            (0, 1, null),   // 0
-            (0, 2, null),   // 1
-            (0, 3, null),   // 2
-            (0, 4, null),   // 3
-            // Body front face
+            // Nose cone edges (orange)
+            (0, 1, Color.Orange),   // 0
+            (0, 2, Color.Orange),   // 1
+            (0, 3, Color.Orange),   // 2
+            (0, 4, Color.Orange),   // 3
+            // Body edges
             (1, 2, null),   // 4
             (1, 4, null),   // 5
             (3, 4, null),   // 6
             (2, 3, null),   // 7
-            // Body to rear
             (2, 5, null),   // 8
             (1, 6, null),   // 9
             (4, 7, null),   // 10
             (3, 8, null),   // 11
-            // Rear face
             (7, 8, null),   // 12
             (5, 8, null),   // 13
             (5, 6, null),   // 14
             (6, 7, null),   // 15
-            // Fins (visibility=8, dimmer)
-            (6, 10, Color.Orange),   // 16
-            (5, 9, Color.Orange),    // 17
-            (8, 12, Color.Orange),   // 18
-            (7, 11, Color.Orange),   // 19
-            (9, 15, Color.Orange),   // 20
-            (10, 16, Color.Orange),  // 21
-            (12, 13, Color.Orange),  // 22
-            (11, 14, Color.Orange),  // 23
+            // Fins (dimmer)
+            (6, 10, Color.Gray),   // 16
+            (5, 9, Color.Gray),    // 17
+            (8, 12, Color.Gray),   // 18
+            (7, 11, Color.Gray),   // 19
+            (9, 15, Color.Gray),   // 20
+            (10, 16, Color.Gray),  // 21
+            (12, 13, Color.Gray),  // 22
+            (11, 14, Color.Gray),  // 23
         };
 
         // 9 faces for back-face culling

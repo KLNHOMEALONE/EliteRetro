@@ -25,12 +25,14 @@ public class EscapePodModel : ShipModel
         // 6 edges
         var edges = new (int a, int b, Color? c)[]
         {
+            // Nose edges (orange)
+            (3, 0, Color.Orange),   // 3 - front tip to back top
+            (3, 1, Color.Orange),   // 5 - front tip to back bottom right
+            (3, 2, Color.Orange),   // 2 - front tip to back bottom left
+            // Back edges
             (0, 1, null),   // 0
             (1, 2, null),   // 1
-            (2, 3, null),   // 2
-            (3, 0, null),   // 3
             (0, 2, null),   // 4
-            (3, 1, null),   // 5
         };
 
         // 4 faces (tetrahedron)

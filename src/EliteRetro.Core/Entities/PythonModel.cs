@@ -32,10 +32,12 @@ public class PythonModel : ShipModel
         // 26 edges
         var edges = new (int a, int b, Color? c)[]
         {
-            (0, 8, null),   // 0
-            (0, 3, null),   // 1
-            (0, 2, null),   // 2
-            (0, 1, null),   // 3
+            // Nose edges (orange)
+            (0, 1, Color.Orange),   // 3
+            (0, 2, Color.Orange),   // 2
+            (0, 3, Color.Orange),   // 1
+            (0, 8, Color.Orange),   // 0
+            // Rest of hull
             (2, 4, null),   // 4
             (1, 2, null),   // 5
             (2, 8, null),   // 6

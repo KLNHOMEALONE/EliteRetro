@@ -40,16 +40,22 @@ public class FerDeLanceModel : ShipModel
         // 27 edges
         var edges = new (int a, int b, Color? c)[]
         {
-            (0, 1, null),   // 0
+            // Nose edges (orange)
+            (0, 1, Color.Orange),   // 0
+            (0, 4, Color.Orange),   // 4
+            (0, 5, Color.Orange),   // 5
+            (0, 8, Color.Orange),   // 9
+            (0, 10, Color.Orange),  // nose left bottom
+            (0, 13, Color.Orange),  // nose right bottom
+            (0, 17, Color.Orange),  // bottom left front
+            (0, 18, Color.Orange),  // bottom right front
+            // Main hull
             (1, 2, null),   // 1
             (2, 3, null),   // 2
             (3, 4, null),   // 3
-            (0, 4, null),   // 4
-            (0, 5, null),   // 5
             (5, 6, null),   // 6
             (6, 7, null),   // 7
             (7, 8, null),   // 8
-            (0, 8, null),   // 9
             (5, 9, null),   // 10
             (6, 9, null),   // 11
             (7, 9, null),   // 12
@@ -58,7 +64,7 @@ public class FerDeLanceModel : ShipModel
             (2, 6, null),   // 15
             (3, 7, null),   // 16
             (4, 8, null),   // 17
-            // Nose detail edges (dimmer)
+            // Nose detail edges (orange)
             (10, 11, Color.Orange),   // 18
             (11, 12, Color.Orange),   // 19
             (10, 12, Color.Orange),   // 20

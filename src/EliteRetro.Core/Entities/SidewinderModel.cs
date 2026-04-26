@@ -31,22 +31,24 @@ public class SidewinderModel : ShipModel
         // 15 edges
         var edges = new (int a, int b, Color? c)[]
         {
-            (0, 1, null),   // 0 - nose edge
-            (1, 2, null),   // 1 - right leading edge
-            (1, 4, null),   // 2
-            (0, 4, null),   // 3
-            (0, 3, null),   // 4 - left leading edge
+            // Nose edges (orange)
+            (0, 1, Color.Orange),   // 0 - nose edge
+            (0, 3, Color.Orange),   // 4 - left leading edge
+            (1, 2, Color.Orange),   // 1 - right leading edge
+            (0, 4, Color.Orange),   // 3 - nose to top rear
+            (1, 4, Color.Orange),   // 2 - nose to top rear
+            (0, 5, Color.Orange),   // 10 - nose to bottom rear
+            (1, 5, Color.Orange),   // 9 - nose to bottom rear
+            // Wing and rear edges
             (3, 4, null),   // 5
             (2, 4, null),   // 6
             (3, 5, null),   // 7
             (2, 5, null),   // 8
-            (1, 5, null),   // 9
-            (0, 5, null),   // 10
             // Engine intake edges (dimmer visibility)
-            (6, 7, Color.Orange),   // 11
-            (7, 8, Color.Orange),   // 12
-            (6, 9, Color.Orange),   // 13
-            (8, 9, Color.Orange),   // 14
+            (6, 7, Color.Gray),   // 11
+            (7, 8, Color.Gray),   // 12
+            (6, 9, Color.Gray),   // 13
+            (8, 9, Color.Gray),   // 14
         };
 
         // 7 faces

@@ -46,14 +46,19 @@ public class MambaModel : ShipModel
         // 28 edges
         var edges = new (int a, int b, Color? c)[]
         {
+            // Nose edges (orange)
+            (0, 1, Color.Orange),   // 0  - nose to left wing
+            (0, 4, Color.Orange),   // 1  - nose to right wing
+            (0, 7, Color.Orange),   // nose to canopy front right
+            (0, 8, Color.Orange),   // nose to canopy front left
+            (0, 2, Color.Orange),   // 26 - nose to left wing inner
+            (0, 3, Color.Orange),   // 27 - nose to right wing inner
             // Main hull outline
-            (0, 1, null),   // 0  - nose to left wing
-            (0, 4, null),   // 1  - nose to right wing
             (1, 4, null),   // 2  - wing baseline
             (1, 2, null),   // 3
             (2, 3, null),   // 4
             (3, 4, null),   // 5
-            // Canopy edges (dimmer)
+            // Canopy edges (orange)
             (5, 6, Color.Orange),   // 6
             (6, 7, Color.Orange),   // 7
             (7, 8, Color.Orange),   // 8
@@ -77,9 +82,6 @@ public class MambaModel : ShipModel
             (19, 22, Color.Gray),   // 23
             (19, 23, Color.Gray),   // 24
             (22, 23, Color.Gray),   // 25
-            // Nose to canopy
-            (0, 2, null),   // 26
-            (0, 3, null),   // 27
         };
 
         // 5 faces

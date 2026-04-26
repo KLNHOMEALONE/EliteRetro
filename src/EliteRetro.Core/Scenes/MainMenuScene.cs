@@ -152,7 +152,7 @@ public class MainMenuScene : GameScene
 
         // Draw wireframe ship - takes up top 2/3 of screen
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
-        _wireframeRenderer.Draw(_cobraModel, _world, _view, _projection, spriteBatch, useBackFaceCulling: false);
+        _wireframeRenderer.Draw(_cobraModel, _world, _view, _projection, spriteBatch, useBackFaceCulling: true);
         spriteBatch.End();
 
         // Draw UI overlay - menu items in bottom 1/3

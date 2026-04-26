@@ -36,15 +36,17 @@ public class ViperModel : ShipModel
         // 20 edges
         var edges = new (int a, int b, Color? c)[]
         {
-            // Main hull edges
-            (0, 3, null),   // 0  - nose to right wing
-            (0, 1, Color.Orange),   // 1
-            (0, 2, Color.Orange),   // 2
-            (0, 4, null),   // 3  - nose to left wing
+            // Nose edges (orange)
+            (0, 3, Color.Orange),   // 0  - nose to right wing
+            (0, 1, Color.Orange),   // 1  - nose to top front
+            (0, 2, Color.Orange),   // 2  - nose to bottom front
+            (0, 4, Color.Orange),   // 3  - nose to left wing
+            // Cockpit edges (orange)
             (1, 7, Color.Orange),   // 4
             (1, 8, Color.Orange),   // 5
             (2, 5, Color.Orange),   // 6
             (2, 6, Color.Orange),   // 7
+            // Main hull edges
             (7, 8, null),   // 8  - top rear edge
             (5, 6, null),   // 9  - bottom rear edge
             (4, 8, null),   // 10 - left wing to top

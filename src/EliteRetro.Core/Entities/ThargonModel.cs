@@ -31,24 +31,24 @@ public class ThargonModel : ShipModel
         // 15 edges — 5 back, 5 front, 5 connecting
         var edges = new (int a, int b, Color? c)[]
         {
-            // Back pentagon (x = -9)
-            (0, 1, null),   // 0
-            (1, 2, null),   // 1
-            (2, 3, null),   // 2
-            (3, 4, null),   // 3
-            (4, 0, null),   // 4
-            // Front pentagon (x = 9)
-            (5, 6, null),   // 5
-            (6, 7, null),   // 6
-            (7, 8, null),   // 7
-            (8, 9, null),   // 8
-            (9, 5, null),   // 9
+            // Front pentagon edges (orange - nose)
+            (5, 6, Color.Orange),   // 5
+            (6, 7, Color.Orange),   // 6
+            (7, 8, Color.Orange),   // 7
+            (8, 9, Color.Orange),   // 8
+            (9, 5, Color.Orange),   // 9
             // Connecting edges
             (0, 5, null),   // 10
             (1, 6, null),   // 11
             (2, 7, null),   // 12
             (3, 8, null),   // 13
             (4, 9, null),   // 14
+            // Back pentagon edges
+            (0, 1, null),   // 0
+            (1, 2, null),   // 1
+            (2, 3, null),   // 2
+            (3, 4, null),   // 3
+            (4, 0, null),   // 4
         };
 
         // 7 faces

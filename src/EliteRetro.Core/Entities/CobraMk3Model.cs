@@ -49,12 +49,15 @@ public class CobraMk3Model : ShipModel
         // 38 edges
         var edges = new (int a, int b, Color? c)[]
         {
-            (0, 1, null), (0, 4, null), (1, 3, null), (3, 8, null),
-            (4, 7, null), (6, 7, null), (6, 9, null), (5, 9, null),
-            (5, 8, null), (2, 5, null), (2, 6, null), (3, 5, null),
-            (4, 6, null), (1, 2, null), (0, 2, null), (8, 10, null),
+            // Nose edges (orange)
+            (0, 1, Color.Orange), (0, 2, Color.Orange), (0, 4, Color.Orange),
+            (1, 2, Color.Orange), (1, 3, Color.Orange), (20, 21, Color.Orange),
+            // Rest of hull
+            (3, 8, null), (4, 7, null), (6, 7, null), (6, 9, null),
+            (5, 9, null), (5, 8, null), (2, 5, null), (2, 6, null),
+            (3, 5, null), (4, 6, null), (8, 10, null),
             (10, 11, null), (7, 11, null), (1, 10, null), (0, 11, null),
-            (1, 5, Color.Gray), (0, 6, Color.Gray), (20, 21, null),
+            (1, 5, Color.Gray), (0, 6, Color.Gray),
             (12, 13, null), (18, 19, null), (14, 15, null), (16, 17, null),
             (15, 16, null), (14, 17, null), (13, 18, null), (12, 19, null),
             (13, 14, null), (12, 10, null), (15, 11, null), (17, 10, null),
