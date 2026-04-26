@@ -90,8 +90,7 @@ public class MainMenuScene : GameScene
         {
             _shipRotationY += dt * 0.3f;
         }
-        _world = Matrix.CreateRotationX(-MathHelper.PiOver2) *  // Point ship up (+Y)
-                 Matrix.CreateRotationZ(_shipRotationY);
+        _world = Matrix.CreateRotationY(_shipRotationY);
 
         // Cycle through ship models with left/right
         if (kb.IsKeyDown(Keys.Right) && _prevKb.IsKeyUp(Keys.Right))

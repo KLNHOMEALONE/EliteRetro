@@ -70,14 +70,14 @@ public class MissileModel : ShipModel
         // 9 faces for back-face culling
         var faces = new Face[]
         {
-            new(new[] { 0, 3, 4 }),          // 0 - left front
+            new(new[] { 0, 4, 3 }),          // 0 - left front
             new(new[] { 0, 1, 4 }),          // 1 - bottom front
-            new(new[] { 0, 1, 2 }),          // 2 - right front
-            new(new[] { 0, 2, 3 }),          // 3 - top front
-            new(new[] { 1, 2, 5, 6 }),       // 4 - right side
+            new(new[] { 0, 2, 1 }),          // 2 - right front
+            new(new[] { 0, 3, 2 }),          // 3 - top front
+            new(new[] { 1, 6, 5, 2 }),       // 4 - right side
             new(new[] { 1, 4, 7, 6 }),       // 5 - bottom
-            new(new[] { 3, 4, 7, 8 }),       // 6 - left side
-            new(new[] { 2, 3, 8, 5 }),       // 7 - top
+            new(new[] { 3, 8, 7, 4 }),       // 6 - left side
+            new(new[] { 2, 5, 8, 3 }),       // 7 - top
             new(new[] { 5, 6, 7, 8 }),       // 8 - rear face
         };
 

@@ -52,42 +52,69 @@ public class WireframeRenderer
 
     /// <summary>
     /// Check if a face is facing the camera.
+    /// Uses pre-computed face normal (from Elite blueprints) when available,
+    /// otherwise computes it at runtime using Newell's method.
     /// </summary>
     private bool IsFaceVisible(Face face, ShipModel model, Matrix world, Matrix view)
     {
         if (face.VertexIndices.Length < 3) return false;
 
-        // Transform all face vertices to world space
+        // Transform face vertices to world space
         var worldVerts = new Vector3[face.VertexIndices.Length];
-        for (int i = 0; i < face.VertexIndices.Length; i++)
+        int n = face.VertexIndices.Length;
+        for (int i = 0; i < n; i++)
         {
             var v = model.Vertices[face.VertexIndices[i]];
             worldVerts[i] = Vector3.Transform(new Vector3(v.X, v.Y, v.Z), world);
         }
 
-        // Compute face normal using Newell's method (works for any polygon)
-        Vector3 normal = Vector3.Zero;
-        int n = worldVerts.Length;
-        for (int i = 0; i < n; i++)
+        // Get normal: use pre-computed if available, otherwise compute with Newell's method
+        Vector3 normal;
+        if (face.Normal.HasValue)
         {
-            Vector3 current = worldVerts[i];
-            Vector3 next = worldVerts[(i + 1) % n];
-            normal.X += (current.Y - next.Y) * (current.Z + next.Z);
-            normal.Y += (current.Z - next.Z) * (current.X + next.X);
-            normal.Z += (current.X - next.X) * (current.Y + next.Y);
+            // Transform pre-computed model-space normal to world space
+            normal = Vector3.TransformNormal(face.Normal.Value, world);
+        }
+        else
+        {
+            // Compute normal using Newell's method (works for any polygon)
+            normal = Vector3.Zero;
+            for (int i = 0; i < n; i++)
+            {
+                Vector3 current = worldVerts[i];
+                Vector3 next = worldVerts[(i + 1) % n];
+                normal.X += (current.Y - next.Y) * (current.Z + next.Z);
+                normal.Y += (current.Z - next.Z) * (current.X + next.X);
+                normal.Z += (current.X - next.X) * (current.Y + next.Y);
+            }
+        }
+
+        // Compute face center in world space
+        Vector3 faceCenter = Vector3.Zero;
+        for (int i = 0; i < n; i++)
+            faceCenter += worldVerts[i];
+        faceCenter /= n;
+
+        // Ensure normal points away from ship center (outward)
+        // For convex ships, the face center should be in the same direction as the normal
+        // If dot(normal, faceCenter) < 0, the normal points inward → flip it
+        if (!face.Normal.HasValue && Vector3.Dot(normal, faceCenter) < 0)
+        {
+            normal = -normal;
         }
 
         // Camera position in world space
-        Vector3 cameraPosition = Vector3.Transform(Vector3.Zero, Matrix.Invert(view));
+        Matrix invView = Matrix.Invert(view);
+        Vector3 cameraPosition = invView.Translation;
 
-        // Vector from face center to camera
-        Vector3 faceCenter = Vector3.Zero;
-        foreach (var p in worldVerts) faceCenter += p;
-        faceCenter /= n;
-        Vector3 toCamera = cameraPosition - faceCenter;
+        // Line of sight: from face center to camera
+        Vector3 lineOfSight = cameraPosition - faceCenter;
 
         // Face is visible if normal points toward camera
-        return Vector3.Dot(normal, toCamera) > 0;
+        // Our LoS goes from face to camera. When normal also points toward camera,
+        // dot(normal, LoS) > 0 means face looks at camera.
+        float dot = Vector3.Dot(normal, lineOfSight);
+        return dot > 0;
     }
 
     /// <summary>
@@ -104,12 +131,21 @@ public class WireframeRenderer
 
         // Determine edge visibility via back-face culling
         var edgeVisible = new bool[model.Edges.Count];
+        var edgeHasFace = new bool[model.Edges.Count];
 
         if (useBackFaceCulling && model.Faces.Count > 0)
         {
-            foreach (var face in model.Faces)
+            // First pass: determine which faces are visible
+            var faceVisible = new bool[model.Faces.Count];
+            for (int f = 0; f < model.Faces.Count; f++)
             {
-                if (!IsFaceVisible(face, model, world, view)) continue;
+                faceVisible[f] = IsFaceVisible(model.Faces[f], model, world, view);
+            }
+
+            // Second pass: mark edges from visible faces as solid
+            foreach (var (face, idx) in model.Faces.Select((f, i) => (f, i)))
+            {
+                if (!faceVisible[idx]) continue;
 
                 for (int i = 0; i < face.VertexIndices.Length; i++)
                 {
@@ -122,8 +158,75 @@ public class WireframeRenderer
                             (model.Edges[e].Start == b && model.Edges[e].End == a))
                         {
                             edgeVisible[e] = true;
+                            edgeHasFace[e] = true;
                         }
                     }
+                }
+            }
+
+            // Third pass: mark edges that belong to culled faces only
+            // (they have faces but no visible faces → should be dashed)
+            foreach (var (face, idx) in model.Faces.Select((f, i) => (f, i)))
+            {
+                if (faceVisible[idx]) continue;
+
+                for (int i = 0; i < face.VertexIndices.Length; i++)
+                {
+                    int a = face.VertexIndices[i];
+                    int b = face.VertexIndices[(i + 1) % face.VertexIndices.Length];
+
+                    for (int e = 0; e < model.Edges.Count; e++)
+                    {
+                        if ((model.Edges[e].Start == a && model.Edges[e].End == b) ||
+                            (model.Edges[e].Start == b && model.Edges[e].End == a))
+                        {
+                            edgeHasFace[e] = true;
+                        }
+                    }
+                }
+            }
+
+            // Edges not part of any face are always visible (structural edges)
+            for (int e = 0; e < model.Edges.Count; e++)
+            {
+                if (!edgeHasFace[e])
+                    edgeVisible[e] = true;
+            }
+
+            // Silhouette edges: edges belonging only to culled faces but facing the camera
+            // For convex ships, these are the boundary between visible and hidden parts
+            Matrix invView = Matrix.Invert(view);
+            Vector3 cameraPos = invView.Translation;
+            for (int e = 0; e < model.Edges.Count; e++)
+            {
+                if (edgeVisible[e]) continue; // already solid
+                if (!edgeHasFace[e]) continue; // structural, already handled
+
+                // Compute edge midpoint in world space
+                var edge = model.Edges[e];
+                Vector3 startW = Vector3.Transform(new Vector3(model.Vertices[edge.Start].X, model.Vertices[edge.Start].Y, model.Vertices[edge.Start].Z), world);
+                Vector3 endW = Vector3.Transform(new Vector3(model.Vertices[edge.End].X, model.Vertices[edge.End].Y, model.Vertices[edge.End].Z), world);
+                Vector3 midPoint = (startW + endW) / 2;
+
+                // Edge direction
+                Vector3 edgeDir = Vector3.Normalize(endW - startW);
+
+                // Vector from ship center (origin in model space, transformed to world)
+                Vector3 shipCenter = Vector3.Transform(Vector3.Zero, world);
+                Vector3 radialDir = Vector3.Normalize(midPoint - shipCenter);
+
+                // Edge "normal" — perpendicular to both edge direction and radial direction
+                Vector3 edgeNormal = Vector3.Cross(edgeDir, radialDir);
+                if (edgeNormal.Length() < 0.001f) continue; // edge points radially, skip
+                edgeNormal = Vector3.Normalize(edgeNormal);
+
+                // Vector from edge midpoint to camera
+                Vector3 toCamera = Vector3.Normalize(cameraPos - midPoint);
+
+                // If edge normal points toward camera, it's a silhouette edge → make solid
+                if (Vector3.Dot(edgeNormal, toCamera) > 0)
+                {
+                    edgeVisible[e] = true;
                 }
             }
         }

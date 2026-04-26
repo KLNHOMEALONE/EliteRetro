@@ -13,9 +13,11 @@ public record struct Vertex3(float X, float Y, float Z);
 public record struct Edge(int Start, int End, Color? Color = null);
 
 /// <summary>
-/// A face (polygon) defined by vertex indices, used for back-face culling.
+/// A face (polygon) defined by vertex indices and an optional pre-computed normal vector.
+/// If the normal is not provided (default Vector3.Zero), it will be computed at runtime
+/// using Newell's method. When provided (as in original Elite blueprints), it is used directly.
 /// </summary>
-public record struct Face(int[] VertexIndices);
+public record struct Face(int[] VertexIndices, Vector3? Normal = null);
 
 /// <summary>
 /// Complete ship model definition.
