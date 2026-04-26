@@ -1,0 +1,64 @@
+using Microsoft.Xna.Framework;
+
+namespace EliteRetro.Core.Entities;
+
+/// <summary>
+/// Defines a 3D ship model as vertices and edges for wireframe rendering.
+/// </summary>
+public record struct Vertex3(float X, float Y, float Z);
+
+/// <summary>
+/// An edge connecting two vertex indices with an optional color.
+/// </summary>
+public record struct Edge(int Start, int End, Color? Color = null);
+
+/// <summary>
+/// A face (polygon) defined by vertex indices, used for back-face culling.
+/// </summary>
+public record struct Face(int[] VertexIndices);
+
+/// <summary>
+/// Complete ship model definition.
+/// </summary>
+public class ShipModel
+{
+    public string Name { get; init; } = "";
+    public List<Vertex3> Vertices { get; init; } = new();
+    public List<Edge> Edges { get; init; } = new();
+    public List<Face> Faces { get; init; } = new();
+
+    /// <summary>
+    /// Create a simple cube model for testing.
+    /// </summary>
+    public static ShipModel CreateCube(float size = 1.0f)
+    {
+        float s = size / 2;
+        return new ShipModel
+        {
+            Name = "Cube",
+            Vertices = new List<Vertex3>
+            {
+                new(-s, -s, -s), new(s, -s, -s), new(s, s, -s), new(-s, s, -s),
+                new(-s, -s, s), new(s, -s, s), new(s, s, s), new(-s, s, s)
+            },
+            Edges = new List<Edge>
+            {
+                // Back face
+                new(0, 1), new(1, 2), new(2, 3), new(3, 0),
+                // Front face
+                new(4, 5), new(5, 6), new(6, 7), new(7, 4),
+                // Connecting edges
+                new(0, 4), new(1, 5), new(2, 6), new(3, 7)
+            },
+            Faces = new List<Face>
+            {
+                new(new[] { 0, 1, 2, 3 }), // Back
+                new(new[] { 4, 5, 6, 7 }), // Front
+                new(new[] { 0, 1, 5, 4 }), // Bottom
+                new(new[] { 2, 3, 7, 6 }), // Top
+                new(new[] { 0, 3, 7, 4 }), // Left
+                new(new[] { 1, 2, 6, 5 })  // Right
+            }
+        };
+    }
+}

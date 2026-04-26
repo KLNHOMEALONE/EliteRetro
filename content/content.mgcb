@@ -1,0 +1,6 @@
+/output:bin/DesktopGL/content
+/intermediateDir:obj/DesktopGL/content
+/platform:DesktopGL
+
+/Font:Fonts/EliteFont.spritefont
+  /id:EliteFont
