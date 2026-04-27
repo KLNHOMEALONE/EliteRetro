@@ -64,6 +64,23 @@ public class CobraMk3Model : ShipModel
             (18, 11, null), (9, 13, null), (9, 14, null),
         };
 
+        // 13 faces for back-face culling - authentic data from cobramk3.txt
+        var faces = new Face[]
+        {
+            new(new[] { 0, 1, 2 }, new Vector3(0, 62, 31)),           // Face 0
+            new(new[] { 1, 2, 5 }, new Vector3(-18, 55, 16)),         // Face 1
+            new(new[] { 0, 2, 6 }, new Vector3(18, 55, 16)),          // Face 2
+            new(new[] { 1, 3, 5 }, new Vector3(-16, 52, 14)),         // Face 3
+            new(new[] { 0, 4, 6 }, new Vector3(16, 52, 14)),          // Face 4
+            new(new[] { 2, 5, 9, 6 }, new Vector3(-14, 47, 0)),       // Face 5 (merged 5 & 6)
+            new(new[] { 3, 8, 5 }, new Vector3(-61, 102, 0)),         // Face 7
+            new(new[] { 4, 7, 6 }, new Vector3(61, 102, 0)),          // Face 8
+            new(new[] { 9, 6, 7, 11, 10, 8, 5 }, new Vector3(0, 0, -80)), // Face 9
+            new(new[] { 1, 3, 8, 10 }, new Vector3(-7, -42, 9)),      // Face 10
+            new(new[] { 0, 1, 10, 11 }, new Vector3(0, -30, 6)),      // Face 11
+            new(new[] { 0, 4, 7, 11 }, new Vector3(7, -42, 9)),       // Face 12
+        };
+
         var vertices = new List<Vertex3>();
         foreach (var (x, y, z) in verts)
             vertices.Add(new Vertex3(x * scale, y * scale, z * scale));
@@ -77,7 +94,7 @@ public class CobraMk3Model : ShipModel
             Name = "Cobra Mk3",
             Vertices = vertices,
             Edges = edgeList,
-            Faces = new List<Face>(), // No culling — pure wireframe
+            Faces = faces.ToList(),
         };
     }
 }
