@@ -10,6 +10,7 @@ public class GalaxyMapScene : GameScene
 {
     private Galaxy[] _galaxies = null!;
     private BitmapFont _font = null!;
+    private Texture2D _whitePixel = null!;
     private int _currentGalaxy;
     private Vector2 _scrollOffset;
     private float _zoom = 0.3f;
@@ -26,6 +27,10 @@ public class GalaxyMapScene : GameScene
         _galaxies = generator.GenerateAllGalaxies();
         _currentGalaxy = 0;
         _scrollOffset = new Vector2(400, 300);
+
+        // Pre-create white pixel for drawing rectangles efficiently
+        _whitePixel = new Texture2D(font.Atlas.GraphicsDevice, 1, 1);
+        _whitePixel.SetData(new[] { Color.White });
     }
 
     public override void Update(GameTime gameTime)
@@ -84,7 +89,7 @@ public class GalaxyMapScene : GameScene
                 _ => Color.Gray
             };
 
-            spriteBatch.FillRectangle(new Rectangle((int)sp.X - 2, (int)sp.Y - 2, 4, 4), color);
+            spriteBatch.Draw(_whitePixel, new Rectangle((int)sp.X - 2, (int)sp.Y - 2, 4, 4), color);
 
             if (_hoveredSystem == system || _zoom > 0.5f)
                 _font.DrawString(spriteBatch, system.Name, sp + new Vector2(5, -5), Color.White, 1f);
@@ -103,15 +108,8 @@ public class GalaxyMapScene : GameScene
         spriteBatch.End();
     }
 
-    public override void UnloadContent() { }
-}
-
-public static class SpriteBatchExt
-{
-    public static void FillRectangle(this SpriteBatch sb, Rectangle r, Color c)
+    public override void UnloadContent()
     {
-        using var tex = new Texture2D(sb.GraphicsDevice, 1, 1);
-        tex.SetData(new[] { Color.White });
-        sb.Draw(tex, r, c);
+        _whitePixel?.Dispose();
     }
 }

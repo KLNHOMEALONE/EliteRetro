@@ -101,5 +101,7 @@ public class BitmapFont
         }
     }
 
+    public Texture2D Atlas => _atlas;
+
     public int LineHeight => _lineHeight;
 }
