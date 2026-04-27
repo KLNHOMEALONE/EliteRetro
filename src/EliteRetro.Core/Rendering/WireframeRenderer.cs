@@ -52,69 +52,47 @@ public class WireframeRenderer
 
     /// <summary>
     /// Check if a face is facing the camera.
-    /// Uses pre-computed face normal (from Elite blueprints) when available,
-    /// otherwise computes it at runtime using Newell's method.
+    /// Follows the optimized algorithm from docs\shiprendering\Back-face-Culling.md
     /// </summary>
-    private bool IsFaceVisible(Face face, ShipModel model, Matrix world, Matrix view)
+    private bool IsFaceVisible(Face face, ShipModel model, Vector3 cameraToShipLocal, Vector3[]? worldVerts, Vector3 cameraPosition, Matrix world)
     {
         if (face.VertexIndices.Length < 3) return false;
 
-        // Transform face vertices to world space
-        var worldVerts = new Vector3[face.VertexIndices.Length];
-        int n = face.VertexIndices.Length;
-        for (int i = 0; i < n; i++)
-        {
-            var v = model.Vertices[face.VertexIndices[i]];
-            worldVerts[i] = Vector3.Transform(new Vector3(v.X, v.Y, v.Z), world);
-        }
-
-        // Get normal: use pre-computed if available, otherwise compute with Newell's method
-        Vector3 normal;
+        // AUTHENTIC ELITE CULLING (if normal is provided in blueprint)
         if (face.Normal.HasValue)
         {
-            // Transform pre-computed model-space normal to world space
-            normal = Vector3.TransformNormal(face.Normal.Value, world);
-        }
-        else
-        {
-            // Compute normal using Newell's method (works for any polygon)
-            normal = Vector3.Zero;
-            for (int i = 0; i < n; i++)
-            {
-                Vector3 current = worldVerts[i];
-                Vector3 next = worldVerts[(i + 1) % n];
-                normal.X += (current.Y - next.Y) * (current.Z + next.Z);
-                normal.Y += (current.Z - next.Z) * (current.X + next.X);
-                normal.Z += (current.X - next.X) * (current.Y + next.Y);
-            }
+            // The Elite Way: visibility = Dot(Projected_LoS + Face_Normal, Face_Normal)
+            // Projected_LoS is the camera-to-ship vector in ship-local space.
+            // A negative result means the face is pointing toward the camera.
+            float visibility = Vector3.Dot(cameraToShipLocal + face.Normal.Value, face.Normal.Value);
+            return visibility < 0;
         }
 
-        // Compute face center in world space
+        // FALLBACK: NEWELL'S METHOD (for models without pre-computed normals)
+        if (worldVerts == null) return false;
+
+        int n = face.VertexIndices.Length;
+        Vector3 normal = Vector3.Zero;
         Vector3 faceCenter = Vector3.Zero;
+
         for (int i = 0; i < n; i++)
-            faceCenter += worldVerts[i];
+        {
+            Vector3 current = worldVerts[face.VertexIndices[i]];
+            Vector3 next = worldVerts[face.VertexIndices[(i + 1) % n]];
+            normal.X += (current.Y - next.Y) * (current.Z + next.Z);
+            normal.Y += (current.Z - next.Z) * (current.X + next.X);
+            normal.Z += (current.X - next.X) * (current.Y + next.Y);
+            faceCenter += current;
+        }
         faceCenter /= n;
 
-        // Ensure normal points away from ship center (outward)
-        // For convex ships, the face center should be in the same direction as the normal
-        // If dot(normal, faceCenter) < 0, the normal points inward → flip it
-        if (!face.Normal.HasValue && Vector3.Dot(normal, faceCenter) < 0)
-        {
+        // Ensure normal points outward from ship center
+        Vector3 shipCenter = world.Translation;
+        if (Vector3.Dot(normal, faceCenter - shipCenter) < 0)
             normal = -normal;
-        }
 
-        // Camera position in world space
-        Matrix invView = Matrix.Invert(view);
-        Vector3 cameraPosition = invView.Translation;
-
-        // Line of sight: from face center to camera
         Vector3 lineOfSight = cameraPosition - faceCenter;
-
-        // Face is visible if normal points toward camera
-        // Our LoS goes from face to camera. When normal also points toward camera,
-        // dot(normal, LoS) > 0 means face looks at camera.
-        float dot = Vector3.Dot(normal, lineOfSight);
-        return dot > 0;
+        return Vector3.Dot(normal, lineOfSight) > 0;
     }
 
     /// <summary>
@@ -135,11 +113,35 @@ public class WireframeRenderer
 
         if (useBackFaceCulling && model.Faces.Count > 0)
         {
+            // Pre-calculate data needed for culling
+            Matrix invView = Matrix.Invert(view);
+            Vector3 cameraPosition = invView.Translation;
+            Vector3 shipPosition = world.Translation;
+
+            // Vector from camera to ship
+            Vector3 cameraToShip = shipPosition - cameraPosition;
+
+            // Transform to ship-local space (Elite's "Projected Line of Sight")
+            Matrix worldToLocal = Matrix.Invert(world);
+            Vector3 cameraToShipLocal = Vector3.TransformNormal(cameraToShip, worldToLocal);
+
+            // Pre-calculate world vertices only if we have faces that need Newell's method
+            Vector3[]? worldVerts = null;
+            if (model.Faces.Any(f => !f.Normal.HasValue))
+            {
+                worldVerts = new Vector3[model.Vertices.Count];
+                for (int i = 0; i < model.Vertices.Count; i++)
+                {
+                    var v = model.Vertices[i];
+                    worldVerts[i] = Vector3.Transform(new Vector3(v.X, v.Y, v.Z), world);
+                }
+            }
+
             // First pass: determine which faces are visible
             var faceVisible = new bool[model.Faces.Count];
             for (int f = 0; f < model.Faces.Count; f++)
             {
-                faceVisible[f] = IsFaceVisible(model.Faces[f], model, world, view);
+                faceVisible[f] = IsFaceVisible(model.Faces[f], model, cameraToShipLocal, worldVerts, cameraPosition, world);
             }
 
             // Second pass: mark edges from visible faces as solid
@@ -195,8 +197,6 @@ public class WireframeRenderer
 
             // Silhouette edges: edges belonging only to culled faces but facing the camera
             // For convex ships, these are the boundary between visible and hidden parts
-            Matrix invView = Matrix.Invert(view);
-            Vector3 cameraPos = invView.Translation;
             for (int e = 0; e < model.Edges.Count; e++)
             {
                 if (edgeVisible[e]) continue; // already solid
@@ -221,7 +221,7 @@ public class WireframeRenderer
                 edgeNormal = Vector3.Normalize(edgeNormal);
 
                 // Vector from edge midpoint to camera
-                Vector3 toCamera = Vector3.Normalize(cameraPos - midPoint);
+                Vector3 toCamera = Vector3.Normalize(cameraPosition - midPoint);
 
                 // If edge normal points toward camera, it's a silhouette edge → make solid
                 if (Vector3.Dot(edgeNormal, toCamera) > 0)
