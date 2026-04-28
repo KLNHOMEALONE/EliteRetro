@@ -3,42 +3,31 @@ using Microsoft.Xna.Framework;
 namespace EliteRetro.Core.Entities;
 
 /// <summary>
-/// Planet wireframe model — icosahedron-based sphere with craters and meridians.
+/// Planet wireframe model — icosahedron-based sphere.
 /// Used for planet rendering in the flight scene.
 /// </summary>
 public class PlanetModel : ShipModel
 {
     /// <summary>
     /// Create a planet model with given radius.
-    /// Generates an icosahedron base with subdivided faces for a spherical shape.
+    /// Generates an icosahedron with 12 vertices, 30 edges, and 20 triangular faces.
     /// </summary>
     public static PlanetModel Create(float radius = GameConstants.PlanetRadius)
     {
-        float a = radius * 0.525731f; // icosahedron scale factor
+        float a = radius * 0.525731f;
         float b = radius * 0.850651f;
 
         // 12 vertices of an icosahedron
-        var verts = new (int x, int y, int z)[]
+        var verts = new (float x, float y, float z)[]
         {
-            (0, (int)(a * 1000), (int)(-b * 1000)),   // 0
-            ((int)(b * 1000), 0, (int)(a * 1000)),     // 1
-            ((int)(-b * 1000), 0, (int)(a * 1000)),    // 2
-            (0, (int)(a * 1000), (int)(b * 1000)),     // 3
-            ((int)(-a * 1000), (int)(b * 1000), 0),    // 4
-            ((int)(a * 1000), (int)(b * 1000), 0),     // 5
-            ((int)(a * 1000), (int)(-b * 1000), 0),    // 6
-            (0, (int)(-a * 1000), (int)(b * 1000)),    // 7
-            (0, (int)(-a * 1000), (int)(-b * 1000)),   // 8
-            ((int)(-a * 1000), (int)(-b * 1000), 0),   // 9
-            ((int)(-b * 1000), 0, (int)(-a * 1000)),   // 10
-            ((int)(b * 1000), 0, (int)(-a * 1000)),    // 11
+            (0, a, -b), (b, 0, a), (-b, 0, a), (0, a, b),
+            (-a, b, 0), (a, b, 0), (a, -b, 0), (0, -a, b),
+            (0, -a, -b), (-a, -b, 0), (-b, 0, -a), (b, 0, -a)
         };
-
-        float scale = radius / 1000f;
 
         var vertices = new List<Vertex3>();
         foreach (var (x, y, z) in verts)
-            vertices.Add(new Vertex3(x * scale, y * scale, z * scale));
+            vertices.Add(new Vertex3(x, y, z));
 
         // 30 edges of an icosahedron
         var edges = new (int a, int b, Color? c)[]

@@ -12,6 +12,7 @@ public class SceneManager
     private ContentManager _content = null!;
     private BitmapFont _font = null!;
     private Game? _game;
+    private bool _prevEscape;
 
     public void ChangeScene(GameScene newScene, ContentManager content, Game? game = null, BitmapFont? font = null)
     {
@@ -51,13 +52,19 @@ public class SceneManager
             _nextScene = null;
         }
 
-        // Check for Escape to go back
+        // Check for Escape to go back (only on key press, not hold)
         var kb = Keyboard.GetState();
-        if (kb.IsKeyDown(Keys.Escape) && _sceneStack.Count > 1)
+        if (kb.IsKeyDown(Keys.Escape) && !_prevEscape)
         {
-            PopScene();
+            if (_sceneStack.Count > 1)
+            {
+                PopScene();
+            }
+            // If only 1 scene, Escape does nothing — let the scene handle it
+            _prevEscape = true;
             return;
         }
+        _prevEscape = kb.IsKeyDown(Keys.Escape);
 
         if (_sceneStack.Count > 0)
             _sceneStack.Peek().Update(gameTime);

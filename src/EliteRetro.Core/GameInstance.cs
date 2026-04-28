@@ -1,6 +1,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using EliteRetro.Core.Scenes;
+using EliteRetro.Core.Managers;
 
 namespace EliteRetro.Core;
 
@@ -10,6 +11,12 @@ public class GameInstance : Game
     private SpriteBatch _spriteBatch = null!;
     private SceneManager _sceneManager = null!;
     private BitmapFont _font = null!;
+    private LocalBubbleManager _bubbleManager = null!;
+
+    /// <summary>
+    /// Global access to the local bubble manager.
+    /// </summary>
+    public LocalBubbleManager BubbleManager => _bubbleManager;
 
     public GameInstance()
     {
@@ -26,6 +33,7 @@ public class GameInstance : Game
     protected override void Initialize()
     {
         _sceneManager = new SceneManager();
+        _bubbleManager = new LocalBubbleManager();
         base.Initialize();
     }
 

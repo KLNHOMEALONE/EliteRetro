@@ -132,11 +132,6 @@ public class MainMenuScene : GameScene
             HandleSelection();
         }
 
-        if (kb.IsKeyDown(Keys.Escape))
-        {
-            _game?.Exit();
-        }
-
         _prevKb = kb;
     }
 
@@ -150,7 +145,7 @@ public class MainMenuScene : GameScene
                 break;
             case 1: // Start New Game
                 if (_game is GameInstance gi)
-                    gi.ChangeScene(new SpaceScene());
+                    gi.ChangeScene(new SpaceScene(gi));
                 break;
             case 2: // Load Commander
                 if (_game is GameInstance gi2)

@@ -38,7 +38,7 @@ public class MenuScene : GameScene
             {
                 case 0:
                     if (_game is GameInstance gi)
-                        gi.ChangeScene(new SpaceScene());
+                        gi.ChangeScene(new SpaceScene(gi));
                     break;
                 case 1:
                     if (_game is GameInstance gi2)
