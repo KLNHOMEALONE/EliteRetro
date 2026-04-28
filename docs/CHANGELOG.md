@@ -2,18 +2,39 @@
 
 All notable changes to this project.
 
+---
+
 ## [Unreleased]
 
 ### Added
-- Implementation plan created (`docs/IMPLEMENTATION_PLAN.md`) — comprehensive 8-phase roadmap
-- Task tracker created (`docs/TASKTRACKER.md`) — active development task list
+- **Tribonacci galaxy generation** — authentic BBC Elite algorithm replacing simple RNG
+  - `GalaxySeed` struct with Twist() and NextGalaxy() methods
+  - 8 galaxies × 256 systems derived from three 16-bit seeds (0x5A4A, 0x0248, 0xB753)
+  - System data: economy, government, tech level, population, productivity, radius, species
+  - Name generation with 31-entry two-letter token table (cpl routine)
+- **Minsky flight system** — replaced Euler angles with Minsky circle algorithm
+  - `OrientationMatrix` with ApplyUniverseRotation() and Tidy() orthonormalization
+  - FlightController for keyboard input (arrows=pitch, Q/W=roll, V=view switch)
+  - Periodic TIDY to prevent floating-point drift
+- **Local Bubble Manager** — slot-based entity lifecycle (20 slots)
+  - Reserved slots: planet (0), sun/station (1), dynamic (2+)
+  - Spawn/despawn, bubble culling, safe zone trigger
+  - Station orientation (faces planet), universe rotation broadcast
+- **Galaxy map improvements** — crosshair cursor, names on hover only, auto-centered view
 - Design docs: Local Bubble system, Minsky flight physics, Galaxy Tribonacci generation, Ship blueprints, Circle/Planet rendering, Back-face culling
 
 ### Changed
-- N/A
+- Main menu: "LOAD COMMANDER" renamed to "GALAXY MAP"
+- EconomyType enum expanded to 8 values (RichIndustrial through PoorAgricultural)
+- TechLevel changed from enum to int (0-14 range)
+- Galaxy map zoom defaults to 3.0, centered on galaxy
 
 ### Fixed
-- N/A
+- Planet wireframe vertex overflow (removed erroneous ×1000 scaling)
+- Escape key double-handler causing immediate exit
+- Texture2D creation per frame in DrawFilledCircle (now cached)
+- Integer overflow in LocalBubbleManager (BubbleRadius² exceeded int range)
+- Back-face culling freeze on large models
 
 ---
 
