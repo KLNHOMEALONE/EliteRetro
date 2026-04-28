@@ -55,8 +55,8 @@
 
 - [x] **4.1** Create `SineTable.cs` — 64-entry sine lookup, Sin(step), Cos(step)
 - [x] **4.2** Create `CircleRenderer.cs` — parametric circle drawing, DrawCircle(center, radius, color, stepSize), segment clipping
-- [ ] **4.3** Create `EllipseRenderer.cs` — conjugate-diameter ellipse, DrawEllipse(center, u, v, color), convenience method for axis-aligned
-- [ ] **4.4** Create `PlanetRenderer.cs` — DrawCrater(), DrawMeridiansAndEquator(), feature visibility based on tech level
+- [x] **4.3** Create `EllipseRenderer.cs` — conjugate-diameter ellipse, DrawEllipse(center, u, v, color), convenience method for axis-aligned
+- [x] **4.4** Create `PlanetRenderer.cs` — DrawCrater(), DrawMeridiansAndEquator(), feature visibility based on tech level
 - [ ] **4.5** Create `SunRenderer.cs` — horizontal scan lines, random fringe, color schemes
 - [ ] **4.6** Create `RingRenderer.cs` — random points in elliptical band, planet occlusion check
 - [ ] **4.7** Create `ExplosionRenderer.cs` — particle-based expanding/contracting cloud
@@ -109,9 +109,9 @@
 
 ## Current Focus
 
-**Phase 4: Circle & Planet Rendering** — IN PROGRESS. SineTable and CircleRenderer complete. Celestial bodies now render as circles in SpaceScene.
+**Phase 4: Circle & Planet Rendering** — IN PROGRESS. EllipseRenderer and PlanetRenderer complete. Planet renders with outline, craters, meridians (front/back visibility), and equator.
 
-**Next immediate task: Phase 4.3** Create `EllipseRenderer.cs` — conjugate-diameter ellipse for planet surface features (equator, meridians).
+**Next immediate task: Phase 4.5** Create `SunRenderer.cs` — horizontal scan lines with random fringe, color schemes.
 
 ---
 

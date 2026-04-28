@@ -13,6 +13,9 @@ public class SpaceScene : GameScene
 {
     private WireframeRenderer _wireframeRenderer = null!;
     private CircleRenderer _circleRenderer = null!;
+    private PlanetRenderer _planetRenderer = null!;
+    private int _planetRotation;
+    private int _planetRotationCounter;
     private Matrix _view;
     private Matrix _projection;
     private BitmapFont _font = null!;
@@ -51,6 +54,7 @@ public class SpaceScene : GameScene
         _graphicsDevice = spriteBatch.GraphicsDevice;
         _wireframeRenderer = new WireframeRenderer(_graphicsDevice);
         _circleRenderer = new CircleRenderer(_graphicsDevice);
+        _planetRenderer = new PlanetRenderer(_graphicsDevice);
         _projection = Matrix.CreatePerspectiveFieldOfView(
             MathHelper.ToRadians(75f),
             _graphicsDevice.Viewport.AspectRatio,
@@ -124,6 +128,10 @@ public class SpaceScene : GameScene
                 _universeOrientation.Tidy();
             }
             _bubbleManager.TidyOne();
+
+            // Slow planet rotation (1 full rotation every ~32 seconds at 60fps)
+            if (_planetRotationCounter++ % 32 == 0)
+                _planetRotation = (_planetRotation + 1) % 64;
 
             // Zoom with +/-
             float speed = 2f * (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -199,10 +207,10 @@ public class SpaceScene : GameScene
             }
         }
 
-        // Draw planet as circle
+        // Draw planet with surface features
         if (_bubbleManager.Planet != null)
         {
-            DrawCelestialCircle(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(50, 100, 180));
+            DrawCelestialPlanet(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(50, 100, 180));
         }
 
         // Draw sun as circle
@@ -236,6 +244,23 @@ public class SpaceScene : GameScene
         float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * viewport.Height / 2;
         if (screenRadius > 0 && screenRadius < 500)
             _circleRenderer.DrawCircle(spriteBatch, new Vector2(screenX, screenY), screenRadius, color);
+    }
+
+    private void DrawCelestialPlanet(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color)
+    {
+        Vector3 pos = worldPos * 0.0001f;
+        Vector3 projected = Vector3.Transform(pos, _view * _projection);
+        if (projected.Z == 0) return;
+
+        float ndcX = projected.X / projected.Z;
+        float ndcY = projected.Y / projected.Z;
+        var viewport = _graphicsDevice.Viewport;
+        float screenX = (ndcX + 1) / 2 * viewport.Width;
+        float screenY = (1 - ndcY) / 2 * viewport.Height;
+
+        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * viewport.Height / 2;
+        if (screenRadius > 0 && screenRadius < 500)
+            _planetRenderer.DrawPlanet(spriteBatch, new Vector2(screenX, screenY), screenRadius, color, _planetRotation);
     }
 
     private void SpawnStation()
