@@ -21,7 +21,7 @@ public class MainMenuScene : GameScene
     private readonly string[] _menuItems = {
         "COMBAT RATING",
         "START NEW GAME",
-        "LOAD COMMANDER",
+        "GALAXY MAP",
         "TOP PILOTS",
         "OPTIONS",
         "QUIT"
@@ -147,7 +147,7 @@ public class MainMenuScene : GameScene
                 if (_game is GameInstance gi)
                     gi.ChangeScene(new SpaceScene(gi));
                 break;
-            case 2: // Load Commander
+            case 2: // Galaxy Map
                 if (_game is GameInstance gi2)
                     gi2.ChangeScene(new GalaxyMapScene());
                 break;

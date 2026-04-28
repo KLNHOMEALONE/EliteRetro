@@ -1,8 +1,18 @@
+using Microsoft.Xna.Framework;
+
 namespace EliteRetro.Core.Systems;
 
-public enum GovernmentType { Anarchy, Feudal, MultiGov, Dictatorship, Communist, Confederacy, Democracy, CorporateState }
-public enum EconomyType { RichIndustrial, AverageIndustrial, PoorIndustrial, AverageAgri, RichAgri, MainlyAgri }
-public enum TechLevel { StoneAge, Rural, Poor, Average, Rich, GalacticHubs }
+public enum GovernmentType
+{
+    Anarchy, Feudal, MultiGov, Dictatorship,
+    Communist, Confederacy, Democracy, CorpState
+}
+
+public enum EconomyType
+{
+    RichIndustrial, AverageIndustrial, PoorIndustrial, MainlyIndustrial,
+    MainlyAgricultural, RichAgricultural, AverageAgricultural, PoorAgricultural
+}
 
 public record struct StarSystem(
     string Name,
@@ -11,7 +21,7 @@ public record struct StarSystem(
     Vector2 Position,
     GovernmentType Government,
     EconomyType Economy,
-    TechLevel TechLevel,
+    int TechLevel,
     int Population,
     int Radius,
     uint Seed)

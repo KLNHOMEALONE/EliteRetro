@@ -67,6 +67,19 @@ public struct OrientationMatrix
     }
 
     /// <summary>
+    /// Convert to a 4x4 rotation matrix (rotation only, no translation).
+    /// The basis vectors form the upper-left 3x3 block.
+    /// </summary>
+    public Matrix ToMatrix4x4()
+    {
+        return new Matrix(
+            Nosev.X, Nosev.Y, Nosev.Z, 0,
+            Roofv.X, Roofv.Y, Roofv.Z, 0,
+            Sidev.X, Sidev.Y, Sidev.Z, 0,
+            0, 0, 0, 1);
+    }
+
+    /// <summary>
     /// Rotate a position vector by this orientation matrix.
     /// </summary>
     public Vector3 Transform(Vector3 position)

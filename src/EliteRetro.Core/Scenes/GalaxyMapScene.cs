@@ -15,6 +15,7 @@ public class GalaxyMapScene : GameScene
     private Vector2 _scrollOffset;
     private float _zoom = 0.3f;
     private StarSystem? _hoveredSystem;
+    private MouseState _mouseState;
 
     public GalaxyMapScene()
     {
@@ -26,7 +27,10 @@ public class GalaxyMapScene : GameScene
         var generator = new GalaxyGenerator();
         _galaxies = generator.GenerateAllGalaxies();
         _currentGalaxy = 0;
-        _scrollOffset = new Vector2(400, 300);
+        // Center galaxy on screen: coords span 0-255 x 0-127, center at (128, 64)
+        // Zoom 3.0 makes 256 units ≈ 768 pixels wide, fitting 1024x768
+        _zoom = 3.0f;
+        _scrollOffset = new Vector2(1024 / 2 - 128 * _zoom, 768 / 2 - 64 * _zoom);
 
         // Pre-create white pixel for drawing rectangles efficiently
         _whitePixel = new Texture2D(font.Atlas.GraphicsDevice, 1, 1);
@@ -37,6 +41,7 @@ public class GalaxyMapScene : GameScene
     {
         var kb = Keyboard.GetState();
         var mouse = Mouse.GetState();
+        _mouseState = mouse;
 
         if (kb.IsKeyDown(Keys.Left)) _currentGalaxy = (_currentGalaxy - 1 + 8) % 8;
         if (kb.IsKeyDown(Keys.Right)) _currentGalaxy = (_currentGalaxy + 1) % 8;
@@ -70,7 +75,7 @@ public class GalaxyMapScene : GameScene
         spriteBatch.Begin();
 
         _font.DrawString(spriteBatch, $"GALAXY {_currentGalaxy + 1}/8", new Vector2(10, 10), Color.Lime, 1.5f);
-        _font.DrawString(spriteBatch, "Left/Right: Switch  +/-: Zoom", new Vector2(10, 35), Color.White, 1f);
+        _font.DrawString(spriteBatch, "Left/Right: Galaxy  Up/Down: Pan  +/-: Zoom  ESC: Back", new Vector2(10, 35), Color.White, 1f);
 
         var galaxy = _galaxies[_currentGalaxy];
         foreach (var system in galaxy.Systems)
@@ -83,15 +88,17 @@ public class GalaxyMapScene : GameScene
                 EconomyType.RichIndustrial => Color.Yellow,
                 EconomyType.AverageIndustrial => Color.Orange,
                 EconomyType.PoorIndustrial => Color.Red,
-                EconomyType.RichAgri => Color.Green,
-                EconomyType.AverageAgri => Color.Cyan,
-                EconomyType.MainlyAgri => Color.Blue,
+                EconomyType.MainlyIndustrial => Color.OrangeRed,
+                EconomyType.RichAgricultural => Color.Green,
+                EconomyType.AverageAgricultural => Color.Cyan,
+                EconomyType.PoorAgricultural => Color.Blue,
+                EconomyType.MainlyAgricultural => Color.LightGreen,
                 _ => Color.Gray
             };
 
             spriteBatch.Draw(_whitePixel, new Rectangle((int)sp.X - 2, (int)sp.Y - 2, 4, 4), color);
 
-            if (_hoveredSystem == system || _zoom > 0.5f)
+            if (_hoveredSystem == system)
                 _font.DrawString(spriteBatch, system.Name, sp + new Vector2(5, -5), Color.White, 1f);
         }
 
@@ -104,6 +111,10 @@ public class GalaxyMapScene : GameScene
             _font.DrawString(spriteBatch, $"Tech: {s.TechLevel}  Pop: {s.Population}M", new Vector2(10, y), Color.White, 1f); y += 20;
             _font.DrawString(spriteBatch, $"Radius: {s.Radius}km", new Vector2(10, y), Color.White, 1f);
         }
+
+        // Draw crosshair at mouse position
+        spriteBatch.Draw(_whitePixel, new Rectangle(_mouseState.X - 1, _mouseState.Y - 10, 2, 20), Color.White);
+        spriteBatch.Draw(_whitePixel, new Rectangle(_mouseState.X - 10, _mouseState.Y - 1, 20, 2), Color.White);
 
         spriteBatch.End();
     }

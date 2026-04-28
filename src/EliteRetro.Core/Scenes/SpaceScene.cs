@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Input;
 using EliteRetro.Core.Rendering;
 using EliteRetro.Core.Entities;
 using EliteRetro.Core.Managers;
+using EliteRetro.Core.Systems;
 
 namespace EliteRetro.Core.Scenes;
 
@@ -18,17 +19,23 @@ public class SpaceScene : GameScene
     private GameInstance _gameInstance = null!;
     private LocalBubbleManager _bubbleManager = null!;
     private float _cameraDistance = 80f;
-    private Vector3 _rotation = Vector3.Zero;
+    private FlightController _flightController = null!;
+    private OrientationMatrix _universeOrientation;
     private bool _paused;
     private bool _prevSpaceState;
     private bool _prevT;
     private bool _initialized;
     private Texture2D _pixelTexture = null!;
+    private int _tidyCounter;
 
     public SpaceScene(Game? game = null)
     {
         if (game is GameInstance gi)
+        {
             _gameInstance = gi;
+            _bubbleManager = gi.BubbleManager;
+        }
+        _flightController = new FlightController();
     }
 
     public override void LoadContent(ContentManager content, BitmapFont font)
@@ -54,7 +61,6 @@ public class SpaceScene : GameScene
 
         if (!_initialized && _gameInstance != null)
         {
-            _bubbleManager = _gameInstance.BubbleManager;
             _bubbleManager.Clear();
 
             // Slot 0: Planet
@@ -99,30 +105,43 @@ public class SpaceScene : GameScene
 
     public override void Update(GameTime gameTime)
     {
+        _flightController.Update(gameTime);
+
         var kb = Keyboard.GetState();
 
-        if ((kb.IsKeyDown(Keys.P) || kb.IsKeyDown(Keys.Space)) && !_prevSpaceState)
+        if (!_flightController.IsPaused)
         {
-            _paused = !_paused;
-        }
-        _prevSpaceState = kb.IsKeyDown(Keys.P) || kb.IsKeyDown(Keys.Space);
+            // Apply Minsky universe rotation to all entities
+            // Universe rotates opposite to player: pitch up = universe down, roll right = universe left
+            _universeOrientation.ApplyUniverseRotation(-_flightController.RollAngle, -_flightController.PitchAngle);
+            _bubbleManager.ApplyUniverseRotation(-_flightController.RollAngle, -_flightController.PitchAngle);
 
-        if (!_paused)
-        {
+            // Periodic TIDY orthonormalization
+            _tidyCounter++;
+            if (_tidyCounter >= 60)
+            {
+                _tidyCounter = 0;
+                _universeOrientation.Tidy();
+            }
+            _bubbleManager.TidyOne();
+
+            // Zoom with +/-
             float speed = 2f * (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            if (kb.IsKeyDown(Keys.Left)) _rotation.Y -= speed;
-            if (kb.IsKeyDown(Keys.Right)) _rotation.Y += speed;
-            if (kb.IsKeyDown(Keys.Up)) _rotation.X -= speed;
-            if (kb.IsKeyDown(Keys.Down)) _rotation.X += speed;
-            if (kb.IsKeyDown(Keys.Q)) _rotation.Z -= speed;
-            if (kb.IsKeyDown(Keys.W)) _rotation.Z += speed;
-
             if (kb.IsKeyDown(Keys.OemPlus) || kb.IsKeyDown(Keys.Add)) _cameraDistance -= speed;
             if (kb.IsKeyDown(Keys.OemMinus) || kb.IsKeyDown(Keys.Subtract)) _cameraDistance += speed;
             _cameraDistance = MathHelper.Clamp(_cameraDistance, 2f, 20f);
 
-            // Debug: press T to toggle station spawn
+            // Debug: T key for station spawn
+            if (kb.IsKeyDown(Keys.T) && !_prevT)
+            {
+                if (_bubbleManager.SunOrStation?.Blueprint?.Name == "Sun")
+                    SpawnStation();
+            }
+            _prevT = kb.IsKeyDown(Keys.T);
+        }
+        else
+        {
+            // Debug: T key still works when paused
             if (kb.IsKeyDown(Keys.T) && !_prevT)
             {
                 if (_bubbleManager.SunOrStation?.Blueprint?.Name == "Sun")
@@ -148,8 +167,7 @@ public class SpaceScene : GameScene
 
         // Draw a reference cube at origin to show rotation
         var cube = ShipModel.CreateCube(0.5f);
-        Matrix cubeWorld = Matrix.CreateRotationX(_rotation.X) * Matrix.CreateRotationY(_rotation.Y) * Matrix.CreateRotationZ(_rotation.Z);
-        _wireframeRenderer.Draw(cube, cubeWorld, _view, _projection, spriteBatch);
+        _wireframeRenderer.Draw(cube, _universeOrientation.ToMatrix4x4(), _view, _projection, spriteBatch);
 
         // Render bubble entities (skip planet and sun - rendered separately)
         foreach (var entity in _bubbleManager.GetAllActive())
@@ -159,9 +177,7 @@ public class SpaceScene : GameScene
                 entity.Blueprint.Name != "Sun")
             {
                 Matrix entityWorld = Matrix.CreateScale(0.0001f) *
-                                     Matrix.CreateRotationX(_rotation.X) *
-                                     Matrix.CreateRotationY(_rotation.Y) *
-                                     Matrix.CreateRotationZ(_rotation.Z) *
+                                     _universeOrientation.ToMatrix4x4() *
                                      Matrix.CreateTranslation(entity.Position * 0.0001f);
                 _wireframeRenderer.Draw(entity.Blueprint.Model, entityWorld, _view, _projection, spriteBatch);
             }
@@ -170,7 +186,7 @@ public class SpaceScene : GameScene
         // Draw planet as filled circle (temporary until PlanetRenderer is implemented)
         if (_bubbleManager.Planet != null)
         {
-            DrawCelestialBody(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(180, 100, 50));
+            DrawCelestialBody(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(50, 100, 180));
         }
 
         // Draw sun as filled circle (temporary until SunRenderer is implemented)
@@ -181,7 +197,7 @@ public class SpaceScene : GameScene
 
         _font.DrawString(spriteBatch, "SPACE VIEW", new Vector2(10, 10), Color.Lime, 1.5f);
         _font.DrawString(spriteBatch, $"Entities: {_bubbleManager.GetAllActive().Count()}", new Vector2(10, 30), Color.Cyan, 1f);
-        _font.DrawString(spriteBatch, "Arrows: Rotate  Q/W: Roll  +/-: Zoom  Space/P: Pause  T: Station", new Vector2(10, 50), Color.White, 1f);
+        _font.DrawString(spriteBatch, "Arrows U/D: Pitch  Q/W: Roll  +/-: Zoom  P: Pause  T: Station  V: View", new Vector2(10, 50), Color.White, 1f);
         if (_paused)
             _font.DrawString(spriteBatch, "PAUSED", new Vector2(10, 70), Color.Red, 1.5f);
         spriteBatch.End();
