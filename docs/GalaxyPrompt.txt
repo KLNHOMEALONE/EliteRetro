@@ -701,8 +701,7 @@ If the result of the above is less than 0, then the available quantity is set to
 The item's base_availability is byte #2 in the market prices table at QQ23, so it's 6 for food, 10 for textiles, 8 for narcotics and so on. The other variables are described above.
 
 
-also you can and you MUST examine other internal links in those pages if necessary
-save data in docs folder the file name should be galaxy_2.md
+
 
 
 
