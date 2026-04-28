@@ -58,7 +58,7 @@
 - [x] **4.3** Create `EllipseRenderer.cs` — conjugate-diameter ellipse, DrawEllipse(center, u, v, color), convenience method for axis-aligned
 - [x] **4.4** Create `PlanetRenderer.cs` — DrawCrater(), DrawMeridiansAndEquator(), feature visibility based on tech level
 - [x] **4.5** Create `SunRenderer.cs` — horizontal scan lines, random fringe, color schemes
-- [ ] **4.6** Create `RingRenderer.cs` — random points in elliptical band, planet occlusion check
+- [x] **4.6** Create `RingRenderer.cs` — random points in elliptical band, planet occlusion check
 - [ ] **4.7** Create `ExplosionRenderer.cs` — particle-based expanding/contracting cloud
 - [ ] **4.8** Create `StardustRenderer.cs` — starfield particles with perspective projection, roll/pitch effects
 - [ ] **4.9** Modify `WireframeRenderer` — add DrawCircle/DrawEllipse convenience methods

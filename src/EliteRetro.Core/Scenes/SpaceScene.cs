@@ -15,6 +15,7 @@ public class SpaceScene : GameScene
     private CircleRenderer _circleRenderer = null!;
     private PlanetRenderer _planetRenderer = null!;
     private SunRenderer _sunRenderer = null!;
+    private RingRenderer _ringRenderer = null!;
     private int _planetRotation;
     private int _planetRotationCounter;
     private Matrix _view;
@@ -57,6 +58,7 @@ public class SpaceScene : GameScene
         _circleRenderer = new CircleRenderer(_graphicsDevice);
         _planetRenderer = new PlanetRenderer(_graphicsDevice);
         _sunRenderer = new SunRenderer(_graphicsDevice);
+        _ringRenderer = new RingRenderer(_graphicsDevice);
         _projection = Matrix.CreatePerspectiveFieldOfView(
             MathHelper.ToRadians(75f),
             _graphicsDevice.Viewport.AspectRatio,
@@ -213,6 +215,8 @@ public class SpaceScene : GameScene
         if (_bubbleManager.Planet != null)
         {
             DrawCelestialPlanet(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(50, 100, 180));
+            // Draw rings around the planet
+            DrawCelestialRings(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(180, 160, 120));
         }
 
         // Draw sun with scan lines and fringe
@@ -229,6 +233,23 @@ public class SpaceScene : GameScene
         if (_paused)
             _font.DrawString(spriteBatch, "PAUSED", new Vector2(10, 70), Color.Red, 1.5f);
         spriteBatch.End();
+    }
+
+    private void DrawCelestialRings(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color)
+    {
+        Vector3 pos = worldPos * 0.0001f;
+        Vector3 projected = Vector3.Transform(pos, _view * _projection);
+        if (projected.Z == 0) return;
+
+        float ndcX = projected.X / projected.Z;
+        float ndcY = projected.Y / projected.Z;
+        var viewport = _graphicsDevice.Viewport;
+        float screenX = (ndcX + 1) / 2 * viewport.Width;
+        float screenY = (1 - ndcY) / 2 * viewport.Height;
+
+        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * viewport.Height / 2;
+        if (screenRadius > 0 && screenRadius < 500)
+            _ringRenderer.DrawAxisAlignedRings(spriteBatch, new Vector2(screenX, screenY), screenRadius, 1.4f, 2.2f, color);
     }
 
     private void DrawCelestialSun(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color)

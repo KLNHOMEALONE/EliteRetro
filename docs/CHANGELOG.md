@@ -26,6 +26,10 @@ All notable changes to this project.
   - Deterministic fringe particles (seeded by screen position, no flicker)
   - Color schemes: yellow (cool), white (medium), blue (hot)
   - Integrated into SpaceScene, replacing simple circle outline
+- **Phase 4.6: RingRenderer** — Saturn-style rings with random point particles
+  - Elliptical band with inner/outer radius, planet occlusion
+  - Deterministic particle placement (seeded, no flicker)
+  - Integrated into SpaceScene — planet now has rings
 - SpaceScene now uses CircleRenderer for planet and sun rendering (circle outlines instead of squares)
 - Corrected celestial body visual hierarchy — sun larger than planet, planet larger than wireframe cube
 
