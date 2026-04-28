@@ -14,6 +14,7 @@ public class SpaceScene : GameScene
     private WireframeRenderer _wireframeRenderer = null!;
     private CircleRenderer _circleRenderer = null!;
     private PlanetRenderer _planetRenderer = null!;
+    private SunRenderer _sunRenderer = null!;
     private int _planetRotation;
     private int _planetRotationCounter;
     private Matrix _view;
@@ -55,6 +56,7 @@ public class SpaceScene : GameScene
         _wireframeRenderer = new WireframeRenderer(_graphicsDevice);
         _circleRenderer = new CircleRenderer(_graphicsDevice);
         _planetRenderer = new PlanetRenderer(_graphicsDevice);
+        _sunRenderer = new SunRenderer(_graphicsDevice);
         _projection = Matrix.CreatePerspectiveFieldOfView(
             MathHelper.ToRadians(75f),
             _graphicsDevice.Viewport.AspectRatio,
@@ -213,10 +215,10 @@ public class SpaceScene : GameScene
             DrawCelestialPlanet(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(50, 100, 180));
         }
 
-        // Draw sun as circle
+        // Draw sun with scan lines and fringe
         if (_bubbleManager.SunOrStation != null && _bubbleManager.SunOrStation.Blueprint?.Name == "Sun")
         {
-            DrawCelestialCircle(spriteBatch, _bubbleManager.SunOrStation.Position, GameConstants.PlanetRadius * 6, new Color(255, 200, 50));
+            DrawCelestialSun(spriteBatch, _bubbleManager.SunOrStation.Position, GameConstants.PlanetRadius * 6, SunRenderer.GetSunColor(0));
         }
 
         _font.DrawString(spriteBatch, "SPACE VIEW", new Vector2(10, 10), Color.Lime, 1.5f);
@@ -227,6 +229,23 @@ public class SpaceScene : GameScene
         if (_paused)
             _font.DrawString(spriteBatch, "PAUSED", new Vector2(10, 70), Color.Red, 1.5f);
         spriteBatch.End();
+    }
+
+    private void DrawCelestialSun(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color)
+    {
+        Vector3 pos = worldPos * 0.0001f;
+        Vector3 projected = Vector3.Transform(pos, _view * _projection);
+        if (projected.Z == 0) return;
+
+        float ndcX = projected.X / projected.Z;
+        float ndcY = projected.Y / projected.Z;
+        var viewport = _graphicsDevice.Viewport;
+        float screenX = (ndcX + 1) / 2 * viewport.Width;
+        float screenY = (1 - ndcY) / 2 * viewport.Height;
+
+        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * viewport.Height / 2;
+        if (screenRadius > 0 && screenRadius < 500)
+            _sunRenderer.DrawSun(spriteBatch, new Vector2(screenX, screenY), screenRadius, color);
     }
 
     private void DrawCelestialCircle(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color)

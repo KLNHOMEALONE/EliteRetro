@@ -21,7 +21,11 @@ All notable changes to this project.
   - Spawn/despawn, bubble culling, safe zone trigger
   - Station orientation (faces planet), universe rotation broadcast
 - **Galaxy map improvements** — crosshair cursor, names on hover only, auto-centered view
-- **Phase 4.2: CircleRenderer** — parametric circle drawing using SineTable
+- **Phase 4.5: SunRenderer** — scan-line sun with corona fringe
+  - Horizontal scan lines with brightness falloff (Elite-style)
+  - Deterministic fringe particles (seeded by screen position, no flicker)
+  - Color schemes: yellow (cool), white (medium), blue (hot)
+  - Integrated into SpaceScene, replacing simple circle outline
 - SpaceScene now uses CircleRenderer for planet and sun rendering (circle outlines instead of squares)
 - Corrected celestial body visual hierarchy — sun larger than planet, planet larger than wireframe cube
 
