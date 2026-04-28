@@ -53,8 +53,8 @@
 
 ## Phase 4: Circle & Planet Rendering
 
-- [ ] **4.1** Create `SineTable.cs` — 64-entry sine lookup, Sin(step), Cos(step)
-- [ ] **4.2** Create `CircleRenderer.cs` — parametric circle drawing, DrawCircle(center, radius, color, stepSize), segment clipping
+- [x] **4.1** Create `SineTable.cs` — 64-entry sine lookup, Sin(step), Cos(step)
+- [x] **4.2** Create `CircleRenderer.cs` — parametric circle drawing, DrawCircle(center, radius, color, stepSize), segment clipping
 - [ ] **4.3** Create `EllipseRenderer.cs` — conjugate-diameter ellipse, DrawEllipse(center, u, v, color), convenience method for axis-aligned
 - [ ] **4.4** Create `PlanetRenderer.cs` — DrawCrater(), DrawMeridiansAndEquator(), feature visibility based on tech level
 - [ ] **4.5** Create `SunRenderer.cs` — horizontal scan lines, random fringe, color schemes
@@ -109,9 +109,9 @@
 
 ## Current Focus
 
-**Phase 3: Galaxy Generation** — COMPLETE. Tribonacci twist algorithm fully implemented with authentic name generation and system data derivation.
+**Phase 4: Circle & Planet Rendering** — IN PROGRESS. SineTable and CircleRenderer complete. Celestial bodies now render as circles in SpaceScene.
 
-**Next immediate task: Phase 4.1** Create `SineTable.cs` — 64-entry sine lookup for circle rendering.
+**Next immediate task: Phase 4.3** Create `EllipseRenderer.cs` — conjugate-diameter ellipse for planet surface features (equator, meridians).
 
 ---
 

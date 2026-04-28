@@ -21,7 +21,9 @@ All notable changes to this project.
   - Spawn/despawn, bubble culling, safe zone trigger
   - Station orientation (faces planet), universe rotation broadcast
 - **Galaxy map improvements** — crosshair cursor, names on hover only, auto-centered view
-- Design docs: Local Bubble system, Minsky flight physics, Galaxy Tribonacci generation, Ship blueprints, Circle/Planet rendering, Back-face culling
+- **Phase 4.2: CircleRenderer** — parametric circle drawing using SineTable
+- SpaceScene now uses CircleRenderer for planet and sun rendering (circle outlines instead of squares)
+- Corrected celestial body visual hierarchy — sun larger than planet, planet larger than wireframe cube
 
 ### Changed
 - Main menu: "LOAD COMMANDER" renamed to "GALAXY MAP"

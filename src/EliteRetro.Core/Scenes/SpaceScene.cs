@@ -12,6 +12,7 @@ namespace EliteRetro.Core.Scenes;
 public class SpaceScene : GameScene
 {
     private WireframeRenderer _wireframeRenderer = null!;
+    private CircleRenderer _circleRenderer = null!;
     private Matrix _view;
     private Matrix _projection;
     private BitmapFont _font = null!;
@@ -20,7 +21,7 @@ public class SpaceScene : GameScene
     private LocalBubbleManager _bubbleManager = null!;
     private float _cameraDistance = 80f;
     private FlightController _flightController = null!;
-    private OrientationMatrix _universeOrientation;
+    private OrientationMatrix _universeOrientation = OrientationMatrix.Identity;
     private bool _paused;
     private bool _prevSpaceState;
     private bool _prevT;
@@ -49,6 +50,7 @@ public class SpaceScene : GameScene
 
         _graphicsDevice = spriteBatch.GraphicsDevice;
         _wireframeRenderer = new WireframeRenderer(_graphicsDevice);
+        _circleRenderer = new CircleRenderer(_graphicsDevice);
         _projection = Matrix.CreatePerspectiveFieldOfView(
             MathHelper.ToRadians(75f),
             _graphicsDevice.Viewport.AspectRatio,
@@ -76,13 +78,13 @@ public class SpaceScene : GameScene
             };
             var planet = new ShipInstance(planetBlueprint)
             {
-                Position = new Vector3(0, 0, -GameConstants.PlanetRadius),
+                Position = new Vector3(-GameConstants.PlanetRadius * 3, 0, -GameConstants.PlanetRadius * 5),
                 Speed = 0
             };
             _bubbleManager.SetSlot(GameConstants.PlanetSlot, planet);
 
-            // Slot 1: Sun - placed off to the side for visibility
-            var sunModel = SunModel.Create(GameConstants.PlanetRadius * 3);
+            // Slot 1: Sun - much larger, placed more centrally
+            var sunModel = SunModel.Create(GameConstants.PlanetRadius * 80);
             var sunBlueprint = new ShipBlueprint
             {
                 Name = "Sun",
@@ -94,7 +96,7 @@ public class SpaceScene : GameScene
             };
             var sun = new ShipInstance(sunBlueprint)
             {
-                Position = new Vector3(30000, 0, -50000),
+                Position = new Vector3(0, 0, -GameConstants.PlanetRadius * 20),
                 Speed = 0
             };
             _bubbleManager.SetSlot(GameConstants.SunStationSlot, sun);
@@ -111,10 +113,8 @@ public class SpaceScene : GameScene
 
         if (!_flightController.IsPaused)
         {
-            // Apply Minsky universe rotation to all entities
-            // Universe rotates opposite to player: pitch up = universe down, roll right = universe left
+            // Apply Minsky rotation to the player's orientation
             _universeOrientation.ApplyUniverseRotation(-_flightController.RollAngle, -_flightController.PitchAngle);
-            _bubbleManager.ApplyUniverseRotation(-_flightController.RollAngle, -_flightController.PitchAngle);
 
             // Periodic TIDY orthonormalization
             _tidyCounter++;
@@ -150,7 +150,23 @@ public class SpaceScene : GameScene
             _prevT = kb.IsKeyDown(Keys.T);
         }
 
-        _view = Matrix.CreateLookAt(new Vector3(0, 0, _cameraDistance), Vector3.Zero, Vector3.Up);
+        // View matrix: camera at origin, looking forward along -Z.
+        // The player's orientation rotates the view direction.
+        // Build view matrix directly from orientation basis:
+        // In camera space, right = +X, up = +Y, forward = -Z.
+        // The orientation gives us: sidev = right, roofv = up, nosev = forward.
+        // View matrix = [sidev; roofv; -nosev] (3x3 rotation part).
+        // This is the transpose/inverse of [sidev | roofv | -nosev] as columns.
+        Vector3 side = _universeOrientation.Sidev;
+        Vector3 roof = _universeOrientation.Roofv;
+        Vector3 nose = _universeOrientation.Nosev;
+        // View matrix: rows are camera axes in world space
+        // Camera right = sidev, camera up = roofv, camera forward (toward -Z) = -nosev
+        _view = new Matrix(
+            side.X, side.Y, side.Z, 0,
+            roof.X, roof.Y, roof.Z, 0,
+            -nose.X, -nose.Y, -nose.Z, 0,
+            0, 0, 0, 1);
     }
 
     public override void Draw(SpriteBatch spriteBatch)
@@ -165,9 +181,10 @@ public class SpaceScene : GameScene
 
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
 
-        // Draw a reference cube at origin to show rotation
+        // Draw a reference cube (small, at moderate distance)
         var cube = ShipModel.CreateCube(0.5f);
-        _wireframeRenderer.Draw(cube, _universeOrientation.ToMatrix4x4(), _view, _projection, spriteBatch);
+        Matrix cubeWorld = Matrix.CreateTranslation(0, 0, -30);
+        _wireframeRenderer.Draw(cube, cubeWorld, _view, _projection, spriteBatch);
 
         // Render bubble entities (skip planet and sun - rendered separately)
         foreach (var entity in _bubbleManager.GetAllActive())
@@ -177,33 +194,34 @@ public class SpaceScene : GameScene
                 entity.Blueprint.Name != "Sun")
             {
                 Matrix entityWorld = Matrix.CreateScale(0.0001f) *
-                                     _universeOrientation.ToMatrix4x4() *
                                      Matrix.CreateTranslation(entity.Position * 0.0001f);
                 _wireframeRenderer.Draw(entity.Blueprint.Model, entityWorld, _view, _projection, spriteBatch);
             }
         }
 
-        // Draw planet as filled circle (temporary until PlanetRenderer is implemented)
+        // Draw planet as circle
         if (_bubbleManager.Planet != null)
         {
-            DrawCelestialBody(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(50, 100, 180));
+            DrawCelestialCircle(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(50, 100, 180));
         }
 
-        // Draw sun as filled circle (temporary until SunRenderer is implemented)
+        // Draw sun as circle
         if (_bubbleManager.SunOrStation != null && _bubbleManager.SunOrStation.Blueprint?.Name == "Sun")
         {
-            DrawCelestialBody(spriteBatch, _bubbleManager.SunOrStation.Position, GameConstants.PlanetRadius * 3, new Color(255, 200, 50));
+            DrawCelestialCircle(spriteBatch, _bubbleManager.SunOrStation.Position, GameConstants.PlanetRadius * 6, new Color(255, 200, 50));
         }
 
         _font.DrawString(spriteBatch, "SPACE VIEW", new Vector2(10, 10), Color.Lime, 1.5f);
         _font.DrawString(spriteBatch, $"Entities: {_bubbleManager.GetAllActive().Count()}", new Vector2(10, 30), Color.Cyan, 1f);
+        _font.DrawString(spriteBatch, $"Cam: ({_view.Translation.X:F1}, {_view.Translation.Y:F1}, {_view.Translation.Z:F1})", new Vector2(10, 300), Color.Magenta, 1f);
+        _font.DrawString(spriteBatch, $"Nose: ({_universeOrientation.Nosev.X:F2}, {_universeOrientation.Nosev.Y:F2}, {_universeOrientation.Nosev.Z:F2})", new Vector2(10, 320), Color.Yellow, 1f);
         _font.DrawString(spriteBatch, "Arrows U/D: Pitch  Q/W: Roll  +/-: Zoom  P: Pause  T: Station  V: View", new Vector2(10, 50), Color.White, 1f);
         if (_paused)
             _font.DrawString(spriteBatch, "PAUSED", new Vector2(10, 70), Color.Red, 1.5f);
         spriteBatch.End();
     }
 
-    private void DrawCelestialBody(SpriteBatch sb, Vector3 worldPos, float radius, Color color)
+    private void DrawCelestialCircle(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color)
     {
         Vector3 pos = worldPos * 0.0001f;
         Vector3 projected = Vector3.Transform(pos, _view * _projection);
@@ -217,7 +235,7 @@ public class SpaceScene : GameScene
 
         float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * viewport.Height / 2;
         if (screenRadius > 0 && screenRadius < 500)
-            DrawFilledCircle(sb, new Vector2(screenX, screenY), screenRadius, color);
+            _circleRenderer.DrawCircle(spriteBatch, new Vector2(screenX, screenY), screenRadius, color);
     }
 
     private void SpawnStation()
@@ -232,12 +250,6 @@ public class SpaceScene : GameScene
             HullStrength = 255,
             ShieldStrength = 255
         });
-    }
-
-    private void DrawFilledCircle(SpriteBatch sb, Vector2 center, float radius, Color color)
-    {
-        if (radius < 1) return;
-        sb.Draw(_pixelTexture, new Rectangle((int)(center.X - radius), (int)(center.Y - radius), (int)(radius * 2), (int)(radius * 2)), color);
     }
 
     public override void UnloadContent() { }
