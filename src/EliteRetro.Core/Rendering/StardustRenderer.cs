@@ -13,7 +13,8 @@ public class StardustRenderer
 {
     private readonly Texture2D _whitePixel;
     private readonly StarData[] _stars;
-    private const int StarCount = 200;
+    private const int StarCount = 400;
+    private float _currentSpeed;
 
     /// <summary>
     /// 16-bit sign-magnitude star coordinate.
@@ -42,99 +43,85 @@ public class StardustRenderer
 
         for (int i = 0; i < StarCount; i++)
         {
+            // Distribute stars uniformly in a sphere segment in front of the camera
+            // Use spherical coordinates for even distribution
+            float theta = (float)rng.NextDouble() * MathHelper.TwoPi; // 0 to 2π (azimuth)
+            float phi = (float)rng.NextDouble() * MathHelper.PiOver2; // 0 to π/2 (elevation, front hemisphere only)
+            float r = (float)rng.NextDouble() * 16000 + 384; // distance from 384 to 16383
+
+            int x = (int)(r * Math.Sin(phi) * Math.Cos(theta));
+            int y = (int)(r * Math.Sin(phi) * Math.Sin(theta));
+            int z = (int)(r * Math.Cos(phi));
+
             _stars[i] = new StarData
             {
-                X = (short)rng.Next(-16383, 16383),
-                Y = (short)rng.Next(-16383, 16383),
-                Z = (short)rng.Next(1, 16383),
-                Brightness = (byte)rng.Next(64, 255)
+                X = SignedToSignMag(Math.Clamp(x, -16383, 16383)),
+                Y = SignedToSignMag(Math.Clamp(y, -16383, 16383)),
+                Z = SignedToSignMag(Math.Clamp(z, 1, 16383)),
+                Brightness = (byte)rng.Next(128, 255)
             };
         }
     }
 
     /// <summary>
-    /// Update star positions based on player speed and rotation.
+    /// Update star positions based on player speed.
+    /// Roll and pitch are handled by the universe orientation matrix, not here.
     /// </summary>
-    /// <param name="speed">Player forward speed (positive = forward).</param>
-    /// <param name="rollAngle">Roll angle in 1/256 rad units.</param>
-    /// <param name="pitchAngle">Pitch angle in 1/256 rad units.</param>
-    /// <param name="viewMode">0=front, 1=rear, 2=left, 3=right.</param>
-    public void Update(float speed, int rollAngle, int pitchAngle, int viewMode)
+    public void Update(float speed)
     {
-        float alpha = rollAngle / 256f;   // Roll in radians (approx)
-        float beta = pitchAngle / 256f;    // Pitch in radians (approx)
+        _currentSpeed = speed;
+
+        // Scale speed so that ship speed 5 produces the same stardust motion as speed 40 did before
+        // Original max zDelta was 10 * 64 = 640. At speed 5: 5 * factor * 64 = 640 → factor = 2
+        // So effective speed = speed * 8, capped at 40 equivalent
+        float effectiveSpeed = Math.Min(speed * 8f, 40f);
 
         for (int i = 0; i < StarCount; i++)
         {
             ref StarData s = ref _stars[i];
 
-            // Extract sign-magnitude values
+            // Extract signed values from sign-magnitude
             int sx = SignMagToSigned(s.X);
             int sy = SignMagToSigned(s.Y);
             int sz = SignMagToSigned(s.Z);
 
             if (sz <= 0) continue;
 
-            int zHi = (sz >> 8) & 0x7F;
-            if (zHi == 0) zHi = 1;
+            // Forward motion: Z decreases by effective speed
+            int zDelta = (int)(effectiveSpeed * 64 / 40f);
+            int oldZ = sz;
+            sz -= zDelta;
 
-            // Forward motion: q = 64 * speed / z_hi
-            float q = 64f * speed / zHi;
-
-            // Z decreases by speed * 64
-            sz -= (int)(speed * 64);
-
-            // Y expands: y += |y_hi| * q
-            int yHi = Math.Abs((s.Y >> 8) & 0x7F);
-            sy += (int)(yHi * q);
-
-            // X expands: x += |x_hi| * q
-            int xHi = Math.Abs((s.X >> 8) & 0x7F);
-            sx += (int)(xHi * q);
-
-            // Roll: y += alpha * x / 256; x -= alpha * y / 256
-            sy += (int)(alpha * sx / 256f);
-            sx -= (int)(alpha * sy / 256f);
-
-            // Pitch: y -= beta * 256; x += 2 * (beta * y / 256)^2
-            sy -= (int)(beta * 256);
-            float pitchOffset = beta * sy / 256f;
-            sx += (int)(2 * pitchOffset * pitchOffset);
-
-            // View switching transformations
-            switch (viewMode)
+            // Perspective expansion: as stars get closer, they spread outward
+            if (sz > 0 && effectiveSpeed > 0)
             {
-                case 1: // Rear view: invert X and Z
-                    sx = -sx;
-                    sz = -sz;
-                    break;
-                case 2: // Left view: swap X/Z, invert X
-                    {
-                        int tmp = sx;
-                        sx = -sz;
-                        sz = tmp;
-                    }
-                    break;
-                case 3: // Right view: swap X/Z, invert Z
-                    {
-                        int tmp = sx;
-                        sx = sz;
-                        sz = -tmp;
-                    }
-                    break;
+                if (oldZ > 0)
+                {
+                    float expand = oldZ / (float)sz;
+                    // Clamp expansion to prevent extreme jumps
+                    expand = Math.Clamp(expand, 1f, 1.5f);
+                    sx = (int)(sx * expand);
+                    sy = (int)(sy * expand);
+                }
             }
 
-            // Wrap around on overflow
-            if (sz <= 0 || sz > 16383)
-            {
-                sz = 16383;
-                sx = (short)(-16383 + (i * 137) % 32766);
-                sy = (short)(-16383 + (i * 251) % 32766);
-            }
+            // Note: Roll and pitch are handled by the universe orientation matrix
+            // (ApplyUniverseRotation), not here. Stardust positions are in world space.
 
-            // Clamp X/Y to prevent extreme values
+            // Clamp to prevent overflow
             sx = Math.Clamp(sx, -16383, 16383);
             sy = Math.Clamp(sy, -16383, 16383);
+
+            // Wrap around: if star goes too far or behind camera, respawn in distance
+            if (sz <= 0 || sz > 16383 || Math.Abs(sx) > 16000 || Math.Abs(sy) > 16000)
+            {
+                // Respawn at far distance with random X/Y
+                float theta = (float)(s.Brightness * 0.0245 + i * 0.001);
+                float r = 14000 + (s.Brightness % 2000);
+                sx = (int)(r * Math.Sin(theta) * Math.Cos(theta * 7));
+                sy = (int)(r * Math.Sin(theta) * Math.Sin(theta * 7));
+                sz = (int)r;
+            }
 
             // Store back as sign-magnitude
             s.X = SignedToSignMag(sx);
@@ -170,17 +157,40 @@ public class StardustRenderer
             // Star size: closer stars are larger
             int size = z < 200 ? 3 : z < 1000 ? 2 : 1;
 
-            // Brightness: closer stars are brighter
-            float brightness = s.Brightness / 255f * Math.Clamp(1.0f - z / 16384f, 0.2f, 1.0f);
+            // At high speed, stars stretch into dashes (motion blur effect)
+            float speedFactor = Math.Max(0, _currentSpeed - 7f) / 33f; // 0 at speed 7, 1 at speed 40
+            speedFactor = Math.Min(speedFactor, 1f); // clamp at speed 40+
+            int dashLength = 1 + (int)(speedFactor * 8); // 1 to 9 pixels long
+
+            // Brightness: closer stars are brighter, with higher base brightness
+            float brightness = s.Brightness / 255f * Math.Clamp(1.0f - z / 16384f, 0.4f, 1.0f);
+            brightness = Math.Clamp(brightness * 1.5f * (1f + speedFactor * 0.5f), 0.1f, 1.0f);
 
             Color starColor = new Color(
                 (int)(255 * brightness),
                 (int)(255 * brightness),
                 (int)(255 * brightness));
 
-            spriteBatch.Draw(_whitePixel,
-                new Rectangle((int)screenX, (int)screenY, size, size),
-                starColor);
+            if (dashLength > 1)
+            {
+                // Draw star as a dash (line) radiating from screen center
+                Vector2 dir = Vector2.Normalize(new Vector2((float)(screenX - center.X), (float)(screenY - center.Y)));
+                if (dir.Length() < 0.01f) dir = Vector2.UnitX; // center star edge case
+                Vector2 start = new Vector2(screenX, screenY) - dir * dashLength / 2f;
+                Vector2 end = new Vector2(screenX, screenY) + dir * dashLength / 2f;
+
+                // Draw line using rotation
+                float angle = (float)Math.Atan2(end.Y - start.Y, end.X - start.X);
+                float length = dashLength;
+                spriteBatch.Draw(_whitePixel, start, null, starColor, angle, Vector2.Zero,
+                    new Vector2(length, 1), SpriteEffects.None, 0);
+            }
+            else
+            {
+                spriteBatch.Draw(_whitePixel,
+                    new Rectangle((int)screenX, (int)screenY, size, size),
+                    starColor);
+            }
         }
     }
 

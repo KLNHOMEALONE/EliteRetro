@@ -18,7 +18,7 @@ public class MenuScene : GameScene
         _game = game;
     }
 
-    public override void LoadContent(ContentManager content, BitmapFont font)
+    public override void LoadContent(ContentManager content, BitmapFont font, GraphicsDevice graphicsDevice)
     {
         _font = font;
     }

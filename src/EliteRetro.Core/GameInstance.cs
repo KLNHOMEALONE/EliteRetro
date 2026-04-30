@@ -56,7 +56,7 @@ public class GameInstance : Game
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _font = new BitmapFont(GraphicsDevice);
-        _sceneManager.ChangeScene(new MainMenuScene(this), Content, this, _font);
+        _sceneManager.ChangeScene(new MainMenuScene(this), Content, GraphicsDevice, this, _font);
     }
 
     protected override void Update(GameTime gameTime)

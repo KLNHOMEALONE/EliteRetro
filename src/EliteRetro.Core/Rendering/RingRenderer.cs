@@ -190,8 +190,9 @@ public class RingRenderer
     }
 
     /// <summary>
-    /// Draw rings with axis-aligned ellipse (no tilt rotation, horizontal rings).
+    /// Draw rings with optional tilt rotation.
     /// </summary>
+    /// <param name="tiltAngle">Ring tilt in 1/64-turn units (0-63). Default 16 = 90 degrees (horizontal).</param>
     /// <param name="layer">Which half to draw: "back" for behind planet, "front" for in front, "all" for both.</param>
     public void DrawAxisAlignedRings(
         SpriteBatch spriteBatch,
@@ -200,6 +201,7 @@ public class RingRenderer
         float innerRadius,
         float outerRadius,
         Color color,
+        int tiltAngle = 16,
         string layer = "all")
     {
         if (planetRadius <= 0 || outerRadius <= innerRadius) return;
@@ -207,12 +209,14 @@ public class RingRenderer
         float inner = planetRadius * innerRadius;
         float outer = planetRadius * outerRadius;
 
+        var (sin, cos) = SineTable.SinCos(tiltAngle);
+
         // Draw concentric elliptical rings for structure
         int ringCount = Math.Clamp((int)((outer - inner) / 8), 3, 6);
         for (int r = 0; r < ringCount; r++)
         {
             float t = inner + (outer - inner) * r / Math.Max(ringCount - 1, 1);
-            DrawAxisAlignedEllipticalRing(spriteBatch, center, t, color, planetRadius, layer);
+            DrawEllipticalRing(spriteBatch, center, t, color, sin, cos, planetRadius, layer);
         }
 
         // Draw scattered points for texture
@@ -220,7 +224,7 @@ public class RingRenderer
         pointCount = Math.Clamp(pointCount, 20, 150);
 
         // Seed from screen position for stable particles (no flicker)
-        int seed = HashCode.Combine((int)center.X, (int)center.Y, (int)planetRadius);
+        int seed = HashCode.Combine((int)center.X, (int)center.Y, (int)planetRadius, tiltAngle);
         Random rng = new Random(seed);
 
         for (int i = 0; i < pointCount; i++)
@@ -231,15 +235,19 @@ public class RingRenderer
             float ex = (float)Math.Cos(angle) * radius;
             float ey = (float)Math.Sin(angle) * radius * 0.4f;
 
+            // Rotate into tilt
+            float rx = cos * ex - sin * ey;
+            float ry = sin * ex + cos * ey;
+
             // Only draw requested layer
-            bool isBack = ey < 0;
+            bool isBack = ry < 0;
             if (layer == "front" && isBack) continue;
             if (layer == "back" && !isBack) continue;
 
-            Vector2 pos = center + new Vector2(ex, ey);
+            Vector2 pos = center + new Vector2(rx, ry);
 
             // Occlusion: back half segments behind planet disk are hidden
-            float screenDistSq = ex * ex + ey * ey;
+            float screenDistSq = rx * rx + ry * ry;
             if (isBack && screenDistSq < planetRadius * planetRadius)
                 continue;
 

@@ -35,8 +35,8 @@ public static class GameConstants
     public const int TidyInterval = 64; // TIDY every N frames per entity (round-robin)
 
     // --- Flight ---
-    public const float RollMax = 0.125f;     // max roll per frame (angle/256)
-    public const float PitchMax = 0.03125f;  // max pitch per frame (angle/256)
+    public const float RollMax = 0.025f;     // max roll per frame at 60fps (≈1.5 rad/sec)
+    public const float PitchMax = 0.025f;    // max pitch per frame at 60fps (same rate as roll)
     public const float AiRotationAngle = 1f / 16f; // 3.6 degrees for NPC rotation
 
     // --- Galaxy ---

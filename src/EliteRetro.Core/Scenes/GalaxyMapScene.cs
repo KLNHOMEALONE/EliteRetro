@@ -21,7 +21,7 @@ public class GalaxyMapScene : GameScene
     {
     }
 
-    public override void LoadContent(ContentManager content, BitmapFont font)
+    public override void LoadContent(ContentManager content, BitmapFont font, GraphicsDevice graphicsDevice)
     {
         _font = font;
         var generator = new GalaxyGenerator();

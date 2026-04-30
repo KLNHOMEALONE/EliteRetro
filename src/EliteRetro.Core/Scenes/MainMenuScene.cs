@@ -21,6 +21,7 @@ public class MainMenuScene : GameScene
     private readonly string[] _menuItems = {
         "COMBAT RATING",
         "START NEW GAME",
+        "SPACE VIEW",
         "GALAXY MAP",
         "TOP PILOTS",
         "OPTIONS",
@@ -39,9 +40,18 @@ public class MainMenuScene : GameScene
         _game = game;
     }
 
-    public override void LoadContent(ContentManager content, BitmapFont font)
+    public override void LoadContent(ContentManager content, BitmapFont font, GraphicsDevice graphicsDevice)
     {
         _font = font;
+        _graphicsDevice = graphicsDevice;
+        _wireframeRenderer = new WireframeRenderer(_graphicsDevice);
+        _projection = Matrix.CreatePerspectiveFieldOfView(
+            MathHelper.PiOver4,
+            _graphicsDevice.Viewport.AspectRatio,
+            0.1f, 1000f);
+        // Camera positioned to show ship in top 2/3
+        _view = Matrix.CreateLookAt(new Vector3(0, 10f, 6), new Vector3(0, -1f, 0), Vector3.Up);
+
         _shipModels.Add(("Cobra Mk3", size => CobraMk3Model.Create(size)));
         _shipModels.Add(("Coriolis", size => CoriolisStationModel.Create(size / 2f)));
         _shipModels.Add(("Missile", size => MissileModel.Create(size)));
@@ -75,20 +85,6 @@ public class MainMenuScene : GameScene
         _currentModelIndex = 0;
         _cobraModel = _shipModels[_currentModelIndex].Create(2.4f);
         _world = Matrix.Identity;
-    }
-
-    private void EnsureInitialized(SpriteBatch spriteBatch)
-    {
-        if (_graphicsDevice != null) return;
-
-        _graphicsDevice = spriteBatch.GraphicsDevice;
-        _wireframeRenderer = new WireframeRenderer(_graphicsDevice);
-        _projection = Matrix.CreatePerspectiveFieldOfView(
-            MathHelper.PiOver4,
-            _graphicsDevice.Viewport.AspectRatio,
-            0.1f, 1000f);
-        // Camera positioned to show ship in top 2/3
-        _view = Matrix.CreateLookAt(new Vector3(0, 10f, 6), new Vector3(0, -1f, 0), Vector3.Up);
     }
 
     public override void Update(GameTime gameTime)
@@ -143,15 +139,19 @@ public class MainMenuScene : GameScene
                 int idx = Array.IndexOf(_ratings, _currentRating);
                 _currentRating = _ratings[(idx + 1) % _ratings.Length];
                 break;
-            case 1: // Start New Game
+            case 1: // Start New Game → FlightScene
                 if (_game is GameInstance gi)
-                    gi.ChangeScene(new SpaceScene(gi));
+                    gi.ChangeScene(new FlightScene(gi));
                 break;
-            case 2: // Galaxy Map
+            case 2: // Space View → SpaceScene (visual test)
                 if (_game is GameInstance gi2)
-                    gi2.ChangeScene(new GalaxyMapScene());
+                    gi2.ChangeScene(new SpaceScene(gi2));
                 break;
-            case 5: // Quit
+            case 3: // Galaxy Map
+                if (_game is GameInstance gi3)
+                    gi3.ChangeScene(new GalaxyMapScene());
+                break;
+            case 6: // Quit
                 _game?.Exit();
                 break;
         }
@@ -159,8 +159,6 @@ public class MainMenuScene : GameScene
 
     public override void Draw(SpriteBatch spriteBatch)
     {
-        EnsureInitialized(spriteBatch);
-
         // Draw wireframe ship - takes up top 2/3 of screen
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
         _wireframeRenderer.Draw(_cobraModel, _world, _view, _projection, spriteBatch, useBackFaceCulling: true);

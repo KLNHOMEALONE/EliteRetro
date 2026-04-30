@@ -11,17 +11,19 @@ public class SceneManager
     private GameScene? _nextScene;
     private ContentManager _content = null!;
     private BitmapFont _font = null!;
+    private GraphicsDevice _graphicsDevice = null!;
     private Game? _game;
     private bool _prevEscape;
 
-    public void ChangeScene(GameScene newScene, ContentManager content, Game? game = null, BitmapFont? font = null)
+    public void ChangeScene(GameScene newScene, ContentManager content, GraphicsDevice graphicsDevice, Game? game = null, BitmapFont? font = null)
     {
         _sceneStack.Clear();
         _content = content;
+        _graphicsDevice = graphicsDevice;
         _game = game;
         if (font != null) _font = font;
 
-        newScene.LoadContent(content, _font);
+        newScene.LoadContent(content, _font, graphicsDevice);
         _sceneStack.Push(newScene);
     }
 
@@ -47,7 +49,7 @@ public class SceneManager
         // Handle queued scene push
         if (_nextScene != null)
         {
-            _nextScene.LoadContent(_content, _font);
+            _nextScene.LoadContent(_content, _font, _graphicsDevice);
             _sceneStack.Push(_nextScene);
             _nextScene = null;
         }

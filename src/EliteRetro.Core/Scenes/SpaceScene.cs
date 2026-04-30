@@ -24,8 +24,7 @@ public class SpaceScene : GameScene
     private GraphicsDevice? _graphicsDevice;
     private GameInstance _gameInstance = null!;
     private LocalBubbleManager _bubbleManager = null!;
-    private float _cameraDistance = 80f;
-    private FlightController _flightController = null!;
+    private FlightControlService _flightControlService = null!;
     private OrientationMatrix _universeOrientation = OrientationMatrix.Identity;
     private bool _paused;
     private bool _prevSpaceState;
@@ -33,6 +32,7 @@ public class SpaceScene : GameScene
     private bool _initialized;
     private Texture2D _pixelTexture = null!;
     private int _tidyCounter;
+    private float _cumulativeRoll; // accumulated roll angle in radians, for planet/ring counter-rotation
 
     public SpaceScene(Game? game = null)
     {
@@ -41,19 +41,13 @@ public class SpaceScene : GameScene
             _gameInstance = gi;
             _bubbleManager = gi.BubbleManager;
         }
-        _flightController = new FlightController();
+        _flightControlService = new FlightControlService();
     }
 
-    public override void LoadContent(ContentManager content, BitmapFont font)
+    public override void LoadContent(ContentManager content, BitmapFont font, GraphicsDevice graphicsDevice)
     {
         _font = font;
-    }
-
-    private void EnsureInitialized(SpriteBatch spriteBatch)
-    {
-        if (_graphicsDevice != null) return;
-
-        _graphicsDevice = spriteBatch.GraphicsDevice;
+        _graphicsDevice = graphicsDevice;
         _wireframeRenderer = new WireframeRenderer(_graphicsDevice);
         _circleRenderer = new CircleRenderer(_graphicsDevice);
         _planetRenderer = new PlanetRenderer(_graphicsDevice);
@@ -63,13 +57,18 @@ public class SpaceScene : GameScene
             MathHelper.ToRadians(75f),
             _graphicsDevice.Viewport.AspectRatio,
             0.1f, 1000f);
-        _view = Matrix.CreateLookAt(new Vector3(0, 0, _cameraDistance), Vector3.Zero, Vector3.Up);
+        _view = Matrix.CreateLookAt(new Vector3(0, 0, 5), Vector3.Zero, Vector3.Up);
 
         // Create 1x1 white pixel texture for drawing celestial bodies
         _pixelTexture = new Texture2D(_graphicsDevice, 1, 1);
         _pixelTexture.SetData(new[] { Color.White });
+    }
 
-        if (!_initialized && _gameInstance != null)
+    private void EnsureInitialized()
+    {
+        if (_initialized) return;
+
+        if (_gameInstance != null)
         {
             _bubbleManager.Clear();
 
@@ -115,14 +114,20 @@ public class SpaceScene : GameScene
 
     public override void Update(GameTime gameTime)
     {
-        _flightController.Update(gameTime);
-
+        var control = _flightControlService.Update(gameTime);
         var kb = Keyboard.GetState();
 
-        if (!_flightController.IsPaused)
+        if (!control.IsPaused)
         {
-            // Apply Minsky rotation to the player's orientation
-            _universeOrientation.ApplyUniverseRotation(-_flightController.RollAngle, -_flightController.PitchAngle);
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Apply Minsky rotation to the player's orientation (frame-rate independent)
+            float rollDelta = -control.RollAngle * dt * 60f;
+            float pitchDelta = -control.PitchAngle * dt * 60f;
+            _universeOrientation.ApplyUniverseRotation(rollDelta, pitchDelta);
+
+            // Track cumulative roll for planet/ring counter-rotation
+            _cumulativeRoll += rollDelta;
 
             // Periodic TIDY orthonormalization
             _tidyCounter++;
@@ -136,12 +141,6 @@ public class SpaceScene : GameScene
             // Slow planet rotation (1 full rotation every ~32 seconds at 60fps)
             if (_planetRotationCounter++ % 32 == 0)
                 _planetRotation = (_planetRotation + 1) % 64;
-
-            // Zoom with +/-
-            float speed = 2f * (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (kb.IsKeyDown(Keys.OemPlus) || kb.IsKeyDown(Keys.Add)) _cameraDistance -= speed;
-            if (kb.IsKeyDown(Keys.OemMinus) || kb.IsKeyDown(Keys.Subtract)) _cameraDistance += speed;
-            _cameraDistance = MathHelper.Clamp(_cameraDistance, 2f, 20f);
 
             // Debug: T key for station spawn
             if (kb.IsKeyDown(Keys.T) && !_prevT)
@@ -163,15 +162,12 @@ public class SpaceScene : GameScene
         }
 
         // View matrix: camera at origin, looking forward along -Z.
-        // The player's orientation rotates the view direction.
-        // Build view matrix directly from orientation basis:
-        // In camera space, right = +X, up = +Y, forward = -Z.
-        // The orientation gives us: sidev = right, roofv = up, nosev = forward.
-        // View matrix = [sidev; roofv; -nosev] (3x3 rotation part).
-        // This is the transpose/inverse of [sidev | roofv | -nosev] as columns.
+        // The orientation matrix defines the camera's direction (nosev = forward, roofv = up, sidev = right).
+        // This is the same construction as FlightScene for consistent controls.
         Vector3 side = _universeOrientation.Sidev;
         Vector3 roof = _universeOrientation.Roofv;
         Vector3 nose = _universeOrientation.Nosev;
+
         // View matrix: rows are camera axes in world space
         // Camera right = sidev, camera up = roofv, camera forward (toward -Z) = -nosev
         _view = new Matrix(
@@ -183,7 +179,7 @@ public class SpaceScene : GameScene
 
     public override void Draw(SpriteBatch spriteBatch)
     {
-        EnsureInitialized(spriteBatch);
+        EnsureInitialized();
 
         if (_graphicsDevice != null)
             _graphicsDevice.Clear(Color.Black);
@@ -214,14 +210,19 @@ public class SpaceScene : GameScene
         // Draw planet with surface features
         if (_bubbleManager.Planet != null)
         {
-            // Draw back half of rings first (behind planet)
-            DrawCelestialRings(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(180, 160, 120), "back");
+            // Convert cumulative roll to 0-63 units (1/64-turn)
+            // Negative roll (left) → planet features rotate right (counter-rotation)
+            int rollAngle64 = ((int)(_cumulativeRoll * 64 / MathHelper.TwoPi) % 64 + 64) % 64;
+            int totalPlanetRotation = (_planetRotation + rollAngle64) % 64;
 
-            // Draw planet on top of back rings
-            DrawCelestialPlanet(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(50, 100, 180));
+            // Draw back half of rings first (behind planet, with counter-rotation)
+            DrawCelestialRings(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(180, 160, 120), "back", rollAngle64);
 
-            // Draw front half of rings on top of planet
-            DrawCelestialRings(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(180, 160, 120), "front");
+            // Draw planet on top of back rings (with counter-rotation)
+            DrawCelestialPlanet(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(50, 100, 180), totalPlanetRotation);
+
+            // Draw front half of rings on top of planet (with counter-rotation)
+            DrawCelestialRings(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(180, 160, 120), "front", rollAngle64);
         }
 
         // Draw sun with scan lines and fringe
@@ -234,13 +235,13 @@ public class SpaceScene : GameScene
         _font.DrawString(spriteBatch, $"Entities: {_bubbleManager.GetAllActive().Count()}", new Vector2(10, 30), Color.Cyan, 1f);
         _font.DrawString(spriteBatch, $"Cam: ({_view.Translation.X:F1}, {_view.Translation.Y:F1}, {_view.Translation.Z:F1})", new Vector2(10, 300), Color.Magenta, 1f);
         _font.DrawString(spriteBatch, $"Nose: ({_universeOrientation.Nosev.X:F2}, {_universeOrientation.Nosev.Y:F2}, {_universeOrientation.Nosev.Z:F2})", new Vector2(10, 320), Color.Yellow, 1f);
-        _font.DrawString(spriteBatch, "Arrows U/D: Pitch  Q/W: Roll  +/-: Zoom  P: Pause  T: Station  V: View", new Vector2(10, 50), Color.White, 1f);
+        _font.DrawString(spriteBatch, "Arrows: Pitch/Roll  +/-: Zoom  P: Pause  T: Station  V: View", new Vector2(10, 50), Color.White, 1f);
         if (_paused)
             _font.DrawString(spriteBatch, "PAUSED", new Vector2(10, 70), Color.Red, 1.5f);
         spriteBatch.End();
     }
 
-    private void DrawCelestialRings(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color, string layer = "all")
+    private void DrawCelestialRings(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color, string layer = "all", int tiltAngle = 16)
     {
         Vector3 pos = worldPos * 0.0001f;
         Vector3 projected = Vector3.Transform(pos, _view * _projection);
@@ -254,7 +255,7 @@ public class SpaceScene : GameScene
 
         float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * viewport.Height / 2;
         if (screenRadius > 0 && screenRadius < 500)
-            _ringRenderer.DrawAxisAlignedRings(spriteBatch, new Vector2(screenX, screenY), screenRadius, 1.4f, 2.2f, color, layer);
+            _ringRenderer.DrawAxisAlignedRings(spriteBatch, new Vector2(screenX, screenY), screenRadius, 1.4f, 2.2f, color, tiltAngle, layer);
     }
 
     private void DrawCelestialSun(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color)
@@ -291,7 +292,7 @@ public class SpaceScene : GameScene
             _circleRenderer.DrawCircle(spriteBatch, new Vector2(screenX, screenY), screenRadius, color);
     }
 
-    private void DrawCelestialPlanet(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color)
+    private void DrawCelestialPlanet(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color, int rotationAngle = 0)
     {
         Vector3 pos = worldPos * 0.0001f;
         Vector3 projected = Vector3.Transform(pos, _view * _projection);
@@ -305,7 +306,7 @@ public class SpaceScene : GameScene
 
         float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * viewport.Height / 2;
         if (screenRadius > 0 && screenRadius < 500)
-            _planetRenderer.DrawPlanet(spriteBatch, new Vector2(screenX, screenY), screenRadius, color, _planetRotation);
+            _planetRenderer.DrawPlanet(spriteBatch, new Vector2(screenX, screenY), screenRadius, color, rotationAngle);
     }
 
     private void SpawnStation()

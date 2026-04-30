@@ -35,6 +35,12 @@ public class ShipInstance
     /// <summary>Entity is alive and active.</summary>
     public bool IsActive;
 
+    /// <summary>Lifetime in frames. Entity auto-despawns after MaxLifetime frames.</summary>
+    public int LifetimeFrames;
+
+    /// <summary>Maximum lifetime in frames (60fps = 1 second). 3600 = 60 seconds.</summary>
+    public const int MaxLifetime = 3600;
+
     /// <summary>Missiles locked on this ship.</summary>
     public bool IsMissileTarget;
 

@@ -39,7 +39,7 @@ All notable changes to this project.
   - SunRenderer: scan-line sun with corona fringe
   - RingRenderer: Saturn-style rings with concentric elliptical bands + particle texture, proper planet occlusion (front/back layer separation)
   - ExplosionRenderer: vertex-based particle clouds with counter-driven lifecycle (expand→contract)
-  - StardustRenderer: 200-star particle system with 16-bit sign-magnitude coords, authentic motion model
+  - StardustRenderer: 400-star particle system with 16-bit sign-magnitude coords, perspective expansion, roll/pitch transforms, speed-based dash effects
   - WireframeRenderer: added DrawCircle/DrawEllipse convenience methods
 - **Galaxy map improvements** — crosshair cursor, names on hover only, auto-centered view
 - SpaceScene now uses CircleRenderer for planet and sun rendering (circle outlines instead of squares)
@@ -57,6 +57,62 @@ All notable changes to this project.
 - Texture2D creation per frame in DrawFilledCircle (now cached)
 - Integer overflow in LocalBubbleManager (BubbleRadius² exceeded int range)
 - Back-face culling freeze on large models
+
+---
+
+## [0.3.0] — Unreleased
+
+### Added
+- **FlightScene** — main gameplay scene with first-person cockpit view
+  - Player at origin (0,0,0), universe moves around them
+  - Planet in slot 0, sun in slot 1, player flies toward planet
+  - Safe zone trigger spawns Coriolis station, removes sun
+  - Sun proximity effects (heat warning, fuel scoop, fatal)
+  - View switching (V key): Front, Rear, Left, Right
+  - Speed control (W/S keys), zoom (+/-)
+  - HUD overlay: view mode, speed, planet/sun distances, sun status, station status, controls
+  - Entity lifecycle events displayed on HUD (spawn/despawn notifications)
+
+- **FlightControlService** — unified input processing for consistent controls across all scenes
+  - Replaced FlightController with frame-rate independent control state
+  - Arrow keys: Left/Right = roll, Up/Down = pitch (inverted: Down = pitch up)
+  - W/S = speed increase/decrease
+  - V = view switch, P/Space = pause
+  - Same control behavior in FlightScene and SpaceScene
+
+- **Stardust improvements**
+  - Speed-based dash effect: dashes start at speed 7, scale to max at speed 40
+  - Brighter stars with distance-based brightness
+  - Perspective expansion as stars approach
+  - Roll/pitch handled via universe orientation (no double-rotation)
+
+- **Random ship/asteroid spawning** in FlightScene
+  - Ships: Sidewinder, Viper, Cobra Mk3, Python
+  - Asteroids: Asteroid, Boulder
+  - 50% fly toward player (nose-first), 50% fly toward planet (nose-first)
+  - Size: 16-32 units (large, easily visible)
+  - Lifetime: 60 seconds max, or despawn when leaving bubble boundary
+  - Spawn rate: ~1 per 3 seconds (30% chance every 180 frames)
+
+- **Planet counter-rotation** — planet surface features and rings rotate opposite to ship roll
+  - Cumulative roll angle tracked and applied to planet/ring rendering
+  - Consistent behavior in both FlightScene and SpaceScene
+
+- **Entity orientation in world matrix** — ships rendered with proper 3D orientation
+  - World matrix includes entity's orientation (sidev/roofv/nosev as columns)
+  - Ships fly nose-first in their direction of travel
+
+### Changed
+- PitchMax increased to match RollMax (0.125 rad/frame at 60fps) for unified control feel
+- Flight controls are frame-rate independent (dt-scaled)
+- SpaceScene uses same view matrix construction as FlightScene (pure rotation, no orbital camera)
+- Stardust no longer applies its own roll/pitch (universe orientation handles it)
+
+### Fixed
+- View switching (V key) now persists across frames
+- Ship orientation now correctly included in world matrix for rendering
+- Entity positions no longer rotated by ApplyUniverseRotation (only view rotates)
+- Ships flying toward player now properly face nose-first
 
 ---
 

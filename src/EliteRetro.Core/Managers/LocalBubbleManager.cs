@@ -4,6 +4,15 @@ using Microsoft.Xna.Framework;
 namespace EliteRetro.Core.Managers;
 
 /// <summary>
+/// Event args for entity lifecycle events (spawn/despawn).
+/// </summary>
+public class EntityEventArgs : EventArgs
+{
+    public string EntityName { get; init; }
+    public string Reason { get; init; } // "spawned", "lifetime", "out_of_bounds"
+}
+
+/// <summary>
 /// Manages entities within the player's local bubble (renderable area).
 /// Uses a fixed slot array: slot 0 = planet, slot 1 = sun/station,
 /// slots 2+ = ships, missiles, cargo. Enforces capacity limits and
@@ -14,6 +23,9 @@ public class LocalBubbleManager
     private readonly ShipInstance?[] _slots;
     private readonly int _capacity;
     private int _tidyIndex; // round-robin TIDY counter
+
+    /// <summary>Raised when an entity is spawned or despawned.</summary>
+    public event EventHandler<EntityEventArgs>? EntityEvent;
 
     /// <summary>Planet entity (always in slot 0).</summary>
     public ShipInstance? Planet => _slots[GameConstants.PlanetSlot];
@@ -61,11 +73,15 @@ public class LocalBubbleManager
     /// <summary>
     /// Despawn a ship by slot index.
     /// </summary>
-    public void Despawn(int slotIndex)
+    public void Despawn(int slotIndex, string reason = "despawned")
     {
         if (slotIndex < 0 || slotIndex >= _capacity) return;
         if (_slots[slotIndex] != null)
-            _slots[slotIndex]!.IsActive = false;
+        {
+            var entity = _slots[slotIndex]!;
+            EntityEvent?.Invoke(this, new EntityEventArgs { EntityName = entity.Blueprint.Name, Reason = reason });
+            entity.IsActive = false;
+        }
         _slots[slotIndex] = null;
     }
 
@@ -185,6 +201,38 @@ public class LocalBubbleManager
         {
             if (_slots[i] != null && _slots[i]!.IsActive)
                 _slots[i]!.ApplyUniverseRotation(alpha, beta);
+        }
+    }
+
+    /// <summary>
+    /// Despawn entities that have exceeded their lifetime or left the bubble boundaries.
+    /// Called each frame to clean up expired entities.
+    /// </summary>
+    public void CleanupExpired()
+    {
+        const float bubbleLimit = GameConstants.BubbleRadius;
+        const float maxDistSq = bubbleLimit * bubbleLimit;
+
+        for (int i = GameConstants.FirstAvailableSlot; i < _capacity; i++)
+        {
+            if (_slots[i] == null || !_slots[i]!.IsActive)
+                continue;
+
+            var entity = _slots[i]!;
+
+            // Check lifetime expiry
+            entity.LifetimeFrames++;
+            if (entity.LifetimeFrames > ShipInstance.MaxLifetime)
+            {
+                Despawn(i, "lifetime expired");
+                continue;
+            }
+
+            // Check boundary: despawn if too far from origin
+            if (entity.Position.LengthSquared() > maxDistSq)
+            {
+                Despawn(i, "out of bounds");
+            }
         }
     }
 

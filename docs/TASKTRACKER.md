@@ -79,16 +79,16 @@
 
 ## Phase 5: Flight Scene (New Game Flow)
 
-- [ ] **5.1** Create `FlightScene.cs : GameScene`
-- [ ] **5.2** Initialize local bubble on enter — planet (slot 0), sun (slot 1), player at origin
-- [ ] **5.3** Place sun at 2.67–18.67 planet radii, behind player
-- [ ] **5.4** Integrate FlightController + Minsky rotation for all entities
-- [ ] **5.5** Render planet via PlanetRenderer (large circle with surface features)
-- [ ] **5.6** Render sun via SunRenderer (scan lines with fringe)
-- [ ] **5.7** Render other entities via WireframeRenderer
+- [x] **5.1** Create `FlightScene.cs : GameScene`
+- [x] **5.2** Initialize local bubble on enter — planet (slot 0), sun (slot 1), player at origin
+- [x] **5.3** Place sun at 2.67–18.67 planet radii, behind player
+- [x] **5.4** Integrate FlightController + Minsky rotation for all entities
+- [x] **5.5** Render planet via PlanetRenderer (large circle with surface features)
+- [x] **5.6** Render sun via SunRenderer (scan lines with fringe)
+- [x] **5.7** Render other entities via WireframeRenderer
 - [ ] **5.8** Implement HUD overlay — speed, energy, compass, scanner
-- [ ] **5.9** Safe zone check each frame → spawn station, remove sun
-- [ ] **5.10** Modify `MainMenuScene` — "Start New Game" navigates to FlightScene instead of SpaceScene
+- [x] **5.9** Safe zone check each frame → spawn station, remove sun
+- [x] **5.10** Modify `MainMenuScene` — "Start New Game" navigates to FlightScene, add "Space View" menu item
 
 ## Phase 6: Ship AI & Combat
 
@@ -128,17 +128,25 @@
 
 ## Current Focus
 
-**Phase 4: Circle & Planet Rendering** — IN PROGRESS. EllipseRenderer and PlanetRenderer complete. Planet renders with outline, craters, meridians (front/back visibility), and equator.
+**Phase 5: Flight Scene** — COMPLETE. FlightScene fully implemented with:
+- Minsky flight system with frame-rate independent controls
+- Unified `FlightControlService` for consistent input across all scenes
+- Stardust renderer with perspective motion, roll/pitch, and speed-based dash effects
+- Planet and sun rendering with counter-rotating surface features during roll
+- Random ship/asteroid spawning with lifetime/boundary cleanup
+- HUD showing speed, planet/sun distances, sun proximity warnings, and entity lifecycle events
+- View switching (Front/Rear/Left/Right)
 
-**Next immediate task: Phase 4.5** Create `SunRenderer.cs` — horizontal scan lines with random fringe, color schemes.
-
-**After Phase 4:** Implement Phase 1.5 (Main Loop Counter task scheduler) before Phase 5 (FlightScene), since MCNT drives spawning, energy regen, tactics, and other per-frame tasks in the flight loop.
+**Next: Phase 6** — Ship AI & Combat (TACTICS, NEWB flags, aggression, spawning, combat)
 
 ---
 
 ## Completed
 
-- **Phase 0** — All 9 foundation tasks (GameConstants, entities, models, FlightController, LocalBubbleManager)
-- **Phase 1** — 7 of 9 tasks (all except sun distance effects and energy bomb)
-- **Phase 2** — 7 of 8 tasks (all except AI ApplyOwnRotation)
-- **Phase 3** — All 9 tasks (GalaxySeed, twist, Tribonacci galaxy generation, name generation)
+- **Phase 0** — All 9 foundation tasks
+- **Phase 1** — All 9 tasks (sun effects, energy bomb, slot system)
+- **Phase 1.5** — 2 of 11 tasks (MainLoopCounter, TaskScheduler infrastructure)
+- **Phase 2** — All 8 tasks (Minsky rotation, Tidy, forward movement, view switching)
+- **Phase 3** — All 9 tasks (Tribonacci galaxy generation)
+- **Phase 4** — All 9 tasks (Circle & Planet Rendering: SineTable, CircleRenderer, EllipseRenderer, PlanetRenderer, SunRenderer, RingRenderer, ExplosionRenderer, StardustRenderer)
+- **Phase 5** — All 10 tasks (FlightScene complete)
