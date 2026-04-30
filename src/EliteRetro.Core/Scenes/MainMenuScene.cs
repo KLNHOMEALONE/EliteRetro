@@ -33,6 +33,8 @@ public class MainMenuScene : GameScene
     private float _shipRotationY;
     private int _currentModelIndex;
     private bool _paused;
+    private int _highlightedEdgeIndex = -1;
+    private bool _showHiddenEdges = true;
     private readonly List<(string Name, Func<float, ShipModel> Create)> _shipModels = new();
 
     public MainMenuScene(Game? game = null)
@@ -52,6 +54,7 @@ public class MainMenuScene : GameScene
         // Camera positioned to show ship in top 2/3
         _view = Matrix.CreateLookAt(new Vector3(0, 10f, 6), new Vector3(0, -1f, 0), Vector3.Up);
 
+        _shipModels.Add(("Anaconda", size => AnacondaModel.Create(size)));
         _shipModels.Add(("Cobra Mk3", size => CobraMk3Model.Create(size)));
         _shipModels.Add(("Coriolis", size => CoriolisStationModel.Create(size / 2f)));
         _shipModels.Add(("Missile", size => MissileModel.Create(size)));
@@ -63,7 +66,6 @@ public class MainMenuScene : GameScene
         _shipModels.Add(("Viper", size => ViperModel.Create(size)));
         _shipModels.Add(("Mamba", size => MambaModel.Create(size)));
         _shipModels.Add(("Python", size => PythonModel.Create(size)));
-        _shipModels.Add(("Anaconda", size => AnacondaModel.Create(size)));
         _shipModels.Add(("Fer-de-Lance", size => FerDeLanceModel.Create(size)));
         _shipModels.Add(("Adder", size => AdderModel.Create(size)));
         _shipModels.Add(("Asp Mk II", size => AspMk2Model.Create(size)));
@@ -128,6 +130,24 @@ public class MainMenuScene : GameScene
             HandleSelection();
         }
 
+        // Cycle edges with ] and [
+        if (kb.IsKeyDown(Keys.OemCloseBrackets) && _prevKb.IsKeyUp(Keys.OemCloseBrackets))
+        {
+            if (_cobraModel.Edges.Count > 0)
+                _highlightedEdgeIndex = (_highlightedEdgeIndex + 1) % _cobraModel.Edges.Count;
+        }
+        if (kb.IsKeyDown(Keys.OemOpenBrackets) && _prevKb.IsKeyUp(Keys.OemOpenBrackets))
+        {
+            if (_cobraModel.Edges.Count > 0)
+                _highlightedEdgeIndex = (_highlightedEdgeIndex - 1 + _cobraModel.Edges.Count) % _cobraModel.Edges.Count;
+        }
+
+        // Toggle hidden edges with I
+        if (kb.IsKeyDown(Keys.I) && _prevKb.IsKeyUp(Keys.I))
+        {
+            _showHiddenEdges = !_showHiddenEdges;
+        }
+
         _prevKb = kb;
     }
 
@@ -161,7 +181,7 @@ public class MainMenuScene : GameScene
     {
         // Draw wireframe ship - takes up top 2/3 of screen
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
-        _wireframeRenderer.Draw(_cobraModel, _world, _view, _projection, spriteBatch, useBackFaceCulling: true);
+        _wireframeRenderer.Draw(_cobraModel, _world, _view, _projection, spriteBatch, useBackFaceCulling: true, _highlightedEdgeIndex, _showHiddenEdges);
         spriteBatch.End();
 
         // Draw UI overlay - menu items in bottom 1/3
@@ -169,6 +189,13 @@ public class MainMenuScene : GameScene
 
         // Ship name in top-left corner
         _font.DrawString(spriteBatch, _shipModels[_currentModelIndex].Name, new Vector2(10, 10), Color.Cyan, 1f);
+
+        // Edge info
+        if (_highlightedEdgeIndex >= 0)
+            _font.DrawString(spriteBatch, $"EDGE: {_highlightedEdgeIndex}/{_cobraModel.Edges.Count - 1}", new Vector2(10, 30), Color.Red, 1f);
+
+        // Hidden edges toggle indicator
+        _font.DrawString(spriteBatch, _showHiddenEdges ? "HIDDEN: ON" : "HIDDEN: OFF", new Vector2(10, 50), Color.White, 0.8f);
 
         // Menu items - centered horizontally, in bottom third
         int menuStartY = 540;
@@ -185,6 +212,7 @@ public class MainMenuScene : GameScene
 
         // Instructions at very bottom
         _font.DrawString(spriteBatch, "UP/DOWN: SELECT   ENTER: CHOOSE   ESC: QUIT   SPACE: PAUSE", new Vector2(220, 750), Color.Gray, 0.8f);
+        _font.DrawString(spriteBatch, "LEFT/RIGHT: SHIP   [/]: EDGE   [I]: TOGGLE HIDDEN EDGES", new Vector2(180, 765), Color.Gray, 0.7f);
 
         if (_paused)
             _font.DrawString(spriteBatch, "PAUSED", new Vector2(380, 500), Color.Red, 1.5f);

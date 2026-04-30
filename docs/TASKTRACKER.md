@@ -86,9 +86,11 @@
 - [x] **5.5** Render planet via PlanetRenderer (large circle with surface features)
 - [x] **5.6** Render sun via SunRenderer (scan lines with fringe)
 - [x] **5.7** Render other entities via WireframeRenderer
-- [ ] **5.8** Implement HUD overlay — speed, energy, compass, scanner
+- [x] **5.8** Implement HUD overlay — speed, energy, compass, scanner, hidden edges indicator
 - [x] **5.9** Safe zone check each frame → spawn station, remove sun
 - [x] **5.10** Modify `MainMenuScene` — "Start New Game" navigates to FlightScene, add "Space View" menu item
+- [x] **5.11** Wireframe rendering improvements — back-face culling with pre-computed face normals for Anaconda/Viper/Asp Mk II, added missing faces to Viper (wing surfaces), hidden edge toggle (I key), edge highlighting for debugging ([] keys)
+- [x] **5.12** Ship scale in FlightScene — 4x larger (0.0004 instead of 0.0001) for better visibility
 
 ## Phase 6: Ship AI & Combat
 

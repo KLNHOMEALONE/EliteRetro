@@ -49,6 +49,7 @@ public class GameInstance : Game
         _bubbleManager = new LocalBubbleManager();
         _mcnt = new MainLoopCounter();
         _taskScheduler = new Systems.TaskScheduler(_mcnt);
+
         base.Initialize();
     }
 

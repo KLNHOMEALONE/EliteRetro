@@ -113,6 +113,14 @@ All notable changes to this project.
 - Ship orientation now correctly included in world matrix for rendering
 - Entity positions no longer rotated by ApplyUniverseRotation (only view rotates)
 - Ships flying toward player now properly face nose-first
+- **Wireframe rendering — back-face culling with proper face normals**
+  - Anaconda: manually verified normals for all 12 faces (non-planar faces had degenerate Newell-computed normals)
+  - Viper: added 2 wing-surface faces so edges 10 and 12 render solid from above (silhouette detection)
+  - Asp Mk II: added pre-computed normals for all 10 faces, corrected top-rear face normal
+  - All models: face normals point outward from ship center for correct visibility testing
+- Hidden edges toggle (I key) — press to show/hide dashed lines in both MainMenuScene and FlightScene
+- Edge highlighting for debugging ([] keys cycle highlighted edge in red)
+- Ship scale in FlightScene increased 4x for better visibility
 
 ---
 

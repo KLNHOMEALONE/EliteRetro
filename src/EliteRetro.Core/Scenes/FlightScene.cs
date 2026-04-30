@@ -31,6 +31,7 @@ public class FlightScene : GameScene
     private Matrix _projection;
     private bool _paused;
     private bool _initialized;
+    private bool _showHiddenEdges = true;
     private int _planetRotation;
     private int _planetRotationCounter;
     private int _viewMode; // 0=front, 1=rear, 2=left, 3=right
@@ -219,6 +220,10 @@ public class FlightScene : GameScene
         if (kb.IsKeyDown(Keys.Space) && _prevKb.IsKeyUp(Keys.Space) && !control.IsPaused)
             _paused = !_paused;
 
+        // Toggle hidden edges with I
+        if (kb.IsKeyDown(Keys.I) && _prevKb.IsKeyUp(Keys.I))
+            _showHiddenEdges = !_showHiddenEdges;
+
         // Build view matrix from orientation.
         // The view matrix maps world space to camera space.
         // Rows: camera-right, camera-up, camera-forward (camera look direction = -Z in camera space)
@@ -284,10 +289,10 @@ public class FlightScene : GameScene
                     entity.Orientation.Sidev.Y, entity.Orientation.Roofv.Y, entity.Orientation.Nosev.Y, 0,
                     entity.Orientation.Sidev.Z, entity.Orientation.Roofv.Z, entity.Orientation.Nosev.Z, 0,
                     0, 0, 0, 1);
-                Matrix entityWorld = Matrix.CreateScale(0.0001f) *
+                Matrix entityWorld = Matrix.CreateScale(0.0004f) *
                                      entityOrientation *
                                      Matrix.CreateTranslation(entity.Position * 0.0001f);
-                _wireframeRenderer.Draw(entity.Blueprint.Model, entityWorld, _view, _projection, spriteBatch);
+                _wireframeRenderer.Draw(entity.Blueprint.Model, entityWorld, _view, _projection, spriteBatch, drawHiddenEdges: _showHiddenEdges);
             }
         }
 
@@ -447,8 +452,11 @@ public class FlightScene : GameScene
         if (_bubbleManager.SunOrStation?.Blueprint?.Name == "Coriolis Station")
             _font.DrawString(spriteBatch, "STATION DOCKED", new Vector2(10, 135), Color.Yellow, 1f);
 
+        // Hidden edges indicator
+        _font.DrawString(spriteBatch, _showHiddenEdges ? "HIDDEN: ON" : "HIDDEN: OFF", new Vector2(10, 160), Color.White, 0.8f);
+
         // Controls
-        _font.DrawString(spriteBatch, "ARROWS: PITCH/ROLL  W/S: SPEED  V: VIEW  +/-: ZOOM  SPACE: PAUSE  ESC: MENU", new Vector2(10, 740), Color.Gray, 0.8f);
+        _font.DrawString(spriteBatch, "ARROWS: PITCH/ROLL  W/S: SPEED  V: VIEW  +/-: ZOOM  SPACE: PAUSE  I: EDGES  ESC: MENU", new Vector2(10, 740), Color.Gray, 0.8f);
 
         // Entity event messages (spawn/despawn)
         if (_eventMessageTimer > 0 && !string.IsNullOrEmpty(_lastEventMessage))

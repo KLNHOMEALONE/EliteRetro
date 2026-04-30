@@ -70,18 +70,18 @@ public class AspMk2Model : ShipModel
 
         var faces = new Face[]
         {
-            new(new[] { 0, 1, 11, 10 }),
-            new(new[] { 0, 12, 13, 1 }),
-            new(new[] { 1, 2, 3, 4, 13 }),
-            new(new[] { 1, 13, 4, 3, 2 }),
-            new(new[] { 10, 11, 9, 8 }),
-            new(new[] { 12, 10, 8, 5 }),
-            new(new[] { 3, 4, 5, 6 }),
-            new(new[] { 7, 6, 5, 12, 10 }),
-            new(new[] { 2, 11, 9, 3 }),
-            new(new[] { 7, 10, 11, 2 }),
-            new(new[] { 6, 8, 9, 3, 2, 7 }),
-            new(new[] { 14, 15, 16, 17 }),
+            new(new[] { 0, 1, 11, 10 }, new Vector3(0, 0.9f, 0.4f)),    // 0 - top front (up+forward)
+            new(new[] { 0, 12, 13, 1 }, new Vector3(0, -0.9f, 0.4f)),   // 1 - bottom front (down+forward)
+            new(new[] { 1, 2, 3, 4, 13 }, new Vector3(0.5f, 0.5f, -0.7f)), // 2 - starboard side (right+up+back)
+            new(new[] { 1, 13, 4, 3, 2 }, new Vector3(0.5f, -0.5f, -0.7f)), // 3 - starboard lower side (right+down+back)
+            new(new[] { 10, 11, 9, 8 }, new Vector3(0, 0.95f, 0.3f)),   // 4 - top rear (up+forward)
+            new(new[] { 12, 10, 8, 5 }, new Vector3(-0.5f, -0.5f, -0.7f)), // 5 - port lower side (left+down+back)
+            new(new[] { 3, 4, 5, 6 }, new Vector3(0, 0, -1f)),          // 6 - rear (backward)
+            new(new[] { 7, 6, 5, 12, 10 }, new Vector3(-0.5f, -0.3f, 0.8f)), // 7 - port bottom front (left+down+forward)
+            new(new[] { 2, 11, 9, 3 }, new Vector3(0.5f, 0.3f, -0.8f)), // 8 - starboard top rear (right+up+back)
+            new(new[] { 7, 10, 11, 2 }, new Vector3(-0.5f, 0.3f, 0.8f)), // 9 - port top front (left+up+forward)
+            new(new[] { 6, 8, 9, 3, 2, 7 }, new Vector3(0, 0, -1f)),    // 10 - rear face (backward)
+            new(new[] { 14, 15, 16, 17 }, new Vector3(0, 1f, 0)),       // 11 - canopy (up)
         };
 
         var vertices = new List<Vertex3>();

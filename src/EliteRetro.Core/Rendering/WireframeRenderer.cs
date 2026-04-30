@@ -54,18 +54,16 @@ public class WireframeRenderer
     /// Check if a face is facing the camera.
     /// Follows the optimized algorithm from docs\shiprendering\Back-face-Culling.md
     /// </summary>
-    private bool IsFaceVisible(Face face, ShipModel model, Vector3 cameraToShipLocal, Vector3[]? worldVerts, Vector3 cameraPosition, Matrix world)
+    private bool IsFaceVisible(Face face, ShipModel model, Vector3 shipToCameraLocal, Vector3[]? worldVerts, Vector3 cameraPosition, Matrix world)
     {
         if (face.VertexIndices.Length < 3) return false;
 
         // AUTHENTIC ELITE CULLING (if normal is provided in blueprint)
         if (face.Normal.HasValue)
         {
-            // The Elite Way: visibility = Dot(Projected_LoS + Face_Normal, Face_Normal)
-            // Projected_LoS is the camera-to-ship vector in ship-local space.
-            // A negative result means the face is pointing toward the camera.
-            float visibility = Vector3.Dot(cameraToShipLocal + face.Normal.Value, face.Normal.Value);
-            return visibility < 0;
+            // Face is visible when the camera is on the side the normal points to.
+            // Dot(shipToCamera, normal) > 0 means the camera is in the hemisphere the normal faces.
+            return Vector3.Dot(shipToCameraLocal, face.Normal.Value) > 0;
         }
 
         // FALLBACK: NEWELL'S METHOD (for models without pre-computed normals)
@@ -97,8 +95,9 @@ public class WireframeRenderer
 
     /// <summary>
     /// Draw a ship wireframe. Visible edges are solid, hidden edges are dashed.
+    /// Optionally highlight a specific edge in red.
     /// </summary>
-    public void Draw(ShipModel model, Matrix world, Matrix view, Matrix projection, SpriteBatch spriteBatch, bool useBackFaceCulling = true)
+    public void Draw(ShipModel model, Matrix world, Matrix view, Matrix projection, SpriteBatch spriteBatch, bool useBackFaceCulling = true, int highlightedEdgeIndex = -1, bool drawHiddenEdges = true)
     {
         // Project all vertices
         var projected = new Vector2[model.Vertices.Count];
@@ -118,12 +117,12 @@ public class WireframeRenderer
             Vector3 cameraPosition = invView.Translation;
             Vector3 shipPosition = world.Translation;
 
-            // Vector from camera to ship
-            Vector3 cameraToShip = shipPosition - cameraPosition;
+            // Vector from ship to camera (line of sight from ship's perspective)
+            Vector3 shipToCamera = cameraPosition - shipPosition;
 
             // Transform to ship-local space (Elite's "Projected Line of Sight")
             Matrix worldToLocal = Matrix.Invert(world);
-            Vector3 cameraToShipLocal = Vector3.TransformNormal(cameraToShip, worldToLocal);
+            Vector3 shipToCameraLocal = Vector3.TransformNormal(shipToCamera, worldToLocal);
 
             // Pre-calculate world vertices only if we have faces that need Newell's method
             Vector3[]? worldVerts = null;
@@ -141,7 +140,16 @@ public class WireframeRenderer
             var faceVisible = new bool[model.Faces.Count];
             for (int f = 0; f < model.Faces.Count; f++)
             {
-                faceVisible[f] = IsFaceVisible(model.Faces[f], model, cameraToShipLocal, worldVerts, cameraPosition, world);
+                faceVisible[f] = IsFaceVisible(model.Faces[f], model, shipToCameraLocal, worldVerts, cameraPosition, world);
+            }
+
+            // Debug: log face visibility and normals (first 6 faces only)
+            Console.WriteLine($"=== {model.Name} === camLocal={shipToCameraLocal:F1}");
+            for (int f = 0; f < Math.Min(6, model.Faces.Count); f++)
+            {
+                var n = model.Faces[f].Normal;
+                float dot = n.HasValue ? Vector3.Dot(shipToCameraLocal, n.Value) : 999;
+                Console.WriteLine($"  F{f}: vis={faceVisible[f]} dot={dot:F1} v=[{string.Join(",", model.Faces[f].VertexIndices)}]");
             }
 
             // Second pass: mark edges from visible faces as solid
@@ -195,36 +203,43 @@ public class WireframeRenderer
                     edgeVisible[e] = true;
             }
 
-            // Silhouette edges: edges belonging only to culled faces but facing the camera
-            // For convex ships, these are the boundary between visible and hidden parts
+            // Silhouette edges: build edge-to-face adjacency.
+            // A face is adjacent to an edge if both edge vertices are in the face.
+            var edgeFaces = new List<int>[model.Edges.Count];
+            for (int e = 0; e < model.Edges.Count; e++)
+                edgeFaces[e] = new List<int>();
+
+            // Build a set of vertex indices for each face for fast lookup
+            var faceVertexSets = new HashSet<int>[model.Faces.Count];
+            for (int f = 0; f < model.Faces.Count; f++)
+            {
+                faceVertexSets[f] = new HashSet<int>(model.Faces[f].VertexIndices);
+            }
+
+            // For each edge, find all faces that contain both vertices
             for (int e = 0; e < model.Edges.Count; e++)
             {
-                if (edgeVisible[e]) continue; // already solid
-                if (!edgeHasFace[e]) continue; // structural, already handled
+                int start = model.Edges[e].Start;
+                int end = model.Edges[e].End;
+                for (int f = 0; f < model.Faces.Count; f++)
+                {
+                    if (faceVertexSets[f].Contains(start) && faceVertexSets[f].Contains(end))
+                    {
+                        edgeFaces[e].Add(f);
+                    }
+                }
+            }
 
-                // Compute edge midpoint in world space
-                var edge = model.Edges[e];
-                Vector3 startW = Vector3.Transform(new Vector3(model.Vertices[edge.Start].X, model.Vertices[edge.Start].Y, model.Vertices[edge.Start].Z), world);
-                Vector3 endW = Vector3.Transform(new Vector3(model.Vertices[edge.End].X, model.Vertices[edge.End].Y, model.Vertices[edge.End].Z), world);
-                Vector3 midPoint = (startW + endW) / 2;
+            // Edge is silhouette if it has both visible and hidden adjacent faces
+            for (int e = 0; e < model.Edges.Count; e++)
+            {
+                if (edgeVisible[e]) continue;
+                if (edgeFaces[e].Count == 0) continue;
 
-                // Edge direction
-                Vector3 edgeDir = Vector3.Normalize(endW - startW);
+                int visibleCount = edgeFaces[e].Count(v => faceVisible[v]);
+                int hiddenCount = edgeFaces[e].Count - visibleCount;
 
-                // Vector from ship center (origin in model space, transformed to world)
-                Vector3 shipCenter = Vector3.Transform(Vector3.Zero, world);
-                Vector3 radialDir = Vector3.Normalize(midPoint - shipCenter);
-
-                // Edge "normal" — perpendicular to both edge direction and radial direction
-                Vector3 edgeNormal = Vector3.Cross(edgeDir, radialDir);
-                if (edgeNormal.Length() < 0.001f) continue; // edge points radially, skip
-                edgeNormal = Vector3.Normalize(edgeNormal);
-
-                // Vector from edge midpoint to camera
-                Vector3 toCamera = Vector3.Normalize(cameraPosition - midPoint);
-
-                // If edge normal points toward camera, it's a silhouette edge → make solid
-                if (Vector3.Dot(edgeNormal, toCamera) > 0)
+                if (visibleCount > 0 && hiddenCount > 0)
                 {
                     edgeVisible[e] = true;
                 }
@@ -237,7 +252,7 @@ public class WireframeRenderer
                 edgeVisible[e] = true;
         }
 
-        // Draw edges: visible solid, hidden dashed
+        // Draw edges: visible solid, hidden dashed (if drawHiddenEdges), highlighted in red
         for (int i = 0; i < model.Edges.Count; i++)
         {
             var edge = model.Edges[i];
@@ -246,13 +261,15 @@ public class WireframeRenderer
 
             if (float.IsNaN(start.X) || float.IsNaN(end.X)) continue;
 
+            Color drawColor = (i == highlightedEdgeIndex) ? Color.Red : (edge.Color ?? _primaryColor);
+
             if (edgeVisible[i])
             {
-                DrawLine(spriteBatch, start, end, edge.Color ?? _primaryColor);
+                DrawLine(spriteBatch, start, end, drawColor);
             }
-            else
+            else if (drawHiddenEdges)
             {
-                DrawDashedLine(spriteBatch, start, end, edge.Color ?? _primaryColor);
+                DrawDashedLine(spriteBatch, start, end, drawColor);
             }
         }
     }

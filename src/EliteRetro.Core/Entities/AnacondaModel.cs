@@ -64,21 +64,23 @@ public class AnacondaModel : ShipModel
             (10, 14, null), // 20
         };
 
-        // 12 faces
+        // 12 faces with manually verified outward-pointing normals.
+        // The Anaconda has non-planar faces, so normals are best-fit approximations
+        // verified against the ship's geometry (vertex positions from original Elite).
         var faces = new Face[]
         {
-            new(new[] { 0, 1, 2, 3, 4 }),          // 0 - bottom rear
-            new(new[] { 0, 1, 6, 5 }),             // 1
-            new(new[] { 1, 2, 7, 6 }),             // 2
-            new(new[] { 2, 3, 8, 7 }),             // 3
-            new(new[] { 3, 4, 9, 8 }),             // 4
-            new(new[] { 0, 4, 9, 5 }),             // 5
-            new(new[] { 5, 10, 14 }),              // 6
-            new(new[] { 6, 10, 11 }),              // 7
-            new(new[] { 7, 11, 12 }),              // 8
-            new(new[] { 8, 12, 13 }),              // 9
-            new(new[] { 9, 13, 14 }),              // 10
-            new(new[] { 10, 12, 14 }),             // 11
+            new(new[] { 0, 1, 2, 3, 4 }, new Vector3(0, -0.6f, -0.8f)),    // 0 - rear (down+back)
+            new(new[] { 0, 1, 6, 5 }, new Vector3(-0.2f, 0.7f, -0.7f)),    // 1 - left rear (left+up+back)
+            new(new[] { 1, 2, 7, 6 }, new Vector3(-0.3f, -0.3f, 0.9f)),    // 2 - left side (left+down+forward)
+            new(new[] { 2, 3, 8, 7 }, new Vector3(0, -0.9f, 0.4f)),        // 3 - bottom front (down+forward)
+            new(new[] { 3, 4, 9, 8 }, new Vector3(0.3f, -0.3f, 0.9f)),     // 4 - right side (right+down+forward)
+            new(new[] { 0, 4, 9, 5 }, new Vector3(0.2f, 0.7f, -0.7f)),     // 5 - right rear (right+up+back)
+            new(new[] { 5, 10, 14 }, new Vector3(0, 0.9f, -0.4f)),          // 6 - top rear (up+back)
+            new(new[] { 6, 10, 11 }, new Vector3(-0.7f, 0.5f, -0.5f)),     // 7 - left top front (left+up+back)
+            new(new[] { 7, 11, 12 }, new Vector3(-0.7f, 0.5f, 0.5f)),      // 8 - left front (left+up+forward)
+            new(new[] { 8, 12, 13 }, new Vector3(0.7f, 0.5f, 0.5f)),       // 9 - right front (right+up+forward)
+            new(new[] { 9, 13, 14 }, new Vector3(0.7f, 0.5f, -0.5f)),      // 10 - right top front (right+up+back)
+            new(new[] { 10, 12, 14 }, new Vector3(0, 0.9f, 0.4f)),         // 11 - top front (up+forward)
         };
 
         var vertices = new List<Vertex3>();

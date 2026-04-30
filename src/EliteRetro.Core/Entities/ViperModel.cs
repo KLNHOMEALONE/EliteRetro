@@ -62,16 +62,22 @@ public class ViperModel : ShipModel
             (12, 13, Color.Gray),  // 19
         };
 
-        // 7 faces
+        // 9 faces — original 7 plus 2 additional wing-surface faces.
+        // The Viper's rear face (6) is a flat hexagon at z=-24. The additional
+        // faces define the top-left and top-right wing surfaces so that wing
+        // edges (10 and 12) are shared between visible and hidden faces,
+        // making them render as solid silhouette edges from above.
         var faces = new Face[]
         {
-            new(new[] { 1, 7, 8 }),          // 0 - top
-            new(new[] { 0, 4, 1 }),          // 1 - top left front
-            new(new[] { 0, 3, 1 }),          // 2 - top right front
-            new(new[] { 0, 4, 2 }),          // 3 - bottom left front
-            new(new[] { 0, 2, 3 }),          // 4 - bottom right front
-            new(new[] { 2, 6, 5 }),          // 5 - bottom rear
-            new(new[] { 3, 7, 8, 4, 6, 5 }), // 6 - rear face (hexagon with engine cutout)
+            new(new[] { 1, 7, 8 }, new Vector3(0, 1, 0)),              // 0 - top (up)
+            new(new[] { 0, 4, 1 }, new Vector3(-0.3f, 0.5f, 0.8f)),   // 1 - top left front
+            new(new[] { 0, 3, 1 }, new Vector3(0.3f, 0.5f, 0.8f)),    // 2 - top right front
+            new(new[] { 0, 4, 2 }, new Vector3(-0.3f, -0.5f, 0.8f)),  // 3 - bottom left front
+            new(new[] { 0, 2, 3 }, new Vector3(0.3f, -0.5f, 0.8f)),   // 4 - bottom right front
+            new(new[] { 2, 6, 5 }, new Vector3(0, -1, 0)),            // 5 - bottom rear (down)
+            new(new[] { 3, 7, 8, 4, 6, 5 }, new Vector3(0, 0, -1)),   // 6 - rear face (backward)
+            new(new[] { 1, 7, 3 }, new Vector3(0.3f, 0.9f, -0.3f)),   // 7 - top right wing surface
+            new(new[] { 1, 8, 4 }, new Vector3(-0.3f, 0.9f, -0.3f)),  // 8 - top left wing surface
         };
 
         var vertices = new List<Vertex3>();
