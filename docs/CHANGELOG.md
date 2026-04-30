@@ -7,6 +7,11 @@ All notable changes to this project.
 ## [Unreleased]
 
 ### Added
+- **MainLoopCounter and TaskScheduler** — frame-spread task scheduling adapted from Elite's MCNT
+  - 8-bit counter cycling 0-255, decrements each Update()
+  - Task registration via (mask, offset) pairs: fires when (mcnt & mask) == offset
+  - Integrated into GameInstance for global access
+  - Remaining tasks (energy regen, tactics, TIDY, station checks, spawn) to be registered when dependent systems are implemented
 - **Tribonacci galaxy generation** — authentic BBC Elite algorithm replacing simple RNG
   - `GalaxySeed` struct with Twist() and NextGalaxy() methods
   - 8 galaxies × 256 systems derived from three 16-bit seeds (0x5A4A, 0x0248, 0xB753)
@@ -20,16 +25,17 @@ All notable changes to this project.
   - Reserved slots: planet (0), sun/station (1), dynamic (2+)
   - Spawn/despawn, bubble culling, safe zone trigger
   - Station orientation (faces planet), universe rotation broadcast
+- **Phase 4: Circle & Planet Rendering**
+  - SineTable: 64-entry sine/cosine lookup
+  - CircleRenderer: parametric circle drawing via SineTable
+  - EllipseRenderer: conjugate-diameter ellipses with arc support
+  - PlanetRenderer: craters, meridians, equator with front/back visibility
+  - SunRenderer: scan-line sun with corona fringe
+  - RingRenderer: Saturn-style rings with concentric elliptical bands + particle texture, proper planet occlusion (front/back layer separation)
+  - ExplosionRenderer: vertex-based particle clouds with counter-driven lifecycle (expand→contract)
+  - StardustRenderer: 200-star particle system with 16-bit sign-magnitude coords, authentic motion model
+  - WireframeRenderer: added DrawCircle/DrawEllipse convenience methods
 - **Galaxy map improvements** — crosshair cursor, names on hover only, auto-centered view
-- **Phase 4.5: SunRenderer** — scan-line sun with corona fringe
-  - Horizontal scan lines with brightness falloff (Elite-style)
-  - Deterministic fringe particles (seeded by screen position, no flicker)
-  - Color schemes: yellow (cool), white (medium), blue (hot)
-  - Integrated into SpaceScene, replacing simple circle outline
-- **Phase 4.6: RingRenderer** — Saturn-style rings with random point particles
-  - Elliptical band with inner/outer radius, planet occlusion
-  - Deterministic particle placement (seeded, no flicker)
-  - Integrated into SpaceScene — planet now has rings
 - SpaceScene now uses CircleRenderer for planet and sun rendering (circle outlines instead of squares)
 - Corrected celestial body visual hierarchy — sun larger than planet, planet larger than wireframe cube
 

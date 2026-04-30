@@ -30,8 +30,8 @@
 
 ## Phase 1.5: Main Loop Counter (Task Scheduling)
 
-- [ ] **1.5.1** Create `MainLoopCounter.cs` — MCNT byte field, Decrement() wrapping 255→0, Reset(byte)
-- [ ] **1.5.2** Create `TaskScheduler.cs` — RegisterTask(mask, offset, action), Evaluate(mcnt) method
+- [x] **1.5.1** Create `MainLoopCounter.cs` — MCNT byte field, Decrement() wrapping 255→0, Reset(byte)
+- [x] **1.5.2** Create `TaskScheduler.cs` — RegisterTask(mask, offset, action), Evaluate(mcnt) method
 - [ ] **1.5.3** Register energy/shield regen (every 8, offset 0)
 - [ ] **1.5.4** Register tactics processing (every 8, offsets 0-3 for 1-2 ships)
 - [ ] **1.5.5** Register TIDY scheduling (every 16, offsets 0-11) — replaces round-robin from Phase 2.7

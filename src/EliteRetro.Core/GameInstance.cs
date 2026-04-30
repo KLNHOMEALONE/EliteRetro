@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using EliteRetro.Core.Scenes;
 using EliteRetro.Core.Managers;
+using EliteRetro.Core.Systems;
 
 namespace EliteRetro.Core;
 
@@ -12,11 +13,23 @@ public class GameInstance : Game
     private SceneManager _sceneManager = null!;
     private BitmapFont _font = null!;
     private LocalBubbleManager _bubbleManager = null!;
+    private MainLoopCounter _mcnt = null!;
+    private Systems.TaskScheduler _taskScheduler = null!;
 
     /// <summary>
     /// Global access to the local bubble manager.
     /// </summary>
     public LocalBubbleManager BubbleManager => _bubbleManager;
+
+    /// <summary>
+    /// Main loop counter for frame-spread task scheduling.
+    /// </summary>
+    public MainLoopCounter MCNT => _mcnt;
+
+    /// <summary>
+    /// Task scheduler driven by MCNT.
+    /// </summary>
+    public Systems.TaskScheduler Scheduler => _taskScheduler;
 
     public GameInstance()
     {
@@ -34,6 +47,8 @@ public class GameInstance : Game
     {
         _sceneManager = new SceneManager();
         _bubbleManager = new LocalBubbleManager();
+        _mcnt = new MainLoopCounter();
+        _taskScheduler = new Systems.TaskScheduler(_mcnt);
         base.Initialize();
     }
 
@@ -46,6 +61,12 @@ public class GameInstance : Game
 
     protected override void Update(GameTime gameTime)
     {
+        // Decrement MCNT each frame (wraps 0 → 255)
+        _mcnt.Decrement();
+
+        // Evaluate all scheduled tasks
+        _taskScheduler.Evaluate();
+
         _sceneManager.Update(gameTime);
         base.Update(gameTime);
     }
