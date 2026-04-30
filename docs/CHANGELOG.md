@@ -12,6 +12,12 @@ All notable changes to this project.
   - Task registration via (mask, offset) pairs: fires when (mcnt & mask) == offset
   - Integrated into GameInstance for global access
   - Remaining tasks (energy regen, tactics, TIDY, station checks, spawn) to be registered when dependent systems are implemented
+- **Sun distance effects** — proximity-based interactions with the sun
+  - Heat warning at 2.67× planet diameter
+  - Fuel scooping at 1.33× planet diameter
+  - Fatal damage at 0.90× planet diameter
+- **Energy bomb** — clears all non-reserved bubble slots within 1.17× planet diameter blast radius
+- **OrientationMatrix.ApplyOwnRotation** — AI ship turning via fixed 1/16 rad increments
 - **Tribonacci galaxy generation** — authentic BBC Elite algorithm replacing simple RNG
   - `GalaxySeed` struct with Twist() and NextGalaxy() methods
   - 8 galaxies × 256 systems derived from three 16-bit seeds (0x5A4A, 0x0248, 0xB753)

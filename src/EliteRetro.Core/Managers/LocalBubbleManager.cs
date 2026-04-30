@@ -196,4 +196,87 @@ public class LocalBubbleManager
         for (int i = 0; i < _capacity; i++)
             _slots[i] = null;
     }
+
+    // --- Sun distance effects ---
+
+    /// <summary>
+    /// Sun proximity effects based on distance from player.
+    /// </summary>
+    public enum SunProximityEffect
+    {
+        None = 0,
+        HeatWarning = 1,    // >2.67r: cabin temperature rises
+        FuelScoop = 2,       // >1.33r: fuel scooping available
+        Fatal = 3            // <0.90r: fatal damage
+    }
+
+    /// <summary>
+    /// Check sun proximity and return current effect level.
+    /// </summary>
+    public SunProximityEffect CheckSunProximity()
+    {
+        var sun = SunOrStation;
+        if (sun == null || sun.Blueprint?.Name != "Sun")
+            return SunProximityEffect.None;
+
+        float planetDiameter = GameConstants.PlanetRadius * 2;
+        float dist = Vector3.Distance(PlayerPosition, sun.Position);
+
+        // Fatal: closer than 0.90 × planet diameter
+        if (dist < planetDiameter * GameConstants.SunFatalDistanceMultiplier)
+            return SunProximityEffect.Fatal;
+
+        // Fuel scoop: closer than 1.33 × planet diameter
+        if (dist < planetDiameter * GameConstants.SunFuelScoopDistanceMultiplier)
+            return SunProximityEffect.FuelScoop;
+
+        // Heat warning: closer than 2.67 × planet diameter
+        if (dist < planetDiameter * GameConstants.SunHeatDistanceMultiplier)
+            return SunProximityEffect.HeatWarning;
+
+        return SunProximityEffect.None;
+    }
+
+    /// <summary>
+    /// Apply fuel scooping when within range of the sun.
+    /// </summary>
+    /// <param name="fuelPerSecond">Fuel units added per second.</param>
+    /// <returns>Fuel added this frame, or 0 if not in range.</returns>
+    public float ApplyFuelScoop(float fuelPerSecond)
+    {
+        if (CheckSunProximity() != SunProximityEffect.FuelScoop)
+            return 0f;
+
+        // In a real implementation, this would be called with deltaTime
+        // For now, return the per-frame amount (assumes 60fps)
+        return fuelPerSecond / 60f;
+    }
+
+    /// <summary>
+    /// Energy bomb effect: destroys all non-reserved entities within blast radius.
+    /// Blast radius = 1.17 × planet diameter.
+    /// </summary>
+    /// <returns>Number of entities destroyed.</returns>
+    public int DetonateEnergyBomb()
+    {
+        float blastRadius = GameConstants.PlanetRadius * 2 * GameConstants.EnergyBombMultiplier;
+        float blastSq = blastRadius * blastRadius;
+        int destroyed = 0;
+
+        // Check all non-reserved slots (2+)
+        for (int i = GameConstants.FirstAvailableSlot; i < _capacity; i++)
+        {
+            if (_slots[i] != null && _slots[i]!.IsActive)
+            {
+                float distSq = _slots[i]!.Position.LengthSquared();
+                if (distSq < blastSq)
+                {
+                    Despawn(i);
+                    destroyed++;
+                }
+            }
+        }
+
+        return destroyed;
+    }
 }

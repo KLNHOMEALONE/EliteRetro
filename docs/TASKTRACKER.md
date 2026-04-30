@@ -25,8 +25,8 @@
 - [x] **1.5** Implement orbit point calculation — `planetPos + 2 * planetNosev * PlanetRadius`
 - [x] **1.6** Implement safe zone trigger — bounding box check at 192 local coords, spawn station, remove sun
 - [x] **1.7** Implement station orientation — invert nosev to face planet center
-- [ ] **1.8** Implement sun distance effects — heat (>2.67r), fuel scoop (>1.33r), fatal (<0.90r)
-- [ ] **1.9** Implement energy bomb — 1.17 × planet diameter blast radius, clear all non-reserved slots
+- [x] **1.8** Implement sun distance effects — heat (>2.67r), fuel scoop (>1.33r), fatal (<0.90r)
+- [x] **1.9** Implement energy bomb — 1.17 × planet diameter blast radius, clear all non-reserved slots
 
 ## Phase 1.5: Main Loop Counter (Task Scheduling)
 
@@ -47,7 +47,7 @@
 - [x] **2.1** Implement `OrientationMatrix.RotatePosition()` — Minsky circle algorithm for entity positions
 - [x] **2.2** Implement `OrientationMatrix.ApplyUniverseRotation()` — Minsky rotation for orientation vectors
 - [x] **2.3** Implement `OrientationMatrix.Tidy()` — normalize nosev, orthogonalize roofv, cross-product sidev
-- [ ] **2.4** Implement `OrientationMatrix.ApplyOwnRotation()` — fixed 1/16 rad rotation for AI ships
+- [x] **2.4** Implement `OrientationMatrix.ApplyOwnRotation()` — fixed 1/16 rad rotation for AI ships
 - [x] **2.5** Modify `SpaceScene` — replace `_rotation` Euler angles with Minsky universe rotation
 - [x] **2.6** Add view switching — V key cycles Front/Rear/Left/Right, apply axis transforms
 - [x] **2.7** Implement periodic tidying — round-robin across entities each frame (TidyOne in LocalBubbleManager, every 60 frames for universe orientation)

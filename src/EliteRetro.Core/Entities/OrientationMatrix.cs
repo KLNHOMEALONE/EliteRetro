@@ -98,4 +98,18 @@ public struct OrientationMatrix
     {
         return position.X * Nosev + position.Y * Roofv + position.Z * Sidev;
     }
+
+    /// <summary>
+    /// Apply a fixed-angle rotation to the orientation (for AI ship turning).
+    /// Uses the authentic Elite angle of 1/16 rad (~3.6 degrees).
+    /// Rotates the nose vector toward the target direction using pitch and roll.
+    /// </summary>
+    /// <param name="pitchAmount">Pitch increment (-1 to 1, scaled by AiRotationAngle).</param>
+    /// <param name="rollAmount">Roll increment (-1 to 1, scaled by AiRotationAngle).</param>
+    public void ApplyOwnRotation(float pitchAmount, float rollAmount)
+    {
+        float alpha = rollAmount * GameConstants.AiRotationAngle;
+        float beta = pitchAmount * GameConstants.AiRotationAngle;
+        ApplyUniverseRotation(alpha, beta);
+    }
 }
