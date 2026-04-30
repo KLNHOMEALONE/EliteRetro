@@ -214,9 +214,14 @@ public class SpaceScene : GameScene
         // Draw planet with surface features
         if (_bubbleManager.Planet != null)
         {
+            // Draw back half of rings first (behind planet)
+            DrawCelestialRings(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(180, 160, 120), "back");
+
+            // Draw planet on top of back rings
             DrawCelestialPlanet(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(50, 100, 180));
-            // Draw rings around the planet
-            DrawCelestialRings(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(180, 160, 120));
+
+            // Draw front half of rings on top of planet
+            DrawCelestialRings(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(180, 160, 120), "front");
         }
 
         // Draw sun with scan lines and fringe
@@ -235,7 +240,7 @@ public class SpaceScene : GameScene
         spriteBatch.End();
     }
 
-    private void DrawCelestialRings(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color)
+    private void DrawCelestialRings(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color, string layer = "all")
     {
         Vector3 pos = worldPos * 0.0001f;
         Vector3 projected = Vector3.Transform(pos, _view * _projection);
@@ -249,7 +254,7 @@ public class SpaceScene : GameScene
 
         float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * viewport.Height / 2;
         if (screenRadius > 0 && screenRadius < 500)
-            _ringRenderer.DrawAxisAlignedRings(spriteBatch, new Vector2(screenX, screenY), screenRadius, 1.4f, 2.2f, color);
+            _ringRenderer.DrawAxisAlignedRings(spriteBatch, new Vector2(screenX, screenY), screenRadius, 1.4f, 2.2f, color, layer);
     }
 
     private void DrawCelestialSun(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color)
