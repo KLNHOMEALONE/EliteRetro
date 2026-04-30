@@ -316,4 +316,22 @@ public class WireframeRenderer
             dash = !dash;
         }
     }
+
+    /// <summary>
+    /// Draw a circle outline (convenience method wrapping CircleRenderer).
+    /// </summary>
+    public void DrawCircle(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int stepCount = 32)
+    {
+        var circleRenderer = new CircleRenderer(_graphicsDevice);
+        circleRenderer.DrawCircle(spriteBatch, center, radius, color, stepCount);
+    }
+
+    /// <summary>
+    /// Draw an axis-aligned ellipse outline (convenience method wrapping EllipseRenderer).
+    /// </summary>
+    public void DrawEllipse(SpriteBatch spriteBatch, Vector2 center, float radiusX, float radiusY, Color color, int stepCount = 32)
+    {
+        var ellipseRenderer = new EllipseRenderer(_graphicsDevice);
+        ellipseRenderer.DrawAxisAlignedEllipse(spriteBatch, center, radiusX, radiusY, color, stepCount);
+    }
 }

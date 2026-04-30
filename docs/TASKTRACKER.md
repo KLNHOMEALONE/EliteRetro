@@ -73,9 +73,9 @@
 - [x] **4.4** Create `PlanetRenderer.cs` — DrawCrater(), DrawMeridiansAndEquator(), feature visibility based on tech level
 - [x] **4.5** Create `SunRenderer.cs` — horizontal scan lines, random fringe, color schemes
 - [x] **4.6** Create `RingRenderer.cs` — random points in elliptical band, planet occlusion check
-- [ ] **4.7** Create `ExplosionRenderer.cs` — vertex-based explosion clouds: cloud data (size, counter starting at 18 incrementing by 4 until 128 then shrinking, explosion count from blueprint vertex count, 4 stored random seeds). Render: erase old, increment counter, size=counter/distance, per-origin-vertex scatter random particles (count peaks at counter=128)
-- [ ] **4.8** Create `StardustRenderer.cs` — 16-bit sign-magnitude star coords (SX,SY,SZ). Per-frame motion: `q=64*speed/z_hi; z-=speed*64; y+=|y_hi|*q; x+=|x_hi|*q`. Roll: `y+=alpha*x/256; x-=alpha*y/256`. Pitch: `y-=beta*256; x+=2*(beta*y/256)^2`. Side/rear views use different transforms. Stars wrap on overflow.
-- [ ] **4.9** Modify `WireframeRenderer` — add DrawCircle/DrawEllipse convenience methods
+- [x] **4.7** Create `ExplosionRenderer.cs` — vertex-based explosion clouds: cloud data (size, counter starting at 18 incrementing by 4 until 128 then shrinking, explosion count from blueprint vertex count, 4 stored random seeds). Render: erase old, increment counter, size=counter/distance, per-origin-vertex scatter random particles (count peaks at counter=128)
+- [x] **4.8** Create `StardustRenderer.cs` — 16-bit sign-magnitude star coords (SX,SY,SZ). Per-frame motion: `q=64*speed/z_hi; z-=speed*64; y+=|y_hi|*q; x+=|x_hi|*q`. Roll: `y+=alpha*x/256; x-=alpha*y/256`. Pitch: `y-=beta*256; x+=2*(beta*y/256)^2`. Side/rear views use different transforms. Stars wrap on overflow.
+- [x] **4.9** Modify `WireframeRenderer` — add DrawCircle/DrawEllipse convenience methods
 
 ## Phase 5: Flight Scene (New Game Flow)
 
