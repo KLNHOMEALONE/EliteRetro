@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace EliteRetro.Core.Entities;
 
 /// <summary>
@@ -34,6 +36,12 @@ public class CommanderData
     /// <summary>Current bounty on player's head (in credits).</summary>
     public int CurrentBounty { get; set; }
 
+    /// <summary>Fuel level (0-70). Each unit = 1 light-year jump capacity.</summary>
+    public int Fuel { get; set; } = 35;
+
+    /// <summary>Cargo capacity in tons. Default 10.</summary>
+    public int CargoCapacity { get; set; } = 10;
+
     /// <summary>Cargo hold (commodity index → tons).</summary>
     public Dictionary<int, int> CargoHold { get; } = new();
 
@@ -68,14 +76,19 @@ public class CommanderData
     }
 
     /// <summary>
-    /// Add cargo to the hold. Returns amount actually added (may exceed capacity).
+    /// Add cargo to the hold. Returns amount actually added (may be 0 if full).
     /// </summary>
     public int AddCargo(int commodityIndex, int amount = 1)
     {
+        int currentTotal = CargoHold.Values.Sum();
+        int space = CargoCapacity - currentTotal;
+        if (space <= 0) return 0;
+
+        int toAdd = Math.Min(amount, space);
         if (CargoHold.TryGetValue(commodityIndex, out int current))
-            CargoHold[commodityIndex] = current + amount;
+            CargoHold[commodityIndex] = current + toAdd;
         else
-            CargoHold[commodityIndex] = amount;
-        return amount;
+            CargoHold[commodityIndex] = toAdd;
+        return toAdd;
     }
 }

@@ -145,8 +145,14 @@ public class GameInstance : Game
         // Every 32 frames, offset 20: sun effects (heat, fuel scooping)
         _taskScheduler.RegisterEvery(32, 20, () =>
         {
-            // TODO: apply sun proximity effects
-            // Placeholder for Phase 7 fuel scooping and heat damage
+            var sunEffect = _bubbleManager.CheckSunProximity();
+            if (sunEffect == LocalBubbleManager.SunProximityEffect.FuelScoop)
+            {
+                // Scoop 1 fuel unit per ~32 frames (about 0.5s at 60fps)
+                if (_bubbleManager.Commander.Fuel < 70)
+                    _bubbleManager.Commander.Fuel++;
+            }
+            // TODO: apply heat damage based on sunEffect
         });
 
         // Every 256 frames, offset 0: consider spawning a new ship

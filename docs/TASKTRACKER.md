@@ -112,15 +112,15 @@
 
 ## Phase 7: Game Systems
 
-- [ ] **7.1** Create `MarketSystem.cs` — QQ23 commodity table, price formula, availability formula
-- [ ] **7.2** Implement commodity data — food, textiles, narcotics, luxuries, etc. (16 items)
-- [ ] **7.3** Create player inventory — cargo hold capacity, equipment slots
-- [ ] **7.4** Implement fuel scooping — near sun (1.33 radii), fuel increases over time
-- [ ] **7.5** Create `DockingSystem.cs` — 5 geometric checks (friendliness, approach angle nosev_z<=214, heading z>0, safe cone z>=89, slot horizontal |roofv_x|>=80)
-- [ ] **7.6** Implement docking computer — state machine with fake keypress injection (approach -> align -> accelerate), intentionally imperfect
+- [x] **7.1** Create `MarketSystem.cs` — QQ23 commodity table, price formula, availability formula
+- [x] **7.2** Implement commodity data — food, textiles, narcotics, luxuries, etc. (16 items)
+- [x] **7.3** Create player inventory — cargo hold capacity, equipment slots
+- [x] **7.4** Implement fuel scooping — near sun (1.33 radii), fuel increases over time
+- [x] **7.5** Create `DockingSystem.cs` — 5 geometric checks (friendliness, approach angle nosev_z<=214, heading z>0, safe cone z>=89, slot horizontal |roofv_x|>=80)
+- [x] **7.6** Implement docking computer — state machine with fake keypress injection (approach -> align -> accelerate), intentionally imperfect
 - [ ] **7.7** Implement mission system — delivery, assassination, mining contracts
 - [x] **7.8** Create `HudRenderer.cs` — 11 dashboard bar indicators (DILX routine, 16px bars): shields (0-255), fuel (0-70→0-16), cabin temp, laser temp, altitude, speed (0-40→0-16), energy banks (0-16), missiles, pitch/roll, compass, ECM bulbs
-- [ ] **7.9** Create `ScannerRenderer.cs` — 3D elliptical scanner (138×36 at screen (124,220)), range ±63 on all axes, dot+stick projection (X=123+x_sign*x_hi, stick_base_Y=220-z_sign*z_hi/4, stick_height=-y_sign*y_hi/2), 2px dot with 1px stick, IFF coloring
+- [x] **7.9** Create `ScannerRenderer.cs` — 3D elliptical scanner (138×36 at screen (124,220)), range ±63 on all axes, dot+stick projection (X=123+x_sign*x_hi, stick_base_Y=220-z_sign*z_hi/4, stick_height=-y_sign*y_hi/2), 2px dot with 1px stick, IFF coloring
 
 ## Phase 8: Polish & Integration
 
@@ -136,23 +136,16 @@
 
 ## Current Focus
 
-**Phase 6: Ship AI & Combat** — COMPLETE. All 9 tasks done:
-- TACTICS routine with energy recharge, targeting, missile/laser combat
-- NEWB personality flags (8 behavior bits per ship type)
-- HITCH targeting with crosshair alignment
-- Aggression system (0-63 scale)
-- SpawnSystem with danger level × altitude selection
-- Full combat: lasers, missiles, E.C.M., energy depletion
-- Collision detection with sphere-based radii
-- Bounty system: CommanderData with TALLY tracking → 9 combat ranks
-- Cargo release: destroyed ships drop cargo canisters
-- Collision destruction: small ships instant-kill, large ships take proportional damage
-- Explosion visual effects with proper screen projection and delayed cleanup
-- HUD messages and debug logging for destruction events
-- Player energy/shield regeneration fixed
-- Rock entity system (IsRock property) for asteroids/boulders/hermits
+**Phase 7: Game Systems** — 8 of 9 tasks complete:
+- MarketSystem: QQ23 commodity table (16 items), price/availability formulas based on economy+tech
+- CommanderData: cargo capacity, fuel level (0-70), buy/sell operations
+- Fuel scooping: active when within 1.33× planet diameter of sun, +1 fuel per 32 frames
+- DockingSystem: 5 geometric clearance checks (friendliness, approach angle, heading, safe cone, slot horizontal)
+- Docking computer: state machine (approaching → aligning → accelerating → docked) with fake keypress injection
+- ScannerRenderer: 3D elliptical display with dot+stick projection and IFF coloring
+- Mission system still pending
 
-**Next: Phase 7** — Game Systems (market, trading, fuel scooping, docking, missions, scanner)
+**Next: Phase 7.7** — Mission system (delivery, assassination, mining contracts), then Phase 8 (polish & integration)
 
 ---
 

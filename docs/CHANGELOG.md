@@ -7,7 +7,39 @@ All notable changes to this project.
 ## [Unreleased]
 
 ### Added
-- **Collision destruction with explosions** — visual feedback for ship destruction
+- **Phase 7: Game Systems** — market, docking, scanner, fuel scooping (8 of 9 tasks complete)
+- **MarketSystem** — QQ23 commodity table with 16 items (food, textiles, narcotics, luxuries, furs, liquor/wines, metals, gold, platinum, gem-stones, aliens, firearms, medical, machines, alcohols, computers)
+  - Price formula: `(base + (rand & mask) + economy × factor) × 4`
+  - Availability formula: `(base_qty + (rand & mask) - economy × factor) mod 64`
+  - Tech level adjustments: scarce/expensive outside production range
+  - `Buy()` and `Sell()` operations with credit/cargo validation
+- **DockingSystem** — 5 geometric clearance checks
+  - Friendliness: station not hostile
+  - Approach angle: nosev_z ≤ 214 (within 26° of head-on)
+  - Heading: ship faces station (z-component positive)
+  - Safe cone: position within 22° cone (z ≥ 89)
+  - Slot horizontal: |roofv_x| ≥ 80 (within 33.6°)
+  - Docking computer state machine: approaching → aligning → accelerating → docked
+  - Fake keypress injection for automated approach (intentionally imperfect)
+- **ScannerRenderer** — 3D elliptical scanner display (space compass)
+  - Ellipse: 480×240, centered in dashboard center panel
+  - 3 dashed grey horizontal grid lines (top, center, bottom)
+  - Vertical dashed line from bottom to center
+  - W-shape pattern in upper half (dashed grey)
+  - Sun indicator: orange circle with yellow center (upper left)
+  - Station indicator: cyan circle with filled/outline square (upper right)
+  - Ship contacts: colored dots with sticks (green=friendly, orange=hostile)
+  - Station appears as large white dot on scanner for navigation
+  - Contacts transform with universe orientation (move on pitch/roll)
+- **Fuel scooping** — +1 fuel per 32 frames when within 1.33× planet diameter of sun
+  - Wired via MCNT scheduler (every 32 frames, offset 20)
+  - Fuel level tracked in CommanderData (0-70 range)
+- **CommanderData enhancements**
+  - `Fuel` property (0-70, default 35)
+  - `CargoCapacity` property (default 10 tons)
+  - `AddCargo()` now respects capacity limit
+- **HUD integration** — fuel display reads from CommanderData.Fuel
+- **Scanner integration** — wired into FlightScene.Draw() with universe orientation transform
   - Explosion visual effects wired into FlightScene (particle expansion/contraction cycle)
   - Destroyed ships remain in bubble during explosion animation, cleaned up after 10-frame delay
   - Proper screen projection using view/projection matrices

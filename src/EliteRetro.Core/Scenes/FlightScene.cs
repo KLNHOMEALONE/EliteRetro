@@ -25,6 +25,7 @@ public class FlightScene : GameScene
     private ExplosionRenderer _explosionRenderer = null!;
     private readonly List<ExplosionRenderer.ExplosionCloud> _explosions = new();
     private HudRenderer _hudRenderer = null!;
+    private ScannerRenderer _scannerRenderer = null!;
     private BitmapFont _font = null!;
     private GraphicsDevice? _graphicsDevice;
     private GameInstance _gameInstance = null!;
@@ -81,6 +82,7 @@ public class FlightScene : GameScene
         _stardustRenderer = new StardustRenderer(_graphicsDevice);
         _explosionRenderer = new ExplosionRenderer(_graphicsDevice);
         _hudRenderer = new HudRenderer(_graphicsDevice);
+        _scannerRenderer = new ScannerRenderer(_graphicsDevice);
         _stardustRenderer.Initialize(42); // Fixed seed for consistent starfield
 
         // Create 1x1 white texture for damage flash overlay
@@ -153,6 +155,26 @@ public class FlightScene : GameScene
             Speed = 0
         };
         _bubbleManager.SetSlot(GameConstants.SunStationSlot, sun);
+
+        // DEBUG: Spawn station immediately for testing
+        // Remove this when safe zone approach works naturally
+        var stationModel = ShuttleModel.Create(48);
+        var stationBlueprint = new ShipBlueprint
+        {
+            Name = "Coriolis Station",
+            Model = stationModel,
+            MaxSpeed = 0,
+            MaxEnergy = 255,
+            HullStrength = 255,
+            ShieldStrength = 255
+        };
+        var station = new ShipInstance(stationBlueprint)
+        {
+            Position = new Vector3(0, 0, -GameConstants.PlanetRadius * 2),
+            Speed = 0
+        };
+        station.Orientation.Nosev = Vector3.UnitZ; // Face player
+        _bubbleManager.SetSlot(GameConstants.SunStationSlot, station);
     }
 
     public override void Update(GameTime gameTime)
@@ -510,7 +532,7 @@ public class FlightScene : GameScene
             Speed = _playerSpeed,
             Energy = _bubbleManager.PlayerShip?.Energy ?? 200,
             MaxEnergy = 255,
-            Fuel = _bubbleManager.PlayerFuel,
+            Fuel = _bubbleManager.Commander.Fuel,
             CabinTemp = 0,
             LaserTemp = 0,
             Altitude = (int)(_bubbleManager.Planet?.Position.Length() ?? 0),
@@ -538,6 +560,9 @@ public class FlightScene : GameScene
 
         // Draw dashboard
         _hudRenderer.Draw(spriteBatch, hudState, _font);
+
+        // Scanner display
+        _scannerRenderer.Draw(spriteBatch, _bubbleManager, GameConstants.PlayerSlot, _universeOrientation);
 
         // Flight data text (left side, original positions)
         float planetDist = _bubbleManager.Planet?.Position.Length() ?? 0;
