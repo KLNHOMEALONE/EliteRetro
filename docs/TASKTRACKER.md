@@ -100,13 +100,13 @@
 
 ## Phase 6: Ship AI & Combat
 
-- [ ] **6.1** Create `ShipAISystem.cs` — full TACTICS routine: energy recharge (+1/iter), Part 3 targeting (nosev·toPlayer dot product), Part 4 energy check (2.5% random roll, bail at low energy), Part 5 missile decision, Part 6 laser firing (crosshair check), Part 7 movement (XX15 vector-based: traders→planet, aggressive→player, missiles→home)
-- [ ] **6.2** Implement NEWB flags (byte #37) — 8 personality bits (trader, bounty hunter, hostile, pirate, docking, innocent, cop, scooped), default table E% per ship type
-- [ ] **6.3** Implement HITCH targeting — z_sign positive, x_hi=y_hi=0, distance² = x_lo²+y_lo² vs blueprint targetable area
-- [ ] **6.4** Implement aggression (0-63 in byte #32 bits 1-6) — probability of turning toward target, separate from hostility flag
-- [ ] **6.5** Create `SpawnSystem.cs` — danger level × altitude → ship type selection, pack spawning
-- [ ] **6.6** Implement combat — laser firing (4 mounts, power from blueprint), missile launch (homing), E.C.M. (countermeasure, mutual cancellation), energy depletion on hit
-- [ ] **6.7** Create `CollisionSystem.cs` — entity vs entity collision detection
+- [x] **6.1** Create `ShipAISystem.cs` — full TACTICS routine: energy recharge (+1/iter), Part 3 targeting (nosev·toPlayer dot product), Part 4 energy check (2.5% random roll, bail at low energy), Part 5 missile decision, Part 6 laser firing (crosshair check), Part 7 movement (XX15 vector-based: traders→planet, aggressive→player, missiles→home)
+- [x] **6.2** Implement NEWB flags (byte #37) — 8 personality bits (trader, bounty hunter, hostile, pirate, docking, innocent, cop, scooped), default table E% per ship type
+- [x] **6.3** Implement HITCH targeting — z_sign positive, x_hi=y_hi=0, distance² = x_lo²+y_lo² vs blueprint targetable area
+- [x] **6.4** Implement aggression (0-63 in byte #32 bits 1-6) — probability of turning toward target, separate from hostility flag
+- [x] **6.5** Create `SpawnSystem.cs` — danger level × altitude → ship type selection, pack spawning
+- [x] **6.6** Implement combat — laser firing (4 mounts, power from blueprint), missile launch (homing), E.C.M. (countermeasure, mutual cancellation), energy depletion on hit
+- [x] **6.7** Create `CollisionSystem.cs` — entity vs entity collision detection
 - [ ] **6.8** Implement bounty system — TALLY (16-bit) → 9 ranks (Harmless 0-7, Mostly Harmless 8-15, Poor 16-31, Average 32-63, Above Average 64-127, Competent 128-511, Dangerous 512-2559, Deadly 2560-6399, Elite 6400+)
 - [ ] **6.9** Implement cargo release — destroyed ships drop canisters (max_cargo from blueprint)
 

@@ -85,8 +85,8 @@ public class GameInstance : Game
                     var entity = _bubbleManager.GetSlot(slotIndex);
                     if (entity != null && entity.IsActive)
                     {
-                        if (entity.Energy < (byte)entity.Blueprint.MaxEnergy)
-                            entity.Energy = (byte)Math.Min(entity.Energy + 2, entity.Blueprint.MaxEnergy);
+                        // Execute TACTICS routine for this ship
+                        ShipAISystem.ExecuteTactics(entity, null, _bubbleManager, _mcnt.Value);
                     }
                 }
             });

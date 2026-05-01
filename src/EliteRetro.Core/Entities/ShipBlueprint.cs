@@ -30,6 +30,9 @@ public class ShipBlueprint
     /// <summary>Shield strength (0-255).</summary>
     public byte ShieldStrength { get; init; }
 
+    /// <summary>NEWB personality flags (byte #37).</summary>
+    public NewbFlags Personality { get; init; }
+
     /// <summary>Laser power (0 = none, 1-4 = beam/military/pulse/mining).</summary>
     public byte LaserPower { get; init; }
 
