@@ -6,6 +6,7 @@ using EliteRetro.Core.Entities;
 using EliteRetro.Core.Rendering;
 using EliteRetro.Core.Managers;
 using EliteRetro.Core.Systems;
+using EliteRetro.Core.HUD;
 
 namespace EliteRetro.Core.Scenes;
 
@@ -21,6 +22,7 @@ public class FlightScene : GameScene
     private SunRenderer _sunRenderer = null!;
     private RingRenderer _ringRenderer = null!;
     private StardustRenderer _stardustRenderer = null!;
+    private HudRenderer _hudRenderer = null!;
     private BitmapFont _font = null!;
     private GraphicsDevice? _graphicsDevice;
     private GameInstance _gameInstance = null!;
@@ -66,6 +68,7 @@ public class FlightScene : GameScene
         _sunRenderer = new SunRenderer(_graphicsDevice);
         _ringRenderer = new RingRenderer(_graphicsDevice);
         _stardustRenderer = new StardustRenderer(_graphicsDevice);
+        _hudRenderer = new HudRenderer(_graphicsDevice);
         _stardustRenderer.Initialize(42); // Fixed seed for consistent starfield
         _projection = Matrix.CreatePerspectiveFieldOfView(
             MathHelper.ToRadians(75f),
@@ -412,45 +415,72 @@ public class FlightScene : GameScene
 
     private void DrawHUD(SpriteBatch spriteBatch)
     {
-        // View mode indicator
-        string viewLabel = _viewMode switch
-        {
-            0 => "FRONT",
-            1 => "REAR",
-            2 => "LEFT",
-            3 => "RIGHT",
-            _ => "FRONT"
-        };
-        _font.DrawString(spriteBatch, viewLabel, new Vector2(10, 10), Color.Cyan, 1.5f);
-
-        // Flight data
-        _font.DrawString(spriteBatch, $"SPEED: {_playerSpeed:F1}", new Vector2(10, 40), Color.White, 1f);
-        float planetDist = _bubbleManager.Planet?.Position.Length() ?? 0;
-        _font.DrawString(spriteBatch, $"PLANET DIST: {planetDist:F0}", new Vector2(10, 60), Color.Cyan, 1.2f);
-        float sunDist = _bubbleManager.SunOrStation?.Position.Length() ?? 0;
-        _font.DrawString(spriteBatch, $"SUN DIST: {sunDist:F0}", new Vector2(10, 82), Color.Orange, 1.2f);
-
-        // Sun proximity
+        // Build HUD state from current game data
         var sunEffect = _bubbleManager.CheckSunProximity();
-        Color sunColor = sunEffect switch
-        {
-            LocalBubbleManager.SunProximityEffect.Fatal => Color.Red,
-            LocalBubbleManager.SunProximityEffect.FuelScoop => Color.Green,
-            LocalBubbleManager.SunProximityEffect.HeatWarning => Color.Orange,
-            _ => Color.Gray
-        };
-        string sunLabel = sunEffect switch
-        {
-            LocalBubbleManager.SunProximityEffect.Fatal => "DANGER - FATAL PROXIMITY",
-            LocalBubbleManager.SunProximityEffect.FuelScoop => "FUEL SCOOP ACTIVE",
-            LocalBubbleManager.SunProximityEffect.HeatWarning => "HEAT WARNING",
-            _ => "SUN: NORMAL"
-        };
-        _font.DrawString(spriteBatch, sunLabel, new Vector2(10, 110), sunColor, 1f);
+        string statusMsg = "";
+        Color statusColor = Color.Gray;
 
-        // Station status
+        if (sunEffect == LocalBubbleManager.SunProximityEffect.Fatal)
+        {
+            statusMsg = "DANGER - FATAL PROXIMITY";
+            statusColor = Color.Red;
+        }
+        else if (sunEffect == LocalBubbleManager.SunProximityEffect.FuelScoop)
+        {
+            statusMsg = "FUEL SCOOP ACTIVE";
+            statusColor = Color.Green;
+        }
+        else if (sunEffect == LocalBubbleManager.SunProximityEffect.HeatWarning)
+        {
+            statusMsg = "HEAT WARNING";
+            statusColor = Color.Orange;
+        }
+
         if (_bubbleManager.SunOrStation?.Blueprint?.Name == "Coriolis Station")
-            _font.DrawString(spriteBatch, "STATION DOCKED", new Vector2(10, 135), Color.Yellow, 1f);
+        {
+            statusMsg = "STATION IN VIEW";
+            statusColor = Color.Yellow;
+        }
+
+        var hudState = new HUDState
+        {
+            Speed = _playerSpeed,
+            Energy = 200, // TODO: wire actual player energy
+            MaxEnergy = 255,
+            Fuel = 35, // TODO: wire actual fuel
+            CabinTemp = 0,
+            LaserTemp = 0,
+            Altitude = 100, // TODO: wire actual altitude
+            EnergyBanks = 0,
+            Missiles = 0,
+            MaxMissiles = 4,
+            ShieldForward = 255,
+            ShieldAft = 255,
+            Pitch = 0,
+            Roll = _cumulativeRoll,
+            CompassHeading = _cumulativeRoll,
+            ECMBulbs = 0,
+            ViewMode = _viewMode switch
+            {
+                0 => "FRONT",
+                1 => "REAR",
+                2 => "LEFT",
+                3 => "RIGHT",
+                _ => "FRONT"
+            },
+            StatusMessage = statusMsg,
+            StatusColor = statusColor,
+            ShowHiddenEdges = _showHiddenEdges
+        };
+
+        // Draw dashboard
+        _hudRenderer.Draw(spriteBatch, hudState, _font);
+
+        // Flight data text (left side, original positions)
+        float planetDist = _bubbleManager.Planet?.Position.Length() ?? 0;
+        float sunDist = _bubbleManager.SunOrStation?.Position.Length() ?? 0;
+        _font.DrawString(spriteBatch, $"PLANET DIST: {planetDist:F0}", new Vector2(10, 60), Color.Cyan, 1.2f);
+        _font.DrawString(spriteBatch, $"SUN DIST: {sunDist:F0}", new Vector2(10, 82), Color.Orange, 1.2f);
 
         // Hidden edges indicator
         _font.DrawString(spriteBatch, _showHiddenEdges ? "HIDDEN: ON" : "HIDDEN: OFF", new Vector2(10, 160), Color.White, 0.8f);

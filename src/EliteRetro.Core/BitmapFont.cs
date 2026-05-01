@@ -101,6 +101,37 @@ public class BitmapFont
         }
     }
 
+    /// <summary>
+    /// Measure the pixel dimensions of a string at scale 1.0.
+    /// </summary>
+    public Vector2 MeasureString(string text)
+    {
+        float maxWidth = 0;
+        float currentWidth = 0;
+        float totalHeight = 0;
+
+        foreach (char c in text)
+        {
+            if (c == '\n')
+            {
+                if (currentWidth > maxWidth) maxWidth = currentWidth;
+                currentWidth = 0;
+                totalHeight += _lineHeight;
+                continue;
+            }
+
+            if (_glyphRects.TryGetValue(c, out var rect))
+                currentWidth += rect.Width;
+            else
+                currentWidth += 12;
+        }
+
+        if (currentWidth > maxWidth) maxWidth = currentWidth;
+        totalHeight += _lineHeight;
+
+        return new Vector2(maxWidth, totalHeight);
+    }
+
     public Texture2D Atlas => _atlas;
 
     public int LineHeight => _lineHeight;

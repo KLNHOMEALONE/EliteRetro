@@ -119,7 +119,7 @@
 - [ ] **7.5** Create `DockingSystem.cs` — 5 geometric checks (friendliness, approach angle nosev_z<=214, heading z>0, safe cone z>=89, slot horizontal |roofv_x|>=80)
 - [ ] **7.6** Implement docking computer — state machine with fake keypress injection (approach -> align -> accelerate), intentionally imperfect
 - [ ] **7.7** Implement mission system — delivery, assassination, mining contracts
-- [ ] **7.8** Create `HudRenderer.cs` — 11 dashboard bar indicators (DILX routine, 16px bars): shields (0-255), fuel (0-70→0-16), cabin temp, laser temp, altitude, speed (0-40→0-16), energy banks (0-16), missiles, pitch/roll, compass, ECM bulbs
+- [x] **7.8** Create `HudRenderer.cs` — 11 dashboard bar indicators (DILX routine, 16px bars): shields (0-255), fuel (0-70→0-16), cabin temp, laser temp, altitude, speed (0-40→0-16), energy banks (0-16), missiles, pitch/roll, compass, ECM bulbs
 - [ ] **7.9** Create `ScannerRenderer.cs` — 3D elliptical scanner (138×36 at screen (124,220)), range ±63 on all axes, dot+stick projection (X=123+x_sign*x_hi, stick_base_Y=220-z_sign*z_hi/4, stick_height=-y_sign*y_hi/2), 2px dot with 1px stick, IFF coloring
 
 ## Phase 8: Polish & Integration

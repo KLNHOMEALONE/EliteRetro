@@ -7,6 +7,14 @@ All notable changes to this project.
 ## [Unreleased]
 
 ### Added
+- **HUD Dashboard** — authentic BBC Elite-style dashboard overlay
+  - `HudRenderer.cs` with DILX-style vertical bar indicators (8 indicators)
+  - Speed, energy, fuel, cabin temp, laser temp, altitude, energy banks, missiles
+  - Compass strip with cardinal direction indicator
+  - ECM bulb indicators (3 bulbs)
+  - Temperature bars use cyan→yellow→red gradient
+  - `HUDState` struct for passing dashboard data
+  - `BitmapFont.MeasureString()` added for text centering
 - **Screen-space outline detection** for wireframe rendering
   - Projects edges to 2D, tests if edge lies on the screen-space contour
   - Edges on the outline are always drawn solid, even if their faces are culled
