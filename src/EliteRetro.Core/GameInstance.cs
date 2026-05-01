@@ -63,11 +63,12 @@ public class GameInstance : Game
     /// </summary>
     private void RegisterScheduledTasks()
     {
-        // Every 8 frames, offset 0: energy/shield regen for all active entities
+        // Every 8 frames, offset 0: energy/shield regen for all active entities (not player)
         _taskScheduler.RegisterEvery(8, 0, () =>
         {
             foreach (var entity in _bubbleManager.GetAllActive())
             {
+                if (entity.SlotIndex == GameConstants.PlayerSlot) continue;
                 if (entity.Energy < (byte)entity.Blueprint.MaxEnergy)
                     entity.Energy = (byte)Math.Min(entity.Energy + 1, entity.Blueprint.MaxEnergy);
             }
@@ -79,14 +80,14 @@ public class GameInstance : Game
             int off = offset;
             _taskScheduler.RegisterEvery(8, (byte)offset, () =>
             {
-                int slotIndex = 2 + off;
+                int slotIndex = GameConstants.FirstAvailableSlot + off;
                 if (slotIndex < 20)
                 {
                     var entity = _bubbleManager.GetSlot(slotIndex);
                     if (entity != null && entity.IsActive)
                     {
-                        // Execute TACTICS routine for this ship
-                        ShipAISystem.ExecuteTactics(entity, null, _bubbleManager, _mcnt.Value);
+                        // Execute TACTICS routine for this ship, targeting player
+                        ShipAISystem.ExecuteTactics(entity, _bubbleManager.PlayerShip, _bubbleManager, _mcnt.Value);
                     }
                 }
             });
@@ -123,9 +124,21 @@ public class GameInstance : Game
             }
         });
 
-        // Every 32 frames, offset 10: altitude, crash landing, low energy warnings
+        // Every 32 frames, offset 10: altitude, crash landing, low energy warnings + collision check
         _taskScheduler.RegisterEvery(32, 10, () =>
         {
+            // Check entity collisions
+            CollisionSystem.CheckCollisions(_bubbleManager);
+
+            // Check planet crash for player-adjacent ships
+            var planet = _bubbleManager.Planet;
+            foreach (var entity in _bubbleManager.GetAllActive())
+            {
+                if (entity.SlotIndex == GameConstants.PlanetSlot) continue;
+                if (CollisionSystem.CheckPlanetCrash(entity, planet))
+                    entity.IsActive = false;
+            }
+
             // TODO: calculate altitude from planet, check crash landing, low energy warning
             // Placeholder for Phase 7 HUD warnings
         });
@@ -140,8 +153,10 @@ public class GameInstance : Game
         // Every 256 frames, offset 0: consider spawning a new ship
         _taskScheduler.RegisterEvery(256, 0, () =>
         {
-            // TODO: spawn system based on danger level and altitude
-            // Placeholder — random spawn for now (Phase 6)
+            // TODO: calculate danger level and altitude from current system
+            byte dangerLevel = 3; // placeholder
+            byte altitude = 10;   // placeholder
+            SpawnSystem.TrySpawnShip(_bubbleManager, dangerLevel, altitude);
         });
     }
 

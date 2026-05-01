@@ -13,6 +13,14 @@ public class EntityEventArgs : EventArgs
 }
 
 /// <summary>
+/// Event args for collision events.
+/// </summary>
+public class CollisionEventArgs : EventArgs
+{
+    public string OtherShipName { get; init; }
+}
+
+/// <summary>
 /// Manages entities within the player's local bubble (renderable area).
 /// Uses a fixed slot array: slot 0 = planet, slot 1 = sun/station,
 /// slots 2+ = ships, missiles, cargo. Enforces capacity limits and
@@ -27,19 +35,69 @@ public class LocalBubbleManager
     /// <summary>Raised when an entity is spawned or despawned.</summary>
     public event EventHandler<EntityEventArgs>? EntityEvent;
 
+    /// <summary>Raised when the player ship collides with another entity.</summary>
+    public event EventHandler<CollisionEventArgs>? CollisionEvent;
+
     /// <summary>Planet entity (always in slot 0).</summary>
     public ShipInstance? Planet => _slots[GameConstants.PlanetSlot];
 
     /// <summary>Sun or station entity (slot 1, mutually exclusive).</summary>
     public ShipInstance? SunOrStation => _slots[GameConstants.SunStationSlot];
 
+    /// <summary>Player ship entity (slot 2, always present).</summary>
+    public ShipInstance? PlayerShip => _slots[GameConstants.PlayerSlot];
+
     /// <summary>Player position (at origin in local bubble coordinates).</summary>
     public Vector3 PlayerPosition { get; set; }
+
+    /// <summary>Player energy (0-255).</summary>
+    public byte PlayerEnergy { get; set; } = 200;
+
+    /// <summary>Player shield strength (0-255, front).</summary>
+    public byte PlayerShieldFront { get; set; } = 200;
+
+    /// <summary>Player shield strength (0-255, aft).</summary>
+    public byte PlayerShieldAft { get; set; } = 200;
+
+    /// <summary>Player hull strength (0-255).</summary>
+    public byte PlayerHull { get; set; } = 255;
+
+    /// <summary>Player fuel level (0-70).</summary>
+    public byte PlayerFuel { get; set; } = 35;
+
+    /// <summary>Player missiles remaining.</summary>
+    public byte PlayerMissiles { get; set; } = 4;
+
+    /// <summary>Player legal status (0=clean, 1=fugitive, 2=offender, 3=criminal).</summary>
+    public byte LegalStatus { get; set; }
 
     public LocalBubbleManager(int capacity = GameConstants.MaxSlots)
     {
         _capacity = capacity;
         _slots = new ShipInstance[capacity];
+
+        // Create player ship
+        var playerBlueprint = new ShipBlueprint
+        {
+            Name = "Player",
+            Model = CobraMk3Model.Create(24),
+            MaxSpeed = 40f,
+            MaxEnergy = 255,
+            HullStrength = 255,
+            ShieldStrength = 255,
+            LaserPower = 2,
+            ShipClass = (byte)NewbFlags.None,
+        };
+        var playerShip = new ShipInstance(playerBlueprint)
+        {
+            Position = Vector3.Zero,
+            Speed = 0,
+            Energy = 200,
+            Hull = 255,
+            SlotIndex = GameConstants.PlayerSlot,
+            IsActive = true,
+        };
+        _slots[GameConstants.PlayerSlot] = playerShip;
     }
 
     /// <summary>
@@ -246,12 +304,23 @@ public class LocalBubbleManager
     }
 
     /// <summary>
-    /// Clear all slots (used when jumping to another system).
+    /// Clear all slots except player (used when jumping to another system).
     /// </summary>
     public void Clear()
     {
         for (int i = 0; i < _capacity; i++)
+        {
+            if (i == GameConstants.PlayerSlot) continue; // preserve player ship
             _slots[i] = null;
+        }
+    }
+
+    /// <summary>
+    /// Raise a collision event for the player.
+    /// </summary>
+    public void RaiseCollision(string otherShipName)
+    {
+        CollisionEvent?.Invoke(this, new CollisionEventArgs { OtherShipName = otherShipName });
     }
 
     // --- Sun distance effects ---

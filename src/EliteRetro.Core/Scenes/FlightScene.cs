@@ -45,6 +45,11 @@ public class FlightScene : GameScene
     private readonly Random _rng = new Random();
     private string _lastEventMessage = ""; // HUD message for spawn/despawn events
     private int _eventMessageTimer; // frames remaining to display event message
+    private int _damageFlashTimer; // frames remaining for red damage flash
+    private byte _lastPlayerHull; // track hull for damage detection
+    private byte _lastPlayerEnergy; // track energy/shields for damage detection
+    private Texture2D _whitePixel = null!; // 1x1 white texture for damage flash overlay
+    private bool _ramMode; // when true, spawned entities aim directly at player
 
     public FlightScene(Game? game = null)
     {
@@ -55,7 +60,10 @@ public class FlightScene : GameScene
         }
         _flightControlService = new FlightControlService();
         if (_bubbleManager != null)
+        {
             _bubbleManager.EntityEvent += OnEntityEvent;
+            _bubbleManager.CollisionEvent += OnCollision;
+        }
     }
 
     public override void LoadContent(ContentManager content, BitmapFont font, GraphicsDevice graphicsDevice)
@@ -70,6 +78,11 @@ public class FlightScene : GameScene
         _stardustRenderer = new StardustRenderer(_graphicsDevice);
         _hudRenderer = new HudRenderer(_graphicsDevice);
         _stardustRenderer.Initialize(42); // Fixed seed for consistent starfield
+
+        // Create 1x1 white texture for damage flash overlay
+        _whitePixel = new Texture2D(graphicsDevice, 1, 1);
+        _whitePixel.SetData(new[] { Color.White });
+
         _projection = Matrix.CreatePerspectiveFieldOfView(
             MathHelper.ToRadians(75f),
             _graphicsDevice.Viewport.AspectRatio,
@@ -83,6 +96,12 @@ public class FlightScene : GameScene
         if (_gameInstance != null)
         {
             InitializeBubble();
+            // Initialize damage tracking
+            if (_bubbleManager.PlayerShip != null)
+            {
+                _lastPlayerHull = _bubbleManager.PlayerShip.Hull;
+                _lastPlayerEnergy = _bubbleManager.PlayerShip.Energy;
+            }
             _initialized = true;
         }
     }
@@ -198,6 +217,21 @@ public class FlightScene : GameScene
             // Update stardust
             _stardustRenderer.Update(_playerSpeed);
 
+            // Check for player damage (shield or hull decrease)
+            if (_bubbleManager.PlayerShip != null)
+            {
+                byte currentHull = _bubbleManager.PlayerShip.Hull;
+                byte currentEnergy = _bubbleManager.PlayerShip.Energy;
+                if (currentHull < _lastPlayerHull || currentEnergy < _lastPlayerEnergy)
+                {
+                    _damageFlashTimer = 15; // 15 frames = 250ms red flash
+                }
+                _lastPlayerHull = currentHull;
+                _lastPlayerEnergy = currentEnergy;
+            }
+            if (_damageFlashTimer > 0)
+                _damageFlashTimer--;
+
             // Check sun proximity effects
             var sunEffect = _bubbleManager.CheckSunProximity();
             // TODO: Apply heat damage, fuel scooping, etc. based on sunEffect
@@ -206,6 +240,10 @@ public class FlightScene : GameScene
         // Toggle local pause on Space (separate from flight control pause)
         if (kb.IsKeyDown(Keys.Space) && _prevKb.IsKeyUp(Keys.Space) && !control.IsPaused)
             _paused = !_paused;
+
+        // Toggle ram mode with R
+        if (kb.IsKeyDown(Keys.R) && _prevKb.IsKeyUp(Keys.R))
+            _ramMode = !_ramMode;
 
         // Toggle hidden edges with I
         if (kb.IsKeyDown(Keys.I) && _prevKb.IsKeyUp(Keys.I))
@@ -307,6 +345,15 @@ public class FlightScene : GameScene
             DrawCelestialSun(spriteBatch, _bubbleManager.SunOrStation.Position, GameConstants.PlanetRadius * 6, SunRenderer.GetSunColor(0));
         }
 
+        // Damage flash overlay (red vignette when hit)
+        if (_damageFlashTimer > 0)
+        {
+            float intensity = _damageFlashTimer / 15f;
+            byte alpha = (byte)(intensity * 128);
+            Color flashColor = new Color(255, 0, 0) { A = alpha };
+            spriteBatch.Draw(_whitePixel, new Rectangle(0, 0, 1024, 768), flashColor);
+        }
+
         // HUD overlay
         DrawHUD(spriteBatch);
 
@@ -351,43 +398,62 @@ public class FlightScene : GameScene
 
         // 50% chance: fly toward player (spawn ahead, move toward origin)
         // 50% chance: fly toward planet (spawn near player, move away toward planet)
-        bool towardPlayer = _rng.NextDouble() < 0.5;
-        float speed = 1f + (float)_rng.NextDouble() * 2f; // speed 1-3 (slower, more visible)
+        // In ram mode (R toggle): always fly toward player at high speed
+        bool towardPlayer = _ramMode || _rng.NextDouble() < 0.5;
+        float speed = _ramMode ? (5f + (float)_rng.NextDouble() * 5f) : (1f + (float)_rng.NextDouble() * 2f); // ram: 5-10, normal: 1-3
 
         Vector3 position;
         float entitySpeed;
+        OrientationMatrix orientation = OrientationMatrix.Identity;
 
         if (towardPlayer)
         {
             // Spawn ahead (negative Z), fly toward player (positive Z direction)
             position = new Vector3(lateralX, lateralY, -distance);
-            entitySpeed = speed; // positive speed, Nosev will point toward player
+            entitySpeed = speed;
+
+            // In ram mode, aim directly at player position
+            if (_ramMode)
+            {
+                Vector3 toPlayer = -position;
+                if (toPlayer.LengthSquared() > 0.01f)
+                {
+                    toPlayer = Vector3.Normalize(toPlayer);
+                    orientation = new OrientationMatrix
+                    {
+                        Nosev = toPlayer,
+                        Roofv = Vector3.Normalize(Vector3.Cross(toPlayer, Vector3.UnitY)),
+                        Sidev = Vector3.Normalize(Vector3.Cross(orientation.Roofv, toPlayer))
+                    };
+                }
+            }
+            else
+            {
+                // Non-ram: nose points toward +Z (toward player)
+                orientation = new OrientationMatrix
+                {
+                    Nosev = new Vector3(0, 0, 1),
+                    Roofv = new Vector3(0, 1, 0),
+                    Sidev = new Vector3(1, 0, 0)
+                };
+            }
         }
         else
         {
             // Spawn between player and planet, fly away from player toward planet
             position = new Vector3(lateralX, lateralY, -distance * 0.3f);
-            entitySpeed = speed; // positive speed, Nosev points away from player
+            entitySpeed = speed;
         }
 
         var entity = new ShipInstance(blueprint)
         {
             Position = position,
             Speed = entitySpeed,
-            Orientation = OrientationMatrix.Identity
+            Orientation = orientation
         };
 
-        // For ships flying toward player, nose points toward +Z (toward player)
-        // so they fly nose-first
-        if (towardPlayer)
-        {
-            entity.Orientation = new OrientationMatrix
-            {
-                Nosev = new Vector3(0, 0, 1),   // nose points toward player (+Z)
-                Roofv = new Vector3(0, 1, 0),   // up stays up
-                Sidev = new Vector3(1, 0, 0)    // right stays right (maintains right-handed basis)
-            };
-        }
+        // For ships flying toward player (non-ram mode), nose points toward +Z (toward player)
+        // so they fly nose-first — already handled above, this block removed
 
         _bubbleManager.TrySpawn(entity);
 
@@ -429,17 +495,17 @@ public class FlightScene : GameScene
         var hudState = new HUDState
         {
             Speed = _playerSpeed,
-            Energy = 200, // TODO: wire actual player energy
+            Energy = _bubbleManager.PlayerShip?.Energy ?? 200,
             MaxEnergy = 255,
-            Fuel = 35, // TODO: wire actual fuel
+            Fuel = _bubbleManager.PlayerFuel,
             CabinTemp = 0,
             LaserTemp = 0,
-            Altitude = 100, // TODO: wire actual altitude
+            Altitude = (int)(_bubbleManager.Planet?.Position.Length() ?? 0),
             EnergyBanks = 0,
-            Missiles = 0,
+            Missiles = _bubbleManager.PlayerMissiles,
             MaxMissiles = 4,
-            ShieldForward = 255,
-            ShieldAft = 255,
+            ShieldForward = (byte)(_bubbleManager.PlayerShip?.Energy ?? 200),
+            ShieldAft = (byte)(_bubbleManager.PlayerShip?.Energy ?? 200),
             Pitch = 0,
             Roll = _cumulativeRoll,
             CompassHeading = _cumulativeRoll,
@@ -468,6 +534,23 @@ public class FlightScene : GameScene
 
         // Hidden edges indicator
         _font.DrawString(spriteBatch, _showHiddenEdges ? "HIDDEN: ON" : "HIDDEN: OFF", new Vector2(10, 160), Color.White, 0.8f);
+
+        // Ram mode indicator
+        Color ramColor = _ramMode ? Color.Red : Color.DarkGray;
+        _font.DrawString(spriteBatch, _ramMode ? "RAM MODE: ON (press R to toggle)" : "RAM MODE: OFF (press R to toggle)", new Vector2(10, 182), ramColor, 0.8f);
+
+        // Debug: show distances to nearby entities
+        int debugY = 205;
+        foreach (var entity in _bubbleManager.GetActiveShips())
+        {
+            float dist = entity.Position.Length();
+            if (dist < 500)
+            {
+                Color distColor = dist < 50 ? Color.Red : dist < 200 ? Color.Orange : Color.Yellow;
+                _font.DrawString(spriteBatch, $"{entity.Blueprint.Name}: {dist:F0}", new Vector2(10, debugY), distColor, 0.8f);
+                debugY += 22;
+            }
+        }
 
         // Controls
         _font.DrawString(spriteBatch, "ARROWS: PITCH/ROLL  W/S: SPEED  V: VIEW  +/-: ZOOM  SPACE: PAUSE  I: EDGES  ESC: MENU", new Vector2(10, 740), Color.Gray, 0.8f);
@@ -502,6 +585,15 @@ public class FlightScene : GameScene
             "out of bounds" => $"{e.EntityName} left sector",
             _ => $"{e.EntityName} detected"
         };
+        _eventMessageTimer = 120; // show for 2 seconds
+    }
+
+    /// <summary>
+    /// Handle collision events for HUD notifications.
+    /// </summary>
+    private void OnCollision(object? sender, CollisionEventArgs e)
+    {
+        _lastEventMessage = $"COLLISION with {e.OtherShipName}!";
         _eventMessageTimer = 120; // show for 2 seconds
     }
 

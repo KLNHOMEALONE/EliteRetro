@@ -28,7 +28,8 @@ public static class GameConstants
     public const int MaxSlots = 20;
     public const int PlanetSlot = 0;
     public const int SunStationSlot = 1;
-    public const int FirstAvailableSlot = 2;
+    public const int PlayerSlot = 2;
+    public const int FirstAvailableSlot = 3;
 
     // --- Orientation matrix ---
     public const float TidyThreshold = 0.0001f;

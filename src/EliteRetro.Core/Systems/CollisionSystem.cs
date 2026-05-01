@@ -14,7 +14,7 @@ public static class CollisionSystem
     /// Base collision radius for ships (in local coordinates).
     /// Scaled by ship model size.
     /// </summary>
-    private const float BaseCollisionRadius = 10f;
+    private const float BaseCollisionRadius = 120f;
 
     /// <summary>
     /// Check all active entities for collisions.
@@ -39,7 +39,7 @@ public static class CollisionSystem
 
                 if (CheckCollision(a, b))
                 {
-                    ResolveCollision(a, b);
+                    ResolveCollision(a, b, bubbleManager);
                 }
             }
         }
@@ -56,6 +56,14 @@ public static class CollisionSystem
         float combinedRadius = radiusA + radiusB;
 
         float distSq = a.DistanceSquaredTo(b);
+        float dist = MathF.Sqrt(distSq);
+
+        // Debug: log close approaches
+        if (dist < combinedRadius * 3)
+        {
+            System.Diagnostics.Debug.WriteLine($"Close approach: {a.Blueprint.Name} vs {b.Blueprint.Name}, dist={dist:F1}, combinedRadius={combinedRadius:F1}");
+        }
+
         return distSq < combinedRadius * combinedRadius;
     }
 
@@ -72,32 +80,87 @@ public static class CollisionSystem
 
     /// <summary>
     /// Resolve a collision between two ships.
-    /// Both take hull damage proportional to relative velocity.
+    /// Both take hull damage proportional to relative speed.
+    /// Player collisions reduce shield/hull via LocalBubbleManager.
     /// </summary>
-    private static void ResolveCollision(ShipInstance a, ShipInstance b)
+    private static void ResolveCollision(ShipInstance a, ShipInstance b, LocalBubbleManager bubbleManager)
     {
-        // Calculate relative velocity
-        Vector3 relVel = a.Velocity - b.Velocity;
-        float impactForce = relVel.Length();
+        // Use speed scalars for impact force (velocity vectors not yet wired)
+        float impactForce = Math.Abs(a.Speed) + Math.Abs(b.Speed);
 
-        // Damage proportional to impact
-        int damageA = (int)(impactForce * 2);
-        int damageB = (int)(impactForce * 2);
+        // Damage proportional to impact (higher multiplier for visible feedback)
+        int damageA = (int)(impactForce * 5);
+        int damageB = (int)(impactForce * 5);
 
-        bool aDestroyed = a.TakeDamage(damageA);
-        bool bDestroyed = b.TakeDamage(damageB);
+        // Handle player collision specially
+        if (a.SlotIndex == GameConstants.PlayerSlot)
+        {
+            ApplyPlayerDamage(a, damageA, b);
+            bubbleManager.RaiseCollision(b.Blueprint?.Name ?? "Unknown");
+        }
+        else if (b.SlotIndex == GameConstants.PlayerSlot)
+        {
+            ApplyPlayerDamage(b, damageB, a);
+            bubbleManager.RaiseCollision(a.Blueprint?.Name ?? "Unknown");
+        }
 
-        if (aDestroyed)
-            a.IsActive = false;
-        if (bDestroyed)
-            b.IsActive = false;
+        // Damage NPC ships normally
+        if (a.SlotIndex != GameConstants.PlayerSlot)
+        {
+            bool destroyed = a.TakeDamage(damageA);
+            if (destroyed) a.IsActive = false;
+        }
+        if (b.SlotIndex != GameConstants.PlayerSlot)
+        {
+            bool destroyed = b.TakeDamage(damageB);
+            if (destroyed) b.IsActive = false;
+        }
 
         // Separate ships to prevent repeated collisions
-        if (!aDestroyed && !bDestroyed)
+        if (a.IsActive && b.IsActive)
         {
             Vector3 separation = Vector3.Normalize(b.Position - a.Position) * 20f;
             a.Position -= separation * 0.5f;
             b.Position += separation * 0.5f;
+        }
+    }
+
+    /// <summary>
+    /// Apply damage to player ship (shields first, then hull).
+    /// </summary>
+    private static void ApplyPlayerDamage(ShipInstance playerShip, int damage, ShipInstance other)
+    {
+        // Determine if hit is from front or rear
+        Vector3 toOther = Vector3.Normalize(other.Position - playerShip.Position);
+        float dot = Vector3.Dot(playerShip.Orientation.Nosev, toOther);
+        bool hitFront = dot > 0;
+
+        // Apply to shields first, then hull
+        if (hitFront)
+        {
+            // Front shields absorb first
+            // TODO: wire to LocalBubbleManager shield fields when shield system is implemented
+            int shieldDmg = Math.Min(damage, playerShip.Energy);
+            playerShip.Energy = (byte)(playerShip.Energy - shieldDmg);
+            int hullDmg = damage - shieldDmg;
+            if (hullDmg > 0)
+            {
+                bool destroyed = playerShip.TakeDamage(hullDmg);
+                if (destroyed)
+                {
+                    // TODO: player death / escape pod
+                    playerShip.IsActive = false;
+                }
+            }
+        }
+        else
+        {
+            // Rear hit - damage hull directly (no aft shields in simple mode)
+            bool destroyed = playerShip.TakeDamage(damage);
+            if (destroyed)
+            {
+                playerShip.IsActive = false;
+            }
         }
     }
 
