@@ -82,10 +82,6 @@ public class HudRenderer
         DrawBarH(spriteBatch, LeftX + 2, barY, labelW, barH, (int)(fuelRatio * barMaxW), barMaxW, "FU", font);
         barY += BarSlotH;
 
-        float bankRatio = MathHelper.Clamp(state.EnergyBanks / 16f, 0, 1);
-        DrawBarH(spriteBatch, LeftX + 2, barY, labelW, barH, (int)(bankRatio * barMaxW), barMaxW, "EB", font);
-        barY += BarSlotH;
-
         float cabinRatio = MathHelper.Clamp(state.CabinTemp / 255f, 0, 1);
         DrawBarH(spriteBatch, LeftX + 2, barY, labelW, barH, (int)(cabinRatio * barMaxW), barMaxW, "CT", font);
         barY += BarSlotH;
@@ -96,6 +92,11 @@ public class HudRenderer
 
         float altRatio = MathHelper.Clamp(state.Altitude / 255f, 0, 1);
         DrawBarH(spriteBatch, LeftX + 2, barY, labelW, barH, (int)(altRatio * barMaxW), barMaxW, "AL", font);
+        barY += BarSlotH;
+
+        float bankRatio = MathHelper.Clamp(state.EnergyBanks / 16f, 0, 1);
+        DrawBarH(spriteBatch, LeftX + 2, barY, labelW, barH, (int)(bankRatio * barMaxW), barMaxW, "EB", font);
+
     }
 
     private void DrawRightBars(SpriteBatch spriteBatch, HUDState state, BitmapFont font)
