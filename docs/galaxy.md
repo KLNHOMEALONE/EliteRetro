@@ -258,20 +258,21 @@ y_sign = x_sign
 
 ### Two-Letter Token Table (QQ16)
 
-Indexed 129-159 (31 entries, index 0 = skip):
+Indexed 128-159 (32 entries, index 0/128 = skip):
 
 | Index | Token | Index | Token | Index | Token | Index | Token |
 |-------|-------|-------|-------|-------|-------|-------|-------|
-| 129 | LE | 137 | XE | 145 | DU | 153 | RI |
-| 130 | XE | 138 | ZA | 146 | CE | 154 | US |
-| 131 | GE | 139 | SO | 147 | BI | 155 | ER |
-| 132 | IN | 140 | CR | 148 | RA | 156 | BE |
-| 133 | EN | 141 | DI | 149 | LA | 157 | SA |
-| 134 | VE | 142 | RE | 150 | VE | 158 | VI |
-| 135 | ER | 143 | A | 151 | TI | 159 | ON |
-| 136 | US | 144 | ER | 152 | ED | | |
+| 128 | (skip) | 137 | ES | 146 | EN | 155 | AN |
+| 129 | LE | 138 | AR | 147 | BE | 156 | TE |
+| 130 | XE | 139 | MA | 148 | RA | 157 | IS |
+| 131 | GE | 140 | IN | 149 | LA | 158 | RI |
+| 132 | ZA | 141 | DI | 150 | VE | 159 | ON |
+| 133 | CE | 142 | RE | 151 | TI | | |
+| 134 | BI | 143 | A? | 152 | ED | | |
+| 135 | SO | 144 | ER | 153 | OR | | |
+| 136 | US | 145 | AT | 154 | QU | | |
 
-Note: Token 143 is single-character "A", making odd-length names possible.
+Note: Token 143 is "A?" (single-character "A" with a trailing byte). Index 128 (5-bit value 0) is skipped by the cpl routine.
 
 ### Example Names
 

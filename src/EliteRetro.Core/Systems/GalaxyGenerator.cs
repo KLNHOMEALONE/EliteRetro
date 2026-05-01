@@ -13,15 +13,17 @@ public class GalaxyGenerator
     private const int SystemsPerGalaxy = 256;
 
     /// <summary>
-    /// Two-letter token table for system name generation (indices 129-159).
-    /// Index 0 = skip. 31 entries total.
+    /// Two-letter token table for system name generation (QQ16, indices 128-159).
+    /// The 5-bit token index from s2_hi (0-31) maps as: 0=skip, 1-31=QQ16[129-159].
+    /// Index 0 is never used (cpl routine skips it). 31 usable tokens.
+    /// Source: authentic BBC Elite QQ16 token table.
     /// </summary>
     private static readonly string[] _tokenTable = {
-        "",     // 0 (skip)
-        "LE", "XE", "GE", "IN", "EN", "VE", "ER", "US",  // 1-8
-        "XE", "ZA", "SO", "CR", "DI", "RE", "A",  "ER",  // 9-16
-        "DU", "CE", "BI", "RA", "LA", "VE", "TI", "ED",  // 17-24
-        "RI", "US", "ER", "BE", "SA", "VI", "ON"         // 25-31
+        "",     // 0 (skip — QQ16[128]="AL" is never used)
+        "LE", "XE", "GE", "ZA", "CE", "BI", "SO",  // 1-8   (QQ16[129-136])
+        "US", "ES", "AR", "MA", "IN", "DI", "RE", "A",   // 9-16 (QQ16[137-144])
+        "ER", "AT", "EN", "BE", "RA", "LA", "VE", "TI",  // 17-24 (QQ16[145-152])
+        "ED", "OR", "QU", "AN", "TE", "IS", "RI", "ON"   // 25-31 (QQ16[153-159])
     };
 
     /// <summary>
@@ -160,7 +162,8 @@ public class GalaxyGenerator
 
     /// <summary>
     /// Generate system name using the cpl routine.
-    /// Takes bits 0-4 of s2_hi after each twist to index the token table.
+    /// Takes bits 0-4 of s2_hi (0-31) to index the token table.
+    /// Index 0 is skipped (no token output), indices 1-31 map to QQ16[129-159].
     /// </summary>
     private static string GenerateName(ref GalaxySeed seed)
     {
@@ -174,7 +177,7 @@ public class GalaxyGenerator
 
         for (int i = 0; i < tokenCount; i++)
         {
-            // Take bits 0-4 of s2_hi
+            // Take bits 0-4 of s2_hi (0-31)
             int tokenIndex = seed.W2Hi & 0b11111;
             if (tokenIndex > 0 && tokenIndex < _tokenTable.Length)
             {
