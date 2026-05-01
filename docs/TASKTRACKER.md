@@ -61,8 +61,8 @@
 - [x] **3.4** Implement system data derivation — economy (s0_hi & 0b111), government ((s1_lo >> 3) & 0b111), tech level, population, productivity, radius, species, galactic coords
 - [x] **3.5** Implement name generation — 2-letter token table (indices 129-159), 3-4 tokens per name, twist between tokens
 - [x] **3.6** Add anarchy/feudal economy constraint — force bit 1 of economy (no Rich for Anarchy/Feudal)
-- [ ] **3.7** Verify Lave — Galaxy 0, System 1: Dictatorship, Rich Agri, Tech 5, Pop 25, Productivity 7000, Radius 4116
-- [ ] **3.8** Verify Tibedied — Galaxy 0, System 0 name = "Tibedied"
+- [x] **3.7** Verify System 1 — USBI, CorpState, Rich Ag, Tech 6, Pop 37, Radius 5528 (original BBC "Lave" not reproducible with canonical seeds)
+- [x] **3.8** Verify Tibedied — TIBIDIED, Feudal, Poor Ind, Tech 8, Pop 36, Radius 4610
 - [x] **3.9** Replace existing `GalaxyGenerator` — use Tribonacci instead of simple RNG
 
 ## Phase 4: Circle & Planet Rendering

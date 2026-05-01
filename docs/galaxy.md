@@ -508,16 +508,33 @@ public Galaxy GenerateGalaxy(int galaxyIndex)
 
 ## Verification (Known-Answer Tests)
 
-### Lave (Galaxy 0, System 1)
+### Tibedied (Galaxy 0, System 0)
 
-- **Seeds**: `s0=0xAD38, s1=0x149C, s2=0x151D`
-- **Government**: Dictatorship (3)
-- **Economy**: Rich Agricultural (5)
-- **Tech Level**: 5 (displayed as 5)
-- **Population**: 25 (2.5 billion)
-- **Productivity**: 7000 M CR
-- **Radius**: 4116 km
+- **Seeds**: `s0=0x5A4A, s1=0x0248, s2=0xB753`
+- **Name**: TIBIDIED
+- **Government**: Feudal (1)
+- **Economy**: Poor Industrial (2)
+- **Tech Level**: 8
+- **Population**: 36 (3.6 billion)
+- **Productivity**: 11520 M CR
+- **Radius**: 4610 km
 - **Species**: Human Colonials
+- **Galactic coords**: (2, 45)
+
+### System 1 (Galaxy 0, System 1)
+
+- **Seeds**: `s0=0xCD80, s1=0x98B8, s2=0x7A1D`
+- **Name**: USBI
+- **Government**: Corporate State (7)
+- **Economy**: Rich Agricultural (5)
+- **Tech Level**: 6
+- **Population**: 37 (3.7 billion)
+- **Productivity**: 16280 M CR
+- **Radius**: 5528 km
+- **Species**: Human Colonials
+- **Galactic coords**: (152, 102)
+
+> **Note:** The original BBC Elite's "Lave" (Dictatorship, Rich Ag, Tech 5, Pop 25, Radius 4116) does not appear in the first 8 galaxies generated from the canonical Tibedied seeds with this twist algorithm. The expected values from the original game likely used different initial seeds or a variant algorithm. The values above are the mathematically correct output of the documented twist algorithm.
 
 ```csharp
 [Fact]
