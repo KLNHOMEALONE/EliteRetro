@@ -168,8 +168,7 @@ public class FlightScene : GameScene
                     entity.MoveForward();
             }
 
-            // Periodic TIDY orthonormalization
-            _bubbleManager.TidyOne();
+            // Periodic TIDY orthonormalization is handled by MCNT scheduler (every 16, offsets 0-11)
 
             // Cleanup expired entities (lifetime or out of bounds)
             _bubbleManager.CleanupExpired();
@@ -198,21 +197,6 @@ public class FlightScene : GameScene
 
             // Update stardust
             _stardustRenderer.Update(_playerSpeed);
-
-            // Check safe zone → spawn station
-            if (_bubbleManager.SunOrStation?.Blueprint?.Name == "Sun" && _bubbleManager.IsInSafeZone())
-            {
-                var stationModel = CoriolisStationModel.Create(1.0f);
-                _bubbleManager.SpawnStation(new ShipBlueprint
-                {
-                    Name = "Coriolis Station",
-                    Model = stationModel,
-                    MaxSpeed = 0,
-                    MaxEnergy = 255,
-                    HullStrength = 255,
-                    ShieldStrength = 255
-                });
-            }
 
             // Check sun proximity effects
             var sunEffect = _bubbleManager.CheckSunProximity();

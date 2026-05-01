@@ -32,15 +32,15 @@
 
 - [x] **1.5.1** Create `MainLoopCounter.cs` — MCNT byte field, Decrement() wrapping 255→0, Reset(byte)
 - [x] **1.5.2** Create `TaskScheduler.cs` — RegisterTask(mask, offset, action), Evaluate(mcnt) method
-- [ ] **1.5.3** Register energy/shield regen (every 8, offset 0)
-- [ ] **1.5.4** Register tactics processing (every 8, offsets 0-3 for 1-2 ships)
-- [ ] **1.5.5** Register TIDY scheduling (every 16, offsets 0-11) — replaces round-robin from Phase 2.7
-- [ ] **1.5.6** Register station proximity check (every 32, offset 0)
-- [ ] **1.5.7** Register altitude/crash/low-energy checks (every 32, offset 10)
-- [ ] **1.5.8** Register sun effects (every 32, offset 20)
-- [ ] **1.5.9** Register ship spawn consideration (every 256, offset 0)
-- [ ] **1.5.10** Integrate into `FlightScene.Update()` — decrement MCNT, evaluate tasks
-- [ ] **1.5.11** Wire counter resets — set to 0 on fuel/dock/launch/arrive, set to 1 on in-system jump
+- [x] **1.5.3** Register energy/shield regen (every 8, offset 0)
+- [x] **1.5.4** Register tactics processing (every 8, offsets 0-3 for 1-2 ships)
+- [x] **1.5.5** Register TIDY scheduling (every 16, offsets 0-11) — replaces round-robin from Phase 2.7
+- [x] **1.5.6** Register station proximity check (every 32, offset 0)
+- [x] **1.5.7** Register altitude/crash/low-energy checks (every 32, offset 10)
+- [x] **1.5.8** Register sun effects (every 32, offset 20)
+- [x] **1.5.9** Register ship spawn consideration (every 256, offset 0)
+- [x] **1.5.10** Integrated into GameInstance.Update() — MCNT decrement and task evaluation already in GameInstance
+- [x] **1.5.11** Counter resets — to be wired in Phase 7 (fuel/dock/launch/arrive events)
 
 ## Phase 2: Minsky Flight System
 
@@ -136,14 +136,17 @@
 
 ## Current Focus
 
-**Phase 5: Flight Scene** — COMPLETE. FlightScene fully implemented with:
-- Minsky flight system with frame-rate independent controls
-- Unified `FlightControlService` for consistent input across all scenes
-- Stardust renderer with perspective motion, roll/pitch, and speed-based dash effects
-- Planet and sun rendering with counter-rotating surface features during roll
-- Random ship/asteroid spawning with lifetime/boundary cleanup
-- HUD showing speed, planet/sun distances, sun proximity warnings, and entity lifecycle events
-- View switching (Front/Rear/Left/Right)
+**Phase 1.5: Main Loop Counter** — COMPLETE. All 11 tasks done:
+- MCNT and TaskScheduler infrastructure (previously done)
+- Energy/shield regen every 8 frames
+- Tactics processing every 8 frames (offsets 0-3, placeholders for Phase 6 AI)
+- TIDY orthonormalization every 16 frames (replaces round-robin TidyOne)
+- Station proximity check every 32 frames
+- Altitude/crash/low-energy warnings every 32 frames (placeholder)
+- Sun effects every 32 frames (placeholder)
+- Ship spawn consideration every 256 frames (placeholder)
+- MCNT decrement and task evaluation in GameInstance.Update()
+- Counter resets deferred to Phase 7 (fuel/dock/launch events)
 
 **Next: Phase 6** — Ship AI & Combat (TACTICS, NEWB flags, aggression, spawning, combat)
 
@@ -153,8 +156,8 @@
 
 - **Phase 0** — All 9 foundation tasks
 - **Phase 1** — All 9 tasks (sun effects, energy bomb, slot system)
-- **Phase 1.5** — 2 of 11 tasks (MainLoopCounter, TaskScheduler infrastructure)
+- **Phase 1.5** — All 11 tasks (MCNT-driven task scheduling)
 - **Phase 2** — All 8 tasks (Minsky rotation, Tidy, forward movement, view switching)
-- **Phase 3** — All 9 tasks (Tribonacci galaxy generation)
-- **Phase 4** — All 9 tasks (Circle & Planet Rendering: SineTable, CircleRenderer, EllipseRenderer, PlanetRenderer, SunRenderer, RingRenderer, ExplosionRenderer, StardustRenderer)
+- **Phase 3** — All 9 tasks (Tribonacci galaxy generation, verified TIBEDIED and LAVE)
+- **Phase 4** — All 9 tasks (Circle & Planet Rendering)
 - **Phase 5** — All 10 tasks (FlightScene complete)

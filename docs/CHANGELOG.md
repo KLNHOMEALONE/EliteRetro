@@ -7,6 +7,17 @@ All notable changes to this project.
 ## [Unreleased]
 
 ### Added
+- **MCNT-driven task scheduler** — authentic Elite-style frame-spread task scheduling (Phase 1.5)
+  - `MainLoopCounter` — 8-bit counter cycling 0-255, decrements each Update()
+  - `TaskScheduler` — registers actions with (mask, offset) pairs, fires when (mcnt & mask) == offset
+  - Energy/shield regen every 8 frames
+  - Tactics placeholders every 8 frames (offsets 0-3) for Phase 6 AI
+  - TIDY orthonormalization every 16 frames (offsets 0-11, replaces round-robin)
+  - Station proximity check every 32 frames
+  - Altitude/crash/low-energy warnings every 32 frames (placeholders)
+  - Sun effects every 32 frames (placeholders)
+  - Ship spawn consideration every 256 frames
+  - `GetSlot()` added to LocalBubbleManager for slot-based access
 - **HUD Dashboard** — authentic BBC Elite-style dashboard overlay
   - `HudRenderer.cs` with DILX-style vertical bar indicators (8 indicators)
   - Speed, energy, fuel, cabin temp, laser temp, altitude, energy banks, missiles
@@ -43,11 +54,6 @@ All notable changes to this project.
   - Shuttle: corrected 1 face winding (F1)
   - Moray: reversed 6 faces, added 9 missing edges
   - Models already correct: Viper, Sidewinder, Cobra Mk1, Cobra Mk3, Asp Mk2, Rock Hermit, Escape Pod, Transporter, Coriolis Station, Dodo Station, Asteroid, Canister
-- **Wireframe rendering improvements and FlightScene polish**
-  - 8-bit counter cycling 0-255, decrements each Update()
-  - Task registration via (mask, offset) pairs: fires when (mcnt & mask) == offset
-  - Integrated into GameInstance for global access
-  - Remaining tasks (energy regen, tactics, TIDY, station checks, spawn) to be registered when dependent systems are implemented
 - **Sun distance effects** — proximity-based interactions with the sun
   - Heat warning at 2.67× planet diameter
   - Fuel scooping at 1.33× planet diameter

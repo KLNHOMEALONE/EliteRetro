@@ -54,6 +54,15 @@ public class LocalBubbleManager
     }
 
     /// <summary>
+    /// Get entity at a specific slot index.
+    /// </summary>
+    public ShipInstance? GetSlot(int index)
+    {
+        if (index < 0 || index >= _capacity) return null;
+        return _slots[index];
+    }
+
+    /// <summary>
     /// Spawn a ship in the first available slot (from slot 2 upward).
     /// </summary>
     public bool TrySpawn(ShipInstance ship)
