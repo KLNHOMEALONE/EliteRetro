@@ -495,9 +495,9 @@ src/EliteRetro.DesktopGL/Program.cs
 
 ## Verification Checklist
 
-- [x] Tibedied (Galaxy 0, System 0) generates with correct stats (TIBIDIED, Feudal, Poor Ind, Tech 8, Pop 36)
-- [x] System 1 (Galaxy 0, System 1) generates with correct stats (USBI, CorpState, Rich Ag, Tech 6, Pop 37)
-- [ ] Planet radius = 24,576, station distance = 65,536
+- [x] Tibedied (Galaxy 0, System 0) generates with correct stats (TIBEDIED, Feudal, Poor Ind, Tech 8, Pop 36)
+- [x] Lave (Galaxy 0, System 7) generates with correct stats (Dictatorship, Rich Ag, Tech 4, Pop 25, Radius 4116)
+- [x] Planet radius = 24,576, station distance = 65,536
 - [ ] Safe zone triggers at 192 local coords
 - [ ] Minsky rotation maintains orthonormality over 1000+ iterations
 - [ ] 12-slot bubble enforces capacity
