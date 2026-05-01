@@ -72,23 +72,23 @@ public class CoriolisStationModel : ShipModel
             (15, 12, Color.Cyan),    // 27
         };
 
-        // 14 faces for back-face culling
+        // 14 faces for back-face culling (windings corrected for outward normals)
         var faces = new Face[]
         {
             new(new[] { 0, 1, 2, 3 }),      // 0 - front face
             new(new[] { 0, 3, 4 }),          // 1
-            new(new[] { 0, 1, 5 }),          // 2
-            new(new[] { 1, 2, 6 }),          // 3
-            new(new[] { 2, 3, 7 }),          // 4
-            new(new[] { 3, 4, 11 }),         // 5
+            new(new[] { 5, 1, 0 }),          // 2 - reversed
+            new(new[] { 6, 2, 1 }),          // 3 - reversed
+            new(new[] { 7, 3, 2 }),          // 4 - reversed
+            new(new[] { 11, 4, 3 }),         // 5 - reversed
             new(new[] { 0, 4, 5 }),          // 6
             new(new[] { 2, 6, 7 }),          // 7
             new(new[] { 1, 5, 6 }),          // 8
             new(new[] { 7, 10, 11 }),        // 9
-            new(new[] { 4, 8, 11 }),         // 10
+            new(new[] { 11, 8, 4 }),         // 10 - reversed
             new(new[] { 5, 8, 9 }),          // 11
             new(new[] { 6, 9, 10 }),         // 12
-            new(new[] { 8, 9, 10, 11 }),     // 13 - back face
+            new(new[] { 11, 10, 9, 8 }),     // 13 - reversed - back face
         };
 
         var vertices = new List<Vertex3>();

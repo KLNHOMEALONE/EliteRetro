@@ -101,7 +101,7 @@ public class DodoStationModel : ShipModel
             new(new[] { 1, 3, 4 }),
             new(new[] { 1, 4, 2 }),
             new(new[] { 10, 11, 12, 13 }),
-            new(new[] { 14, 15, 16, 17 }),
+            new(new[] { 17, 16, 15, 14 }),  // reversed
             new(new[] { 18, 19, 20, 21 }),
             new(new[] { 6, 7, 8, 9 }),
         };

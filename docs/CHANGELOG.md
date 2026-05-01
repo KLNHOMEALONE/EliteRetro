@@ -18,7 +18,24 @@ All notable changes to this project.
   - F0, F5, F7, F8, F9, F10 normals were inward-pointing → flipped
   - F5 winding was self-intersecting `{0,4,9,5}` → fixed to `{0,5,9,4}`
   - F7-F10 vertex orders corrected for proper CCW winding
-- **MainLoopCounter and TaskScheduler** — frame-spread task scheduling adapted from Elite's MCNT
+- **Mass model fix** — verified and corrected all 27 ship models for correct back-face culling
+  - Python: reversed 7 faces (F1,F3,F4,F6,F9,F11,F12), added missing edge (6,7)
+  - Fer-de-Lance: reversed 7 faces (F1-F4,F6-F8), added missing edge (1,6)
+  - Mamba: reversed 3 faces (F1,F2,F3)
+  - Adder: reversed 7 faces (F0,F2-F4,F6-F8), added missing edges (1,4),(4,5)
+  - Boa: reversed 9 faces, added 7 missing edges (cockpit/rear connectivity)
+  - Constrictor: reversed 8 faces, added 8 missing edges (rear structure)
+  - Cougar: reversed 5 faces, added 4 missing edges
+  - Gecko: reversed 6 faces, added 9 missing edges
+  - Krait: reversed 1 face (F5), added 5 missing edges
+  - Worm: reversed 6 faces, added 7 missing edges
+  - Missile: reversed 4 faces (F0-F3)
+  - Thargoid: reversed 7 faces, added 8 missing edges
+  - Thargon: reversed 1 face (F0 back pentagon)
+  - Shuttle: corrected 1 face winding (F1)
+  - Moray: reversed 6 faces, added 9 missing edges
+  - Models already correct: Viper, Sidewinder, Cobra Mk1, Cobra Mk3, Asp Mk2, Rock Hermit, Escape Pod, Transporter, Coriolis Station, Dodo Station, Asteroid, Canister
+- **Wireframe rendering improvements and FlightScene polish**
   - 8-bit counter cycling 0-255, decrements each Update()
   - Task registration via (mask, offset) pairs: fires when (mcnt & mask) == offset
   - Integrated into GameInstance for global access

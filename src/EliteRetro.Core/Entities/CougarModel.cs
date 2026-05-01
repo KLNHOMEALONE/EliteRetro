@@ -57,6 +57,10 @@ public class CougarModel : ShipModel
             (2, 8, null),
             (3, 9, null),
             (4, 10, null),
+            (0, 7, null),   // added - face boundary
+            (0, 8, null),   // added - face boundary
+            (7, 9, null),   // added - face boundary
+            (8, 10, null),  // added - face boundary
             (7, 8, null),
             (9, 10, null),
             (11, 1, null),
@@ -68,12 +72,12 @@ public class CougarModel : ShipModel
 
         var faces = new Face[]
         {
-            new(new[] { 0, 1, 3 }),
-            new(new[] { 0, 3, 4, 2 }),
-            new(new[] { 0, 2, 1 }),
-            new(new[] { 0, 5, 8, 7 }),
-            new(new[] { 0, 7, 9, 6 }),
-            new(new[] { 0, 6, 10, 8 }),
+            new(new[] { 0, 3, 1 }),          // F0 (reversed from {0,1,3})
+            new(new[] { 0, 2, 4, 3 }),       // F1 (reversed from {0,3,4,2})
+            new(new[] { 0, 1, 2 }),          // F2 (reversed from {0,2,1})
+            new(new[] { 0, 7, 8, 5 }),       // F3 (reversed from {0,5,8,7})
+            new(new[] { 0, 6, 9, 7 }),       // F4 (reversed from {0,7,9,6})
+            new(new[] { 0, 8, 10, 6 }),      // F5 (reversed from {0,6,10,8})
         };
 
         var vertices = new List<Vertex3>();

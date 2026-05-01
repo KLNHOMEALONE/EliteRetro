@@ -93,6 +93,10 @@
 - [x] **5.12** Ship scale in FlightScene — 4x larger (0.0004 instead of 0.0001) for better visibility
 - [x] **5.13** Boulder model rewrite — proper convex hull geometry with verified outward normals
 - [x] **5.14** Anaconda model fix — corrected 6 inverted face normals and 4 wrong face windings
+- [x] **5.15** Mass model fix — verified and corrected all 27 ship models for correct back-face culling
+  - Fixed 17 models with incorrect face windings (inward-pointing normals)
+  - Added missing face-boundary edges to 10 models
+  - All models now render correctly with back-face culling enabled
 
 ## Phase 6: Ship AI & Combat
 

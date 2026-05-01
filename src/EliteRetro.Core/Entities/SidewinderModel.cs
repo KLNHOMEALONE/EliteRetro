@@ -4,7 +4,7 @@ namespace EliteRetro.Core.Entities;
 
 /// <summary>
 /// Sidewinder — entry-level fighter from Elite (1984).
-/// 10 vertices, 15 edges, 7 faces.
+/// 10 vertices, 17 edges, 7 faces.
 /// Delta-wing design with rear engine intakes.
 /// </summary>
 public class SidewinderModel : ShipModel
@@ -28,39 +28,42 @@ public class SidewinderModel : ShipModel
             (-12,  -6, -28),   // 9 - engine intake bottom left
         };
 
-        // 15 edges
+        // 15 edges (13 from face boundaries + 2 engine intake edges)
         var edges = new (int a, int b, Color? c)[]
         {
             // Nose edges (orange)
             (0, 1, Color.Orange),   // 0 - nose edge
-            (0, 3, Color.Orange),   // 4 - left leading edge
-            (1, 2, Color.Orange),   // 1 - right leading edge
-            (0, 4, Color.Orange),   // 3 - nose to top rear
-            (1, 4, Color.Orange),   // 2 - nose to top rear
-            (0, 5, Color.Orange),   // 10 - nose to bottom rear
-            (1, 5, Color.Orange),   // 9 - nose to bottom rear
+            (0, 3, Color.Orange),   // 1 - left leading edge
+            (1, 2, Color.Orange),   // 2 - right leading edge
+            (0, 4, Color.Orange),   // 3 - nose left to top rear
+            (1, 4, Color.Orange),   // 4 - nose right to top rear
+            (0, 5, Color.Orange),   // 5 - nose left to bottom rear
+            (1, 5, Color.Orange),   // 6 - nose right to bottom rear
             // Wing and rear edges
-            (3, 4, null),   // 5
-            (2, 4, null),   // 6
-            (3, 5, null),   // 7
-            (2, 5, null),   // 8
+            (3, 4, null),   // 7
+            (2, 4, null),   // 8
+            (3, 5, null),   // 9
+            (2, 5, null),   // 10
+            // Missing edges from face boundary analysis
+            (2, 3, null),   // 11 - right wing to left wing (from F3 rear face)
+            (4, 5, null),   // 12 - top rear to bottom rear (from F3 rear face)
             // Engine intake edges (dimmer visibility)
-            (6, 7, Color.Gray),   // 11
-            (7, 8, Color.Gray),   // 12
-            (6, 9, Color.Gray),   // 13
-            (8, 9, Color.Gray),   // 14
+            (6, 7, Color.Gray),   // 13
+            (7, 8, Color.Gray),   // 14
+            (6, 9, Color.Gray),   // 15
+            (8, 9, Color.Gray),   // 16
         };
 
-        // 7 faces
+        // 7 faces with corrected windings (normals point outward from origin)
         var faces = new Face[]
         {
             new(new[] { 0, 1, 4 }),          // 0 - top front
-            new(new[] { 0, 3, 4 }),          // 1 - top left
+            new(new[] { 4, 3, 0 }),          // 1 - top left (reversed from {0,3,4})
             new(new[] { 1, 2, 4 }),          // 2 - top right
             new(new[] { 3, 4, 5, 2 }),       // 3 - rear face
             new(new[] { 0, 3, 5 }),          // 4 - bottom left
-            new(new[] { 0, 1, 5 }),          // 5 - bottom front
-            new(new[] { 1, 2, 5 }),          // 6 - bottom right
+            new(new[] { 5, 1, 0 }),          // 5 - bottom front (reversed from {0,1,5})
+            new(new[] { 5, 2, 1 }),          // 6 - bottom right (reversed from {1,2,5})
         };
 
         var vertices = new List<Vertex3>();

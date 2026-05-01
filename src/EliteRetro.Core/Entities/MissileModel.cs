@@ -67,18 +67,18 @@ public class MissileModel : ShipModel
             (11, 14, Color.Gray),  // 23
         };
 
-        // 9 faces for back-face culling
+        // 9 faces — windings corrected for outward-facing normals
         var faces = new Face[]
         {
-            new(new[] { 0, 4, 3 }),          // 0 - left front
-            new(new[] { 0, 1, 4 }),          // 1 - bottom front
-            new(new[] { 0, 2, 1 }),          // 2 - right front
-            new(new[] { 0, 3, 2 }),          // 3 - top front
-            new(new[] { 1, 6, 5, 2 }),       // 4 - right side
-            new(new[] { 1, 4, 7, 6 }),       // 5 - bottom
-            new(new[] { 3, 8, 7, 4 }),       // 6 - left side
-            new(new[] { 2, 5, 8, 3 }),       // 7 - top
-            new(new[] { 5, 6, 7, 8 }),       // 8 - rear face
+            new(new[] { 0, 3, 4 }),          // F0 (reversed from {0,4,3})
+            new(new[] { 0, 4, 1 }),          // F1 (reversed from {0,1,4})
+            new(new[] { 0, 1, 2 }),          // F2 (reversed from {0,2,1})
+            new(new[] { 0, 2, 3 }),          // F3 (reversed from {0,3,2})
+            new(new[] { 1, 6, 5, 2 }),       // F4 ✓
+            new(new[] { 1, 4, 7, 6 }),       // F5 ✓
+            new(new[] { 3, 8, 7, 4 }),       // F6 ✓
+            new(new[] { 2, 5, 8, 3 }),       // F7 ✓
+            new(new[] { 5, 6, 7, 8 }),       // F8 ✓
         };
 
         var vertices = new List<Vertex3>();

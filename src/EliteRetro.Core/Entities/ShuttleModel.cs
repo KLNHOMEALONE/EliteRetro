@@ -66,23 +66,31 @@ public class ShuttleModel : ShipModel
             (13, 14, null),
             (15, 16, null),
             (17, 18, null),
+            // Additional edges needed for face boundaries
+            (9, 17, null),
+            (18, 10, null),
+            (10, 9, null),
+            (12, 0, null),
+            (0, 11, null),
+            (14, 16, null),
+            (15, 13, null),
         };
 
         var faces = new Face[]
         {
-            new(new[] { 0, 1, 3 }),
-            new(new[] { 0, 3, 4, 2 }),
-            new(new[] { 0, 2, 1 }),
-            new(new[] { 0, 5, 7 }),
-            new(new[] { 0, 7, 8, 6 }),
-            new(new[] { 0, 6, 5 }),
-            new(new[] { 1, 5, 6, 2 }),
-            new(new[] { 3, 7, 8, 4 }),
-            new(new[] { 1, 3, 7, 5 }),
-            new(new[] { 2, 6, 8, 4 }),
-            new(new[] { 9, 17, 18, 10 }),
-            new(new[] { 11, 12, 0 }),
-            new(new[] { 13, 14, 16, 15 }),
+            new(new[] { 3, 1, 0 }),          // F0 ✓
+            new(new[] { 0, 2, 4, 3 }),       // F1 (reversed from {2,4,3,0})
+            new(new[] { 1, 2, 0 }),          // F2 ✓
+            new(new[] { 7, 5, 0 }),          // F3 ✓
+            new(new[] { 6, 8, 7, 0 }),       // F4 ✓
+            new(new[] { 5, 6, 0 }),          // F5 ✓
+            new(new[] { 2, 6, 5, 1 }),       // F6 ✓
+            new(new[] { 3, 7, 8, 4 }),       // F7 ✓
+            new(new[] { 5, 7, 3, 1 }),       // F8 ✓
+            new(new[] { 4, 8, 6, 2 }),       // F9 ✓
+            new(new[] { 9, 17, 18, 10 }),    // F10 (reversed from {10,18,17,9})
+            new(new[] { 0, 11, 12 }),        // F11 (reversed from {0,12,11})
+            new(new[] { 13, 14, 16, 15 }),   // F12 (reversed from {15,16,14,13})
         };
 
         var vertices = new List<Vertex3>();

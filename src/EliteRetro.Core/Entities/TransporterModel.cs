@@ -4,7 +4,7 @@ namespace EliteRetro.Core.Entities;
 
 /// <summary>
 /// Transporter — large cargo hauler from Elite enhanced versions.
-/// 37 vertices, 46 edges, 14 faces.
+/// 37 vertices, 52 edges, 14 faces.
 /// Massive civilian freighter with huge cargo capacity.
 /// </summary>
 public class TransporterModel : ShipModel
@@ -106,24 +106,31 @@ public class TransporterModel : ShipModel
             (11, 29, null),
             (26, 32, null),
             (27, 33, null),
+            // Additional edges needed for face boundaries
+            (9, 11, null),
+            (10, 8, null),
+            (23, 25, null),
+            (24, 22, null),
+            (33, 35, null),
+            (34, 32, null),
         };
 
         var faces = new Face[]
         {
-            new(new[] { 0, 1, 2, 3 }),
-            new(new[] { 4, 5, 6, 7 }),
-            new(new[] { 0, 1, 5, 4 }),
-            new(new[] { 1, 2, 6, 5 }),
-            new(new[] { 2, 3, 7, 6 }),
-            new(new[] { 3, 0, 4, 7 }),
-            new(new[] { 8, 9, 11, 10 }),
-            new(new[] { 0, 8, 10, 3 }),
-            new(new[] { 1, 9, 11, 2 }),
-            new(new[] { 12, 13, 7, 4 }),
-            new(new[] { 14, 15, 17, 16 }),
-            new(new[] { 22, 23, 25, 24 }),
-            new(new[] { 30, 31, 36 }),
-            new(new[] { 32, 33, 35, 34 }),
+            new(new[] { 3, 2, 1, 0 }),     // 0 - reversed from [0,1,2,3]
+            new(new[] { 4, 5, 6, 7 }),     // 1 - outward OK
+            new(new[] { 0, 1, 5, 4 }),     // 2 - outward OK
+            new(new[] { 1, 2, 6, 5 }),     // 3 - outward OK
+            new(new[] { 2, 3, 7, 6 }),     // 4 - outward OK
+            new(new[] { 3, 0, 4, 7 }),     // 5 - outward OK
+            new(new[] { 10, 11, 9, 8 }),   // 6 - reversed from [8,9,11,10]
+            new(new[] { 0, 8, 10, 3 }),    // 7 - outward OK
+            new(new[] { 2, 11, 9, 1 }),    // 8 - reversed from [1,9,11,2]
+            new(new[] { 12, 13, 7, 4 }),   // 9 - outward OK
+            new(new[] { 14, 15, 17, 16 }), // 10 - outward OK
+            new(new[] { 22, 23, 25, 24 }), // 11 - outward OK
+            new(new[] { 36, 31, 30 }),     // 12 - reversed from [30,31,36]
+            new(new[] { 32, 33, 35, 34 }), // 13 - outward OK
         };
 
         var vertices = new List<Vertex3>();

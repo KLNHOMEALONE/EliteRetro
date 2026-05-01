@@ -52,6 +52,14 @@ public class ConstrictorModel : ShipModel
             (6, 10, null),
             (7, 8, null),
             (9, 10, null),
+            (0, 7, null),   // added - face boundary
+            (0, 8, null),   // added - face boundary
+            (7, 9, null),   // added - face boundary
+            (7, 11, null),  // added - face boundary
+            (8, 10, null),  // added - face boundary
+            (8, 11, null),  // added - face boundary
+            (9, 11, null),  // added - face boundary
+            (10, 11, null), // added - face boundary
             (1, 7, null),
             (2, 8, null),
             (3, 9, null),
@@ -64,16 +72,16 @@ public class ConstrictorModel : ShipModel
 
         var faces = new Face[]
         {
-            new(new[] { 0, 1, 3 }),
-            new(new[] { 0, 3, 4, 2 }),
-            new(new[] { 0, 2, 1 }),
-            new(new[] { 0, 5, 8, 7 }),
-            new(new[] { 0, 7, 9, 6 }),
-            new(new[] { 0, 6, 10, 8 }),
-            new(new[] { 1, 7, 11 }),
-            new(new[] { 2, 8, 11 }),
-            new(new[] { 3, 11, 9 }),
-            new(new[] { 4, 10, 11 }),
+            new(new[] { 0, 3, 1 }),          // F0 (reversed from {0,1,3})
+            new(new[] { 0, 2, 4, 3 }),       // F1 (reversed from {0,3,4,2})
+            new(new[] { 0, 1, 2 }),          // F2 (reversed from {0,2,1})
+            new(new[] { 0, 7, 8, 5 }),       // F3 (reversed from {0,5,8,7})
+            new(new[] { 0, 6, 9, 7 }),       // F4 ✓
+            new(new[] { 0, 8, 10, 6 }),      // F5 (reversed from {0,6,10,8})
+            new(new[] { 1, 11, 7 }),         // F6 (reversed from {1,7,11})
+            new(new[] { 2, 11, 8 }),         // F7 (reversed from {2,8,11})
+            new(new[] { 3, 9, 11 }),         // F8 (reversed from {3,11,9})
+            new(new[] { 4, 11, 10 }),        // F9 (reversed from {4,10,11})
         };
 
         var vertices = new List<Vertex3>();

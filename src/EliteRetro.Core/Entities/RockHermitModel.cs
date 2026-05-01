@@ -49,6 +49,11 @@ public class RockHermitModel : ShipModel
             (3, 8, null),
             (2, 8, null),
             (7, 8, null),
+            // Additional edges exposed by face boundary analysis
+            (1, 4, null),
+            (5, 8, null),
+            (6, 7, null),
+            (6, 8, null),
         };
 
         var faces = new Face[]
@@ -59,14 +64,14 @@ public class RockHermitModel : ShipModel
             new(new[] { 2, 3, 5, 6 }),
             new(new[] { 3, 4, 5 }),
             new(new[] { 4, 0, 1 }),
-            new(new[] { 0, 6, 7 }),
+            new(new[] { 7, 6, 0 }),          // reversed
             new(new[] { 1, 7, 8 }),
-            new(new[] { 2, 8, 6 }),
-            new(new[] { 3, 7, 8 }),
+            new(new[] { 6, 8, 2 }),          // reversed
+            new(new[] { 8, 7, 3 }),          // reversed
             new(new[] { 4, 7, 0 }),
-            new(new[] { 3, 4, 7 }),
-            new(new[] { 2, 5, 8 }),
-            new(new[] { 5, 3, 8 }),
+            new(new[] { 7, 4, 3 }),          // reversed
+            new(new[] { 8, 5, 2 }),          // reversed
+            new(new[] { 8, 3, 5 }),          // reversed
         };
 
         var vertices = new List<Vertex3>();

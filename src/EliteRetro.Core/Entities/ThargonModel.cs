@@ -51,16 +51,16 @@ public class ThargonModel : ShipModel
             (4, 0, null),   // 4
         };
 
-        // 7 faces
+        // 7 faces — windings corrected for outward-facing normals
         var faces = new Face[]
         {
-            new(new[] { 0, 1, 2, 3, 4 }),      // 0 - back pentagon
-            new(new[] { 0, 1, 6, 5 }),          // 1
-            new(new[] { 1, 2, 7, 6 }),          // 2
-            new(new[] { 2, 3, 8, 7 }),          // 3
-            new(new[] { 3, 4, 9, 8 }),          // 4
-            new(new[] { 4, 0, 5, 9 }),          // 5
-            new(new[] { 5, 6, 7, 8, 9 }),      // 6 - front pentagon
+            new(new[] { 0, 4, 3, 2, 1 }),    // F0 (reversed from {0,1,2,3,4}) - back pentagon
+            new(new[] { 0, 1, 6, 5 }),       // F1 ✓
+            new(new[] { 1, 2, 7, 6 }),       // F2 ✓
+            new(new[] { 2, 3, 8, 7 }),       // F3 ✓
+            new(new[] { 3, 4, 9, 8 }),       // F4 ✓
+            new(new[] { 4, 0, 5, 9 }),       // F5 ✓
+            new(new[] { 5, 6, 7, 8, 9 }),    // F6 - front pentagon ✓
         };
 
         var vertices = new List<Vertex3>();

@@ -53,22 +53,22 @@ public class AsteroidModel : ShipModel
             (7, 8, null),   // 20
         };
 
-        // 14 faces for back-face culling
+        // 14 faces for back-face culling (windings corrected for outward normals)
         var faces = new Face[]
         {
-            new(new[] { 5, 6, 0 }),          // 0
-            new(new[] { 2, 6, 5 }),          // 1
+            new(new[] { 0, 6, 5 }),          // 0 - reversed
+            new(new[] { 5, 6, 2 }),          // 1 - reversed
             new(new[] { 0, 1, 6 }),          // 2
             new(new[] { 1, 2, 6 }),          // 3
             new(new[] { 2, 3, 5 }),          // 4
             new(new[] { 3, 4, 5 }),          // 5
-            new(new[] { 0, 4, 5 }),          // 6
-            new(new[] { 0, 1, 7 }),          // 7
-            new(new[] { 1, 8, 7 }),          // 8
+            new(new[] { 5, 4, 0 }),          // 6 - reversed
+            new(new[] { 7, 1, 0 }),          // 7 - reversed
+            new(new[] { 7, 8, 1 }),          // 8 - reversed
             new(new[] { 3, 8, 7 }),          // 9
-            new(new[] { 1, 2, 8 }),          // 10
-            new(new[] { 2, 3, 8 }),          // 11
-            new(new[] { 3, 4, 7 }),          // 12
+            new(new[] { 8, 2, 1 }),          // 10 - reversed
+            new(new[] { 8, 3, 2 }),          // 11 - reversed
+            new(new[] { 7, 4, 3 }),          // 12 - reversed
             new(new[] { 0, 4, 7 }),          // 13
         };
 

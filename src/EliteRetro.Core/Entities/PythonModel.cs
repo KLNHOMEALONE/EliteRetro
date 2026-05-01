@@ -29,7 +29,7 @@ public class PythonModel : ShipModel
             (  0, -24,-112),   // 10 - bottom rear tip
         };
 
-        // 26 edges
+        // 27 edges (added (6,7) for rear face boundary)
         var edges = new (int a, int b, Color? c)[]
         {
             // Nose edges (orange)
@@ -60,24 +60,25 @@ public class PythonModel : ShipModel
             (9, 10, null),  // 23
             (1, 4, null),   // 24
             (8, 9, null),   // 25
+            (6, 7, null),   // 26 - rear face edge
         };
 
-        // 13 faces
+        // 13 faces — windings corrected for outward-facing normals
         var faces = new Face[]
         {
-            new(new[] { 0, 1, 3 }),          // 0
-            new(new[] { 0, 1, 2 }),          // 1
-            new(new[] { 0, 3, 8 }),          // 2
-            new(new[] { 0, 2, 8 }),          // 3
-            new(new[] { 1, 3, 4 }),          // 4
-            new(new[] { 1, 2, 4 }),          // 5
-            new(new[] { 3, 8, 9 }),          // 6
-            new(new[] { 2, 8, 9 }),          // 7
-            new(new[] { 3, 4, 5, 6 }),       // 8
-            new(new[] { 2, 4, 5, 7 }),       // 9
-            new(new[] { 2, 9, 10, 7 }),      // 10
-            new(new[] { 3, 9, 10, 6 }),      // 11
-            new(new[] { 5, 6, 7 }),          // 12 - rear face
+            new(new[] { 0, 1, 3 }),          // F0 - top left front ✓
+            new(new[] { 0, 2, 1 }),          // F1 - top right front (reversed)
+            new(new[] { 0, 3, 8 }),          // F2 - bottom left front ✓
+            new(new[] { 0, 8, 2 }),          // F3 - bottom right front (reversed)
+            new(new[] { 1, 4, 3 }),          // F4 - top left rear (reversed)
+            new(new[] { 1, 2, 4 }),          // F5 - top right rear ✓
+            new(new[] { 3, 9, 8 }),          // F6 - bottom left rear (reversed)
+            new(new[] { 2, 8, 9 }),          // F7 - bottom right rear ✓
+            new(new[] { 3, 4, 5, 6 }),       // F8 - left side ✓
+            new(new[] { 2, 7, 5, 4 }),       // F9 - right side (reversed)
+            new(new[] { 2, 9, 10, 7 }),      // F10 - bottom right rear ✓
+            new(new[] { 3, 6, 10, 9 }),      // F11 - bottom left rear (reversed)
+            new(new[] { 5, 7, 6 }),          // F12 - rear face (reversed)
         };
 
         var vertices = new List<Vertex3>();

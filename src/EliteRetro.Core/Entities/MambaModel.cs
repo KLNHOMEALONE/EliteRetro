@@ -84,14 +84,14 @@ public class MambaModel : ShipModel
             (22, 23, Color.Gray),   // 25
         };
 
-        // 5 faces
+        // 5 faces — windings corrected for outward-facing normals
         var faces = new Face[]
         {
-            new(new[] { 0, 1, 4 }),          // 0 - bottom
-            new(new[] { 0, 2, 3 }),          // 1 - top
-            new(new[] { 0, 1, 2 }),          // 2 - left
-            new(new[] { 0, 3, 4 }),          // 3 - right
-            new(new[] { 1, 2, 3, 4 }),       // 4 - rear
+            new(new[] { 0, 1, 4 }),          // F0 - bottom ✓
+            new(new[] { 0, 3, 2 }),          // F1 - top (reversed from {0,2,3})
+            new(new[] { 0, 2, 1 }),          // F2 - left (reversed from {0,1,2})
+            new(new[] { 0, 4, 3 }),          // F3 - right (reversed from {0,3,4})
+            new(new[] { 1, 2, 3, 4 }),       // F4 - rear ✓
         };
 
         var vertices = new List<Vertex3>();

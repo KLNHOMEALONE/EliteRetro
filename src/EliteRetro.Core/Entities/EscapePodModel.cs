@@ -35,13 +35,13 @@ public class EscapePodModel : ShipModel
             (0, 2, null),   // 4
         };
 
-        // 4 faces (tetrahedron)
+        // 4 faces (tetrahedron) — windings corrected for outward normals
         var faces = new Face[]
         {
-            new(new[] { 1, 2, 3 }),   // 0
-            new(new[] { 0, 2, 3 }),   // 1
-            new(new[] { 0, 1, 3 }),   // 2
-            new(new[] { 0, 1, 2 }),   // 3 - back face
+            new(new[] { 1, 2, 3 }),   // 0 - outward OK
+            new(new[] { 3, 2, 0 }),   // 1 - reversed from [0,2,3]
+            new(new[] { 0, 1, 3 }),   // 2 - outward OK
+            new(new[] { 2, 1, 0 }),   // 3 - reversed from [0,1,2] (back face)
         };
 
         var vertices = new List<Vertex3>();

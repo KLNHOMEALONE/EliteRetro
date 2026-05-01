@@ -61,6 +61,7 @@ public class FerDeLanceModel : ShipModel
             (7, 9, null),   // 12
             (8, 9, null),   // 13
             (1, 5, null),   // 14
+            (1, 6, null),   // added - missing face boundary edge
             (2, 6, null),   // 15
             (3, 7, null),   // 16
             (4, 8, null),   // 17
@@ -77,19 +78,19 @@ public class FerDeLanceModel : ShipModel
             (17, 18, Color.DarkGreen),   // 26
         };
 
-        // 10 faces
+        // 10 faces — windings corrected for outward-facing normals
         var faces = new Face[]
         {
-            new(new[] { 0, 5, 1 }),          // 0
-            new(new[] { 0, 1, 6, 5 }),       // 1
-            new(new[] { 1, 2, 6 }),          // 2
-            new(new[] { 2, 3, 7, 6 }),       // 3
-            new(new[] { 3, 4, 8, 7 }),       // 4
-            new(new[] { 0, 4, 8 }),          // 5
-            new(new[] { 5, 6, 9 }),          // 6
-            new(new[] { 6, 7, 9 }),          // 7
-            new(new[] { 7, 8, 9 }),          // 8
-            new(new[] { 0, 1, 2, 3, 4 }),    // 9 - bottom
+            new(new[] { 0, 5, 1 }),          // F0 ✓
+            new(new[] { 0, 5, 6, 1 }),       // F1 (reversed from {0,1,6,5})
+            new(new[] { 1, 6, 2 }),          // F2 (reversed from {1,2,6})
+            new(new[] { 2, 7, 6, 3 }),       // F3 (reversed from {2,3,7,6})
+            new(new[] { 3, 8, 7, 4 }),       // F4 (reversed from {3,4,8,7})
+            new(new[] { 0, 4, 8 }),          // F5 ✓
+            new(new[] { 5, 9, 6 }),          // F6 (reversed from {5,6,9})
+            new(new[] { 6, 9, 7 }),          // F7 (reversed from {6,7,9})
+            new(new[] { 7, 9, 8 }),          // F8 (reversed from {7,8,9})
+            new(new[] { 0, 1, 2, 3, 4 }),    // F9 ✓
         };
 
         var vertices = new List<Vertex3>();

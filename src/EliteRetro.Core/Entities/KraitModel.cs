@@ -42,6 +42,11 @@ public class KraitModel : ShipModel
             (0, 4, Color.Orange),
             (0, 7, Color.Orange),
             (1, 2, null),
+            (1, 7, null),   // added - face boundary
+            (1, 12, null),  // added - face boundary
+            (2, 4, null),   // added - face boundary
+            (4, 7, null),   // added - face boundary
+            (5, 7, null),   // added - face boundary
             (2, 3, null),
             (3, 8, null),
             (8, 9, null),
@@ -63,12 +68,12 @@ public class KraitModel : ShipModel
 
         var faces = new Face[]
         {
-            new(new[] { 0, 1, 2, 4 }),
-            new(new[] { 0, 4, 7 }),
-            new(new[] { 0, 7, 1 }),
-            new(new[] { 1, 5, 12 }),
-            new(new[] { 1, 12, 2 }),
-            new(new[] { 0, 1, 5, 7 }),
+            new(new[] { 0, 1, 2, 4 }),       // F0 ✓
+            new(new[] { 0, 4, 7 }),          // F1 ✓
+            new(new[] { 0, 7, 1 }),          // F2 ✓
+            new(new[] { 1, 5, 12 }),         // F3 ✓
+            new(new[] { 1, 12, 2 }),         // F4 ✓
+            new(new[] { 0, 7, 5, 1 }),       // F5 (reversed from {0,1,5,7})
         };
 
         var vertices = new List<Vertex3>();

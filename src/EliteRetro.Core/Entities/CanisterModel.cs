@@ -51,16 +51,16 @@ public class CanisterModel : ShipModel
             (9, 5, null),   // 14
         };
 
-        // 7 faces
+        // 7 faces (face 2 winding corrected for outward normal)
         var faces = new Face[]
         {
-            new(new[] { 0, 1, 2, 3, 4 }),      // 0 - front face (smaller)
+            new(new[] { 0, 1, 2, 3, 4 }),      // 0 - front face
             new(new[] { 0, 5, 6, 1 }),          // 1
-            new(new[] { 1, 2, 7, 6 }),          // 2
+            new(new[] { 6, 7, 2, 1 }),          // 2 - reversed
             new(new[] { 2, 7, 8, 3 }),          // 3
             new(new[] { 3, 8, 9, 4 }),          // 4
             new(new[] { 0, 4, 9, 5 }),          // 5
-            new(new[] { 5, 9, 8, 7, 6 }),      // 6 - back face (larger)
+            new(new[] { 5, 9, 8, 7, 6 }),      // 6 - back face
         };
 
         var vertices = new List<Vertex3>();

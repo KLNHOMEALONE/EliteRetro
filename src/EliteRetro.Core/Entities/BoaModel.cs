@@ -54,25 +54,31 @@ public class BoaModel : ShipModel
             (4, 8, null),
             (9, 1, null),
             (9, 2, null),
-            (10, 3, null),
-            (10, 4, null),
+            (11, 12, null), // added - cockpit edge
+            (0, 11, null),  // added - cockpit edge
+            (0, 12, null),  // added - cockpit edge
+            (5, 9, null),   // added - face boundary
+            (6, 9, null),   // added - face boundary
+            (7, 10, null),  // added - face boundary
+            (8, 10, null),  // added - face boundary
+            (9, 10, null),  // added - rear edge
         };
 
         var faces = new Face[]
         {
-            new(new[] { 0, 1, 3 }),
-            new(new[] { 0, 3, 4, 2 }),
-            new(new[] { 0, 2, 1 }),
-            new(new[] { 0, 5, 7 }),
-            new(new[] { 0, 7, 8, 6 }),
-            new(new[] { 0, 6, 5 }),
-            new(new[] { 1, 5, 6, 2 }),
-            new(new[] { 3, 7, 8, 4 }),
-            new(new[] { 1, 3, 7, 5 }),
-            new(new[] { 2, 6, 8, 4 }),
-            new(new[] { 5, 9, 6 }),
-            new(new[] { 7, 10, 8 }),
-            new(new[] { 11, 12, 0 }),
+            new(new[] { 0, 3, 1 }),          // F0 (reversed from {0,1,3})
+            new(new[] { 0, 3, 4, 2 }),       // F1 ✓
+            new(new[] { 0, 2, 1 }),          // F2 (reversed from {0,2,1})
+            new(new[] { 0, 7, 5 }),          // F3 (reversed from {0,5,7})
+            new(new[] { 0, 6, 8, 7 }),       // F4 (reversed from {0,7,8,6})
+            new(new[] { 0, 5, 6 }),          // F5 (reversed from {0,6,5})
+            new(new[] { 1, 2, 6, 5 }),       // F6 (reversed from {1,5,6,2})
+            new(new[] { 3, 7, 8, 4 }),       // F7 ✓
+            new(new[] { 1, 5, 7, 3 }),       // F8 (reversed from {1,3,7,5})
+            new(new[] { 2, 4, 8, 6 }),       // F9 (reversed from {2,6,8,4})
+            new(new[] { 5, 6, 9 }),          // F10 (reversed from {5,9,6})
+            new(new[] { 7, 8, 10 }),         // F11 (reversed from {7,10,8})
+            new(new[] { 0, 11, 12 }),        // F12 (reversed from {11,12,0})
         };
 
         var vertices = new List<Vertex3>();

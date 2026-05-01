@@ -4,7 +4,7 @@ namespace EliteRetro.Core.Entities;
 
 /// <summary>
 /// Viper — police ship from Elite (1984).
-/// 15 vertices, 20 edges, 7 faces.
+/// 15 vertices, 24 edges, 9 faces.
 /// Sleek design with distinctive rear engine assembly.
 /// </summary>
 public class ViperModel : ShipModel
@@ -33,7 +33,7 @@ public class ViperModel : ShipModel
             (  8,  -8, -24),   // 14 - right engine bottom inner
         };
 
-        // 20 edges
+        // 24 edges (20 original + 4 missing from face boundaries)
         var edges = new (int a, int b, Color? c)[]
         {
             // Nose edges (orange)
@@ -60,23 +60,24 @@ public class ViperModel : ShipModel
             (10, 14, Color.Gray),  // 17
             (11, 14, Color.Gray),  // 18
             (12, 13, Color.Gray),  // 19
+            // Additional edges from face boundary analysis
+            (1, 3, null),   // 20 - top front to right wing rear (from F7 boundary)
+            (1, 4, null),   // 21 - top front to left wing tip (from F1 boundary)
+            (2, 3, null),   // 22 - bottom front to right wing tip (from F4 boundary)
+            (2, 4, null),   // 23 - bottom front to left wing tip (from F3 boundary)
         };
 
-        // 9 faces — original 7 plus 2 additional wing-surface faces.
-        // The Viper's rear face (6) is a flat hexagon at z=-24. The additional
-        // faces define the top-left and top-right wing surfaces so that wing
-        // edges (10 and 12) are shared between visible and hidden faces,
-        // making them render as solid silhouette edges from above.
+        // 9 faces with corrected windings (normals point outward from origin)
         var faces = new Face[]
         {
             new(new[] { 1, 7, 8 }, new Vector3(0, 1, 0)),              // 0 - top (up)
-            new(new[] { 0, 4, 1 }, new Vector3(-0.3f, 0.5f, 0.8f)),   // 1 - top left front
+            new(new[] { 1, 4, 0 }, new Vector3(0.3f, 0.5f, 0.8f)),    // 1 - top left front (reversed from {0,4,1})
             new(new[] { 0, 3, 1 }, new Vector3(0.3f, 0.5f, 0.8f)),    // 2 - top right front
             new(new[] { 0, 4, 2 }, new Vector3(-0.3f, -0.5f, 0.8f)),  // 3 - bottom left front
             new(new[] { 0, 2, 3 }, new Vector3(0.3f, -0.5f, 0.8f)),   // 4 - bottom right front
             new(new[] { 2, 6, 5 }, new Vector3(0, -1, 0)),            // 5 - bottom rear (down)
-            new(new[] { 3, 7, 8, 4, 6, 5 }, new Vector3(0, 0, -1)),   // 6 - rear face (backward)
-            new(new[] { 1, 7, 3 }, new Vector3(0.3f, 0.9f, -0.3f)),   // 7 - top right wing surface
+            new(new[] { 5, 6, 4, 8, 7, 3 }, new Vector3(0, 0, -1)),   // 6 - rear face (reversed from {3,7,8,4,6,5})
+            new(new[] { 3, 7, 1 }, new Vector3(0.3f, 0.9f, 0.3f)),    // 7 - top right wing surface (reversed from {1,7,3})
             new(new[] { 1, 8, 4 }, new Vector3(-0.3f, 0.9f, -0.3f)),  // 8 - top left wing surface
         };
 

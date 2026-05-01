@@ -44,6 +44,8 @@ public class AdderModel : ShipModel
             (3, 4, Color.Orange),
             (0, 4, Color.Orange),
             (0, 5, null),
+            (1, 4, null),   // added - missing face boundary edge (F9)
+            (4, 5, null),   // added - missing face boundary edge (F1)
             (5, 6, null),
             (6, 7, null),
             (7, 8, null),
@@ -69,16 +71,16 @@ public class AdderModel : ShipModel
 
         var faces = new Face[]
         {
-            new(new[] { 0, 1, 5 }),
-            new(new[] { 0, 5, 4 }),
-            new(new[] { 1, 2, 6, 5 }),
-            new(new[] { 2, 3, 7, 6 }),
-            new(new[] { 3, 4, 8, 7 }),
-            new(new[] { 0, 4, 8 }),
-            new(new[] { 5, 6, 9 }),
-            new(new[] { 6, 7, 9 }),
-            new(new[] { 7, 8, 9 }),
-            new(new[] { 0, 1, 4 }),
+            new(new[] { 0, 5, 1 }),          // F0 (reversed from {0,1,5})
+            new(new[] { 0, 5, 4 }),          // F1 ✓
+            new(new[] { 1, 5, 6, 2 }),       // F2 (reversed from {1,2,6,5})
+            new(new[] { 2, 6, 7, 3 }),       // F3 (reversed from {2,3,7,6})
+            new(new[] { 3, 7, 8, 4 }),       // F4 (reversed from {3,4,8,7})
+            new(new[] { 0, 4, 8 }),          // F5 ✓
+            new(new[] { 5, 9, 6 }),          // F6 (reversed from {5,6,9})
+            new(new[] { 6, 9, 7 }),          // F7 (reversed from {6,7,9})
+            new(new[] { 7, 9, 8 }),          // F8 (reversed from {7,8,9})
+            new(new[] { 0, 1, 4 }),          // F9 ✓
         };
 
         var vertices = new List<Vertex3>();
