@@ -131,9 +131,9 @@ public class StardustRenderer
     }
 
     /// <summary>
-    /// Draw the starfield projected onto screen space.
+    /// Draw the starfield projected onto screen space using the camera's view matrix.
     /// </summary>
-    public void Draw(SpriteBatch spriteBatch, Vector2 center, float scale)
+    public void Draw(SpriteBatch spriteBatch, Vector2 center, float scale, Matrix view)
     {
         for (int i = 0; i < StarCount; i++)
         {
@@ -145,10 +145,18 @@ public class StardustRenderer
 
             if (z <= 0 || z > 16383) continue;
 
-            // Perspective projection: screen pos = center + (x, y) * scale / z
-            float factor = scale / z;
-            float screenX = center.X + x * factor;
-            float screenY = center.Y + y * factor;
+            // Transform star coordinate by view matrix
+            // Stardust is at very far distance, so we treat it as being around origin
+            Vector3 worldPos = new Vector3(x, y, -z);
+            Vector3 viewPos = Vector3.Transform(worldPos, view);
+
+            // Objects in front have negative Z in RH view space
+            if (viewPos.Z >= 0) continue;
+
+            // Perspective projection: screen pos = center + (x, y) * scale / -z
+            float factor = scale / -viewPos.Z;
+            float screenX = center.X + viewPos.X * factor;
+            float screenY = center.Y + viewPos.Y * factor;
 
             // Skip if off-screen
             if (screenX < -10 || screenX > center.X + 1024 + 10) continue;

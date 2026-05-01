@@ -36,8 +36,10 @@ public static class GameConstants
     public const int TidyInterval = 64; // TIDY every N frames per entity (round-robin)
 
     // --- Flight ---
-    public const float RollMax = 0.025f;     // max roll per frame at 60fps (≈1.5 rad/sec)
-    public const float PitchMax = 0.025f;    // max pitch per frame at 60fps (same rate as roll)
+    // Rotation rates per frame at 60fps. Roll ≈120°/sec, pitch ≈80°/sec.
+    // Roll is faster than pitch, matching Elite's handling feel.
+    public const float RollMax = 2f / 90f;     // ≈0.0222 rad/frame
+    public const float PitchMax = 1f / 72f;    // ≈0.0139 rad/frame
     public const float AiRotationAngle = 1f / 16f; // 3.6 degrees for NPC rotation
 
     // --- Galaxy ---

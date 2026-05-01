@@ -45,6 +45,7 @@ public class FlightScene : GameScene
     private float _playerSpeed;
     private float _cumulativeRoll; // accumulated roll angle in radians, for planet/ring counter-rotation
     private int _spawnCounter; // frame counter for random ship spawning
+    private int _tidyCounter; // frame counter for TIDY orthonormalization
     private readonly Random _rng = new Random();
     private string _lastEventMessage = ""; // HUD message for spawn/despawn events
     private int _eventMessageTimer; // frames remaining to display event message
@@ -187,11 +188,9 @@ public class FlightScene : GameScene
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Apply Minsky rotation to the player's orientation (frame-rate independent)
-            // This rotates the view matrix, which makes the scene appear to rotate.
-            // Entity positions are in world space and are NOT rotated — they stay fixed.
-            float rollDelta = -control.RollAngle * dt * 60f;
-            float pitchDelta = -control.PitchAngle * dt * 60f;
+            // Apply rotation to the player's orientation (frame-rate independent)
+            float rollDelta = control.RollAngle * dt * 60f;
+            float pitchDelta = control.PitchAngle * dt * 60f;
             _universeOrientation.ApplyUniverseRotation(rollDelta, pitchDelta);
 
             // Track cumulative roll for planet/ring counter-rotation
@@ -214,9 +213,14 @@ public class FlightScene : GameScene
                     entity.MoveForward();
             }
 
-            // Periodic TIDY orthonormalization is handled by MCNT scheduler (every 16, offsets 0-11)
-
-            // Check for newly destroyed entities and spawn explosions
+            // Periodic TIDY orthonormalization to correct Minsky drift
+            _tidyCounter++;
+            if (_tidyCounter >= 60)
+            {
+                _tidyCounter = 0;
+                _universeOrientation.Tidy();
+            }
+            _bubbleManager.TidyOne();
             CheckExplosions();
 
             // Cleanup expired entities (lifetime or out of bounds)
@@ -281,13 +285,14 @@ public class FlightScene : GameScene
 
         // Build view matrix from orientation.
         // The view matrix maps world space to camera space.
-        // Rows: camera-right, camera-up, camera-forward (camera look direction = -Z in camera space)
-        // Controls always act on the ship's actual orientation axes (nosev/roofv/sidev),
-        // regardless of view mode. Only the camera direction changes.
+        // In Monogame (V * M convention), the View Matrix should have basis vectors in COLUMNS.
+        // Row 0 = Right.X, Up.X, Forward.X, 0
+        // Row 1 = Right.Y, Up.Y, Forward.Y, 0
+        // Row 2 = Right.Z, Up.Z, Forward.Z, 0
         Vector3 side = _universeOrientation.Sidev;
         Vector3 roof = _universeOrientation.Roofv;
         Vector3 nose = _universeOrientation.Nosev;
-        Vector3 forward = -nose; // default: camera looks along the ship's nose direction
+        Vector3 forward = -nose; // camera looks along the ship's nose direction (-nose in world is +Z in cam space)
 
         // Apply view direction changes based on current view mode
         switch (_viewMode)
@@ -304,9 +309,9 @@ public class FlightScene : GameScene
         }
 
         _view = new Matrix(
-            side.X, side.Y, side.Z, 0,
-            roof.X, roof.Y, roof.Z, 0,
-            forward.X, forward.Y, forward.Z, 0,
+            side.X, roof.X, forward.X, 0,
+            side.Y, roof.Y, forward.Y, 0,
+            side.Z, roof.Z, forward.Z, 0,
             0, 0, 0, 1);
 
         _prevKb = kb;
@@ -325,7 +330,7 @@ public class FlightScene : GameScene
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
 
         // Draw stardust (starfield)
-        _stardustRenderer.Draw(spriteBatch, new Vector2(512, 384), 500f);
+        _stardustRenderer.Draw(spriteBatch, new Vector2(512, 384), 500f, _view);
 
         // Draw explosions
         foreach (var cloud in _explosions)
@@ -340,13 +345,14 @@ public class FlightScene : GameScene
                 IsInFrontOfCamera(entity.Position))
             {
                 // Build world matrix from entity orientation.
-                // Sidev = ship's right axis, Roofv = ship's up axis, Nosev = ship's forward (nose).
-                // In a model matrix: col0=right, col1=up, col2=forward.
-                // The ship model's nose points in +Z model space (e.g. Sidewinder nose at Z=+36).
+                // In XNA (V * M convention), a World Matrix (Model-to-World) should have basis vectors in ROWS.
+                // Row 0 = Right vector in world
+                // Row 1 = Up vector in world
+                // Row 2 = Forward vector in world
                 Matrix entityOrientation = new Matrix(
-                    entity.Orientation.Sidev.X, entity.Orientation.Roofv.X, entity.Orientation.Nosev.X, 0,
-                    entity.Orientation.Sidev.Y, entity.Orientation.Roofv.Y, entity.Orientation.Nosev.Y, 0,
-                    entity.Orientation.Sidev.Z, entity.Orientation.Roofv.Z, entity.Orientation.Nosev.Z, 0,
+                    entity.Orientation.Sidev.X, entity.Orientation.Sidev.Y, entity.Orientation.Sidev.Z, 0,
+                    entity.Orientation.Roofv.X, entity.Orientation.Roofv.Y, entity.Orientation.Roofv.Z, 0,
+                    entity.Orientation.Nosev.X, entity.Orientation.Nosev.Y, entity.Orientation.Nosev.Z, 0,
                     0, 0, 0, 1);
                 Matrix entityWorld = Matrix.CreateScale(0.0004f) *
                                      entityOrientation *
@@ -409,6 +415,7 @@ public class FlightScene : GameScene
             ("Python", size => PythonModel.Create(size)),
             ("Asteroid", size => AsteroidModel.Create(size)),
             ("Boulder", size => BoulderModel.Create(size)),
+            ("Rock Hermit", size => RockHermitModel.Create(size)),
         };
 
         var chosen = models[_rng.Next(models.Length)];

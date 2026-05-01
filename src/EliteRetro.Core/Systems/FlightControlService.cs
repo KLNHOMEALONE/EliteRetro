@@ -50,14 +50,15 @@ public class FlightControlService
 
         if (!_isPaused)
         {
-            // Roll: Left Arrow (negative) and Right Arrow (positive)
+            // Roll: Left Arrow (negative = roll left/CCW), Right Arrow (positive = roll right/CW)
             if (state.IsKeyDown(Keys.Left))
                 control.RollAngle = -GameConstants.RollMax;
             else if (state.IsKeyDown(Keys.Right))
                 control.RollAngle = GameConstants.RollMax;
 
-            // Pitch: Up Arrow (negative = nose down) and Down Arrow (positive = nose up)
-            // Inverted: Down = pull stick back = pitch up
+            // Pitch: Up Arrow (negative = nose down = view moves up on screen)
+            // Down Arrow (positive = nose up = view moves down on screen)
+            // Flight standard: push forward (Up) = dive, pull back (Down) = climb
             if (state.IsKeyDown(Keys.Up))
                 control.PitchAngle = -GameConstants.PitchMax;
             else if (state.IsKeyDown(Keys.Down))

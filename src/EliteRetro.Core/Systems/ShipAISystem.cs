@@ -200,8 +200,8 @@ namespace EliteRetro.Core.Systems
             if (dot < 0.9f)
                 return false;
 
-            // Project to local space
-            Vector3 localTarget = ship.Orientation.InverseTransform(target.Position - ship.Position);
+            // Project to local space (X=right, Y=up, Z=forward)
+            Vector3 localTarget = ship.Orientation.Transform(target.Position - ship.Position);
             if (localTarget.Z <= 0)
                 return false;
 

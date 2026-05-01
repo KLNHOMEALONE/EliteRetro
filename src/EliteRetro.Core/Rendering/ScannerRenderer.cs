@@ -203,23 +203,24 @@ public class ScannerRenderer
     }
 
     /// <summary>
-    /// Project a ship's local position to scanner screen coordinates.
+    /// Project a ship's position (in player's local coordinate frame) to scanner screen coordinates.
+    /// Expects: X = lateral (positive = right), Y = altitude (positive = up), Z = depth (positive = ahead).
     /// Returns the dot position and stick base for rendering.
     /// </summary>
-    public static (Vector2 dotPos, Vector2 stickBase, bool visible)? ProjectToScanner(Vector3 shipLocalPos, Vector3 playerLocalPos)
+    public static (Vector2 dotPos, Vector2 stickBase, bool visible)? ProjectToScanner(Vector3 localPos)
     {
-        Vector3 rel = shipLocalPos - playerLocalPos;
         float scale = MaxRange / 1000f;
 
-        int xHi = (int)(rel.X * scale);
-        int yHi = (int)(rel.Y * scale);
-        int zHi = (int)(rel.Z * scale);
+        int xHi = (int)(localPos.X * scale);
+        int yHi = (int)(localPos.Y * scale);
+        int zHi = (int)(localPos.Z * scale);
 
         xHi = Math.Clamp(xHi, -MaxRange, MaxRange);
         yHi = Math.Clamp(yHi, -MaxRange, MaxRange);
         zHi = Math.Clamp(zHi, -MaxRange, MaxRange);
 
         int screenX = CenterX + (int)(xHi * (RadiusX / (float)MaxRange));
+        // Z = depth: positive (ahead) maps to top of ellipse, negative (behind) to bottom
         int stickBaseY = CenterY - (zHi / 4);
         int stickHeight = -(yHi / 2);
         int dotY = stickBaseY + stickHeight;
@@ -244,10 +245,8 @@ public class ScannerRenderer
     /// The stick runs from stickBase (on the Z-depth line) to the dot (Y-offset position).
     /// Horizontal tick at dot shows lateral movement direction.
     /// </summary>
-    private void DrawContact(SpriteBatch spriteBatch, Vector2 dotPos, Vector2 stickBase, bool isFriendly)
+    private void DrawContact(SpriteBatch spriteBatch, Vector2 dotPos, Vector2 stickBase, Color color)
     {
-        Color color = isFriendly ? Color.Lime : Color.OrangeRed;
-
         // Vertical stick from base (scanner plane) to dot (3px wide)
         int stickX = (int)stickBase.X;
         int stickTop = Math.Min((int)stickBase.Y, (int)dotPos.Y);
@@ -272,11 +271,15 @@ public class ScannerRenderer
         {
             if (contact.SlotIndex == playerSlot || contact.SlotIndex < 2) continue;
 
-            // Transform contact position into player's rotated reference frame
+            // Transform world-space delta into player's local coordinate frame
+            // Transform returns: X=side(right), Y=roof(up), Z=nose(forward)
             Vector3 rel = contact.Position - player.Position;
-            Vector3 localRel = universeOrientation.InverseTransform(rel);
+            Vector3 basisCoords = universeOrientation.Transform(rel);
+            // Scanner needs: X=lateral(right), Y=altitude(up), Z=depth(ahead)
+            // Transform already gives (right, up, forward) so use directly
+            Vector3 scannerLocal = basisCoords;
 
-            var pos = ProjectToScanner(localRel, Vector3.Zero);
+            var pos = ProjectToScanner(scannerLocal);
             if (pos.HasValue)
             {
                 // Station appears as a large dot on the scanner
@@ -287,8 +290,14 @@ public class ScannerRenderer
                 }
                 else
                 {
-                    bool isFriendly = (contact.Blueprint.ShipClass & (byte)NewbFlags.Hostile) == 0;
-                    DrawContact(spriteBatch, pos.Value.dotPos, pos.Value.stickBase, isFriendly);
+                    Color color;
+                    if (contact.Blueprint.IsRock)
+                        color = Color.Gray;
+                    else if ((contact.Blueprint.ShipClass & (byte)NewbFlags.Hostile) == 0)
+                        color = Color.Lime;
+                    else
+                        color = Color.OrangeRed;
+                    DrawContact(spriteBatch, pos.Value.dotPos, pos.Value.stickBase, color);
                 }
             }
         }

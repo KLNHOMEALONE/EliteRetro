@@ -85,12 +85,27 @@ public class ShipInstance
 
     /// <summary>
     /// Apply Minsky universe rotation to position and orientation.
+    /// Uses the authentic Elite per-component Minsky algorithm applied
+    /// to both position and orientation vectors in sync.
+    ///
+    /// Combined roll-then-pitch formula:
+    ///   K2 = y - alpha * x
+    ///   z  = z + beta * K2
+    ///   y  = K2 - beta * z       (uses updated z)
+    ///   x  = x + alpha * y       (uses updated y)
+    ///
+    /// See: https://elite.bbcelite.com/deep_dives/rotating_the_universe.html
     /// </summary>
     public void ApplyUniverseRotation(float alpha, float beta)
     {
-        Position = Orientation.InverseTransform(Position);
-        Orientation.ApplyUniverseRotation(alpha, beta);
-        Position = Orientation.Transform(Position);
+        // Rotate position using per-component Minsky
+        float k2 = Position.Y - alpha * Position.X;
+        Position.Z = Position.Z + beta * k2;
+        Position.Y = k2 - beta * Position.Z;
+        Position.X = Position.X + alpha * Position.Y;
+
+        // Rotate orientation vectors using same per-component Minsky
+        Orientation.ApplyMinskyRotation(alpha, beta);
     }
 
     /// <summary>

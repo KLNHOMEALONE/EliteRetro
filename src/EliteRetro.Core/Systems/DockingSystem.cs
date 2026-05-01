@@ -92,8 +92,8 @@ public static class DockingSystem
     public static bool CheckHeading(ShipInstance ship, ShipInstance station)
     {
         Vector3 toStation = station.Position - ship.Position;
-        // Transform direction into ship's local space
-        Vector3 localDir = ship.Orientation.InverseTransform(Vector3.Normalize(toStation));
+        // Transform direction into ship's local space (X=right, Y=up, Z=forward)
+        Vector3 localDir = ship.Orientation.Transform(Vector3.Normalize(toStation));
         return localDir.Z > 0;
     }
 
@@ -104,8 +104,8 @@ public static class DockingSystem
     public static bool CheckSafeCone(ShipInstance ship, ShipInstance station)
     {
         Vector3 toShip = Vector3.Normalize(ship.Position - station.Position);
-        // Transform into station's local space
-        Vector3 localDir = station.Orientation.InverseTransform(toShip);
+        // Transform into station's local space (X=right, Y=up, Z=forward)
+        Vector3 localDir = station.Orientation.Transform(toShip);
 
         // z-component in fixed-point
         int fixedZ = (int)(localDir.Z * 255);
@@ -178,7 +178,7 @@ public static class DockingSystem
                 Vector3 toStationLocal = station.Position - ship.Position;
                 float distAlign = toStationLocal.Length();
                 Vector3 stationDir = Vector3.Normalize(toStationLocal);
-                Vector3 localDir = ship.Orientation.InverseTransform(stationDir);
+                Vector3 localDir = ship.Orientation.Transform(stationDir);
 
                 // Pitch to center station on crosshairs
                 if (localDir.Y > 0.1f)
@@ -211,7 +211,7 @@ public static class DockingSystem
 
                 // Minor corrections while accelerating
                 Vector3 dir2 = Vector3.Normalize(station.Position - ship.Position);
-                Vector3 local2 = ship.Orientation.InverseTransform(dir2);
+                Vector3 local2 = ship.Orientation.Transform(dir2);
                 float dist2 = ship.DistanceTo(station);
                 if (local2.Y > 0.05f)
                     pitchDown = true;

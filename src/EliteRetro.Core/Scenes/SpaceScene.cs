@@ -125,8 +125,8 @@ public class SpaceScene : GameScene
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // Apply Minsky rotation to the player's orientation (frame-rate independent)
-            float rollDelta = -control.RollAngle * dt * 60f;
-            float pitchDelta = -control.PitchAngle * dt * 60f;
+            float rollDelta = control.RollAngle * dt * 60f;
+            float pitchDelta = control.PitchAngle * dt * 60f;
             _universeOrientation.ApplyUniverseRotation(rollDelta, pitchDelta);
 
             // Track cumulative roll for planet/ring counter-rotation
@@ -171,12 +171,12 @@ public class SpaceScene : GameScene
         Vector3 roof = _universeOrientation.Roofv;
         Vector3 nose = _universeOrientation.Nosev;
 
-        // View matrix: rows are camera axes in world space
+        // View matrix: basis vectors in COLUMNS for World-to-Camera transformation
         // Camera right = sidev, camera up = roofv, camera forward (toward -Z) = -nosev
         _view = new Matrix(
-            side.X, side.Y, side.Z, 0,
-            roof.X, roof.Y, roof.Z, 0,
-            -nose.X, -nose.Y, -nose.Z, 0,
+            side.X, roof.X, -nose.X, 0,
+            side.Y, roof.Y, -nose.Y, 0,
+            side.Z, roof.Z, -nose.Z, 0,
             0, 0, 0, 1);
 
         // Debug: cycle highlighted edge with Up/Down when paused
