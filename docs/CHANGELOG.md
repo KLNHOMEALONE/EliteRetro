@@ -7,6 +7,17 @@ All notable changes to this project.
 ## [Unreleased]
 
 ### Added
+- **Screen-space outline detection** for wireframe rendering
+  - Projects edges to 2D, tests if edge lies on the screen-space contour
+  - Edges on the outline are always drawn solid, even if their faces are culled
+  - Fixes wireframe silhouettes for open-shell models (ships without bottom caps)
+- **Boulder model rewrite** — proper convex hull with 7 vertices, 15 edges, 10 faces
+  - Pre-computed outward-pointing face normals (no Newell fallback needed)
+  - Correct back-face culling from all viewing angles
+- **Anaconda model fix** — corrected 6 face normals and 4 face windings
+  - F0, F5, F7, F8, F9, F10 normals were inward-pointing → flipped
+  - F5 winding was self-intersecting `{0,4,9,5}` → fixed to `{0,5,9,4}`
+  - F7-F10 vertex orders corrected for proper CCW winding
 - **MainLoopCounter and TaskScheduler** — frame-spread task scheduling adapted from Elite's MCNT
   - 8-bit counter cycling 0-255, decrements each Update()
   - Task registration via (mask, offset) pairs: fires when (mcnt & mask) == offset

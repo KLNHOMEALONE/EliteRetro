@@ -89,8 +89,10 @@
 - [x] **5.8** Implement HUD overlay — speed, energy, compass, scanner, hidden edges indicator
 - [x] **5.9** Safe zone check each frame → spawn station, remove sun
 - [x] **5.10** Modify `MainMenuScene` — "Start New Game" navigates to FlightScene, add "Space View" menu item
-- [x] **5.11** Wireframe rendering improvements — back-face culling with pre-computed face normals for Anaconda/Viper/Asp Mk II, added missing faces to Viper (wing surfaces), hidden edge toggle (I key), edge highlighting for debugging ([] keys)
+- [x] **5.11** Wireframe rendering improvements — back-face culling with pre-computed face normals, screen-space outline detection for open-shell models
 - [x] **5.12** Ship scale in FlightScene — 4x larger (0.0004 instead of 0.0001) for better visibility
+- [x] **5.13** Boulder model rewrite — proper convex hull geometry with verified outward normals
+- [x] **5.14** Anaconda model fix — corrected 6 inverted face normals and 4 wrong face windings
 
 ## Phase 6: Ship AI & Combat
 

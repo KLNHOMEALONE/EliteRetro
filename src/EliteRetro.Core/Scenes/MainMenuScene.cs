@@ -217,6 +217,15 @@ public class MainMenuScene : GameScene
         if (_paused)
             _font.DrawString(spriteBatch, "PAUSED", new Vector2(380, 500), Color.Red, 1.5f);
 
+        // Debug rotation info when paused
+        if (_paused)
+        {
+            var worldToLocal = Matrix.Invert(_world);
+            Vector3 shipToCameraLocal = Vector3.TransformNormal(_view.Translation - _world.Translation, worldToLocal);
+            _font.DrawString(spriteBatch, $"Cam local: ({shipToCameraLocal.X:F3},{shipToCameraLocal.Y:F3},{shipToCameraLocal.Z:F3})", new Vector2(10, 65), Color.Magenta, 0.8f);
+            _font.DrawString(spriteBatch, $"World rot: {_shipRotationY:F3} rad", new Vector2(10, 80), Color.Magenta, 0.8f);
+        }
+
         spriteBatch.End();
     }
 

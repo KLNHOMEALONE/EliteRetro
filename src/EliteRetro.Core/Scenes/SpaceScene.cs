@@ -33,6 +33,9 @@ public class SpaceScene : GameScene
     private Texture2D _pixelTexture = null!;
     private int _tidyCounter;
     private float _cumulativeRoll; // accumulated roll angle in radians, for planet/ring counter-rotation
+    private int _debugHighlightedEdge = -1;
+    private bool _prevUp;
+    private bool _prevDown;
 
     public SpaceScene(Game? game = null)
     {
@@ -175,6 +178,22 @@ public class SpaceScene : GameScene
             roof.X, roof.Y, roof.Z, 0,
             -nose.X, -nose.Y, -nose.Z, 0,
             0, 0, 0, 1);
+
+        // Debug: cycle highlighted edge with Up/Down when paused
+        if (_paused)
+        {
+            if (kb.IsKeyDown(Keys.Up) && !_prevUp)
+                _debugHighlightedEdge = (_debugHighlightedEdge + 1) % 12; // cube has 12 edges
+            _prevUp = kb.IsKeyDown(Keys.Up);
+
+            if (kb.IsKeyDown(Keys.Down) && !_prevDown)
+                _debugHighlightedEdge = (_debugHighlightedEdge - 1 + 12) % 12;
+            _prevDown = kb.IsKeyDown(Keys.Down);
+        }
+        else
+        {
+            _debugHighlightedEdge = -1;
+        }
     }
 
     public override void Draw(SpriteBatch spriteBatch)
@@ -192,7 +211,7 @@ public class SpaceScene : GameScene
         // Draw a reference cube (small, at moderate distance)
         var cube = ShipModel.CreateCube(0.5f);
         Matrix cubeWorld = Matrix.CreateTranslation(0, 0, -30);
-        _wireframeRenderer.Draw(cube, cubeWorld, _view, _projection, spriteBatch);
+        _wireframeRenderer.Draw(cube, cubeWorld, _view, _projection, spriteBatch, highlightedEdgeIndex: _debugHighlightedEdge);
 
         // Render bubble entities (skip planet and sun - rendered separately)
         foreach (var entity in _bubbleManager.GetAllActive())
@@ -237,7 +256,13 @@ public class SpaceScene : GameScene
         _font.DrawString(spriteBatch, $"Nose: ({_universeOrientation.Nosev.X:F2}, {_universeOrientation.Nosev.Y:F2}, {_universeOrientation.Nosev.Z:F2})", new Vector2(10, 320), Color.Yellow, 1f);
         _font.DrawString(spriteBatch, "Arrows: Pitch/Roll  +/-: Zoom  P: Pause  T: Station  V: View", new Vector2(10, 50), Color.White, 1f);
         if (_paused)
+        {
             _font.DrawString(spriteBatch, "PAUSED", new Vector2(10, 70), Color.Red, 1.5f);
+            _font.DrawString(spriteBatch, $"Edge: {_debugHighlightedEdge}  Up/Down: cycle", new Vector2(10, 90), Color.Orange, 1f);
+            _font.DrawString(spriteBatch, $"sidev=({_universeOrientation.Sidev.X:F3},{_universeOrientation.Sidev.Y:F3},{_universeOrientation.Sidev.Z:F3})", new Vector2(10, 110), Color.Cyan, 0.8f);
+            _font.DrawString(spriteBatch, $"roofv=({_universeOrientation.Roofv.X:F3},{_universeOrientation.Roofv.Y:F3},{_universeOrientation.Roofv.Z:F3})", new Vector2(10, 125), Color.Cyan, 0.8f);
+            _font.DrawString(spriteBatch, $"nosev=({_universeOrientation.Nosev.X:F3},{_universeOrientation.Nosev.Y:F3},{_universeOrientation.Nosev.Z:F3})", new Vector2(10, 140), Color.Cyan, 0.8f);
+        }
         spriteBatch.End();
     }
 

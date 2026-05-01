@@ -4,7 +4,7 @@ namespace EliteRetro.Core.Entities;
 
 /// <summary>
 /// Anaconda — largest ship in Elite (1984).
-/// 15 vertices, 25 edges, 12 faces.
+/// 15 vertices, 24 edges, 12 faces.
 /// Massive capital ship with distinctive tapered hull.
 /// </summary>
 public class AnacondaModel : ShipModel
@@ -33,54 +33,40 @@ public class AnacondaModel : ShipModel
             ( 43,  53, -23),   // 14 - right wing top
         };
 
-        // 25 edges
+        // 24 edges
         var edges = new (int a, int b, Color? c)[]
         {
             // Nose edges (orange)
-            (7, 12, Color.Orange),   // 14
-            (8, 12, Color.Orange),   // 15
-            (11, 12, Color.Orange),  // 22
-            (12, 13, Color.Orange),  // 23
-            (12, 14, Color.Orange),  // 24
-            (10, 12, Color.Orange),  // 21
-            // Rest of hull
-            (0, 1, null),   // 0
-            (1, 2, null),   // 1
-            (2, 3, null),   // 2
-            (3, 4, null),   // 3
-            (0, 4, null),   // 4
-            (0, 5, null),   // 5
-            (1, 6, null),   // 6
-            (2, 7, null),   // 7
-            (3, 8, null),   // 8
-            (4, 9, null),   // 9
-            (5, 10, null),  // 10
-            (6, 10, null),  // 11
-            (6, 11, null),  // 12
-            (7, 11, null),  // 13
-            (9, 13, null),  // 17
-            (9, 14, null),  // 18
-            (5, 14, null),  // 19
-            (10, 14, null), // 20
+            (7, 12, Color.Orange),
+            (8, 12, Color.Orange),
+            (11, 12, Color.Orange),
+            (12, 13, Color.Orange),
+            (12, 14, Color.Orange),
+            (10, 12, Color.Orange),
+            // Hull edges
+            (0, 1, null), (1, 2, null), (2, 3, null), (3, 4, null), (0, 4, null),
+            (0, 5, null), (1, 6, null), (2, 7, null), (3, 8, null), (4, 9, null),
+            (5, 10, null), (6, 10, null), (6, 11, null), (7, 11, null),
+            (9, 13, null), (9, 14, null), (5, 14, null), (10, 14, null),
         };
 
-        // 12 faces with manually verified outward-pointing normals.
-        // The Anaconda has non-planar faces, so normals are best-fit approximations
-        // verified against the ship's geometry (vertex positions from original Elite).
+        // 12 faces with verified outward-pointing normals.
+        // F5 winding corrected from {0,4,9,5} to {0,5,9,4}.
+        // Normals computed via cross product, verified outward by dot(normal, centroid) > 0.
         var faces = new Face[]
         {
-            new(new[] { 0, 1, 2, 3, 4 }, new Vector3(0, -0.6f, -0.8f)),    // 0 - rear (down+back)
-            new(new[] { 0, 1, 6, 5 }, new Vector3(-0.2f, 0.7f, -0.7f)),    // 1 - left rear (left+up+back)
-            new(new[] { 1, 2, 7, 6 }, new Vector3(-0.3f, -0.3f, 0.9f)),    // 2 - left side (left+down+forward)
-            new(new[] { 2, 3, 8, 7 }, new Vector3(0, -0.9f, 0.4f)),        // 3 - bottom front (down+forward)
-            new(new[] { 3, 4, 9, 8 }, new Vector3(0.3f, -0.3f, 0.9f)),     // 4 - right side (right+down+forward)
-            new(new[] { 0, 4, 9, 5 }, new Vector3(0.2f, 0.7f, -0.7f)),     // 5 - right rear (right+up+back)
-            new(new[] { 5, 10, 14 }, new Vector3(0, 0.9f, -0.4f)),          // 6 - top rear (up+back)
-            new(new[] { 6, 10, 11 }, new Vector3(-0.7f, 0.5f, -0.5f)),     // 7 - left top front (left+up+back)
-            new(new[] { 7, 11, 12 }, new Vector3(-0.7f, 0.5f, 0.5f)),      // 8 - left front (left+up+forward)
-            new(new[] { 8, 12, 13 }, new Vector3(0.7f, 0.5f, 0.5f)),       // 9 - right front (right+up+forward)
-            new(new[] { 9, 13, 14 }, new Vector3(0.7f, 0.5f, -0.5f)),      // 10 - right top front (right+up+back)
-            new(new[] { 10, 12, 14 }, new Vector3(0, 0.9f, 0.4f)),         // 11 - top front (up+forward)
+            new(new[] { 0, 1, 2, 3, 4 }, new Vector3( -34, -1819, -1802)),   // F0: rear bottom
+            new(new[] { 0, 1, 6, 5 },    new Vector3(-1028,   400, -1724)),   // F1: left rear
+            new(new[] { 1, 2, 7, 6 },    new Vector3(-1734, -1309,  -442)),   // F2: left side
+            new(new[] { 2, 3, 8, 7 },    new Vector3(    0, -2236,   416)),   // F3: bottom front
+            new(new[] { 3, 4, 9, 8 },    new Vector3( 1700, -1258,  -408)),   // F4: right side
+            new(new[] { 0, 5, 9, 4 },    new Vector3( 1028,   400, -1724)),   // F5: right rear (winding fixed)
+            new(new[] { 5, 10, 14 },     new Vector3(    0,  2236,  -430)),   // F6: top rear
+            new(new[] { 6, 11, 10 },     new Vector3(-1658,  1222,   416)),   // F7: left top (winding fixed)
+            new(new[] { 7, 12, 11 },     new Vector3(-8444, -5220,  2648)),   // F8: left front (winding fixed)
+            new(new[] { 8, 13, 12 },     new Vector3( 8444, -5220,  2648)),   // F9: right front (winding fixed)
+            new(new[] { 9, 14, 13 },     new Vector3( 1658,  1222,   416)),   // F10: right top (winding fixed)
+            new(new[] { 10, 12, 14 },    new Vector3(    0, 23822,  4558)),   // F11: top front
         };
 
         var vertices = new List<Vertex3>();

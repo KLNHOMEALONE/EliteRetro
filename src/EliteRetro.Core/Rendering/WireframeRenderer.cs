@@ -143,15 +143,6 @@ public class WireframeRenderer
                 faceVisible[f] = IsFaceVisible(model.Faces[f], model, shipToCameraLocal, worldVerts, cameraPosition, world);
             }
 
-            // Debug: log face visibility and normals (first 6 faces only)
-            Console.WriteLine($"=== {model.Name} === camLocal={shipToCameraLocal:F1}");
-            for (int f = 0; f < Math.Min(6, model.Faces.Count); f++)
-            {
-                var n = model.Faces[f].Normal;
-                float dot = n.HasValue ? Vector3.Dot(shipToCameraLocal, n.Value) : 999;
-                Console.WriteLine($"  F{f}: vis={faceVisible[f]} dot={dot:F1} v=[{string.Join(",", model.Faces[f].VertexIndices)}]");
-            }
-
             // Second pass: mark edges from visible faces as solid
             foreach (var (face, idx) in model.Faces.Select((f, i) => (f, i)))
             {
@@ -243,6 +234,68 @@ public class WireframeRenderer
                 {
                     edgeVisible[e] = true;
                 }
+            }
+
+            // Screen-space outline: project all vertices to 2D, compute the convex
+            // hull of the projected points. Edges on the hull boundary are outline
+            // edges and should always be solid (even if their faces are culled).
+            // This ensures the wireframe always has a clean outer silhouette.
+            var projectedValid = new Vector2?[model.Vertices.Count];
+            for (int i = 0; i < model.Vertices.Count; i++)
+            {
+                var p = Project(model.Vertices[i], world, view, projection);
+                if (!float.IsNaN(p.X))
+                    projectedValid[i] = p;
+            }
+
+            // For each edge with only culled faces, check if it's on the 2D outline.
+            // An edge is on the outline if all other projected vertices lie on one
+            // side of the line defined by the edge's projected endpoints.
+            for (int e = 0; e < model.Edges.Count; e++)
+            {
+                if (edgeVisible[e]) continue;
+                if (edgeFaces[e].Count == 0) continue;
+                if (edgeFaces[e].Any(f => faceVisible[f])) continue;
+
+                int a = model.Edges[e].Start;
+                int b = model.Edges[e].End;
+                if (!projectedValid[a].HasValue || !projectedValid[b].HasValue) continue;
+
+                Vector2 pa = projectedValid[a].Value;
+                Vector2 pb = projectedValid[b].Value;
+
+                // Edge direction in screen space
+                Vector2 edgeDir = pb - pa;
+                if (edgeDir.LengthSquared() < 1f) continue;
+
+                // Check if all other vertices are on one side of the edge line
+                bool? hasPositive = null;
+                bool onOutline = true;
+                for (int i = 0; i < model.Vertices.Count && onOutline; i++)
+                {
+                    if (i == a || i == b) continue;
+                    if (!projectedValid[i].HasValue) continue;
+
+                    Vector2 toVertex = projectedValid[i].Value - pa;
+                    float cross = edgeDir.X * toVertex.Y - edgeDir.Y * toVertex.X;
+
+                    if (Math.Abs(cross) > 1f) // Not exactly on the line
+                    {
+                        bool positive = cross > 0;
+                        if (hasPositive.HasValue && hasPositive.Value != positive)
+                        {
+                            // Vertices on both sides → not an outline edge
+                            onOutline = false;
+                        }
+                        else if (!hasPositive.HasValue)
+                        {
+                            hasPositive = positive;
+                        }
+                    }
+                }
+
+                if (onOutline)
+                    edgeVisible[e] = true;
             }
         }
         else
