@@ -38,6 +38,9 @@ public class ShipBlueprint
 
     /// <summary>Ship class: 0=innocent, 1=bounty hunter, 2=pirate, 3=cop.</summary>
     public byte ShipClass { get; init; }
+
+    /// <summary>True for non-ship entities: asteroids, boulders, rock hermits.</summary>
+    public bool IsRock { get; init; }
 }
 
 /// <summary>

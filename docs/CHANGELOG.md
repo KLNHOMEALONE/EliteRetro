@@ -7,12 +7,20 @@ All notable changes to this project.
 ## [Unreleased]
 
 ### Added
+- **Collision destruction with explosions** — visual feedback for ship destruction
+  - Explosion visual effects wired into FlightScene (particle expansion/contraction cycle)
+  - Destroyed ships remain in bubble during explosion animation, cleaned up after 10-frame delay
+  - Proper screen projection using view/projection matrices
+  - HUD messages: ">> {ship} destroyed!" on death, ">> COLLISION with {ship}!" on player hit
+  - Debug logging for collision and explosion events
+- **Small ship instant destruction** — ships with < 15 vertices (Sidewinder, Viper, Mamba) destroyed on any collision
+  - Large ships (≥ 15 vertices) take proportional shield + hull damage
+  - Player ship unaffected — uses gradual shield/hull damage
+- **Player energy/shield regeneration** — fixed regen task to include player (was incorrectly excluded)
+- **Rock entity system** — `IsRock` property on ShipModel and ShipBlueprint
+  - Asteroid, Boulder, Rock Hermit marked as rocks — zero energy/shields/speed, hull=1
+  - No longer uses fragile string-based name checks
 - **Phase 6: Ship AI & Combat complete** — full TACTICS routine, bounty system, cargo release
-  - `CommanderData.cs` — player stats: TALLY (kill count), Credits, LegalStatus, CargoHold
-  - Combat rank system: 9 ranks from Harmless (0-7 kills) to Elite (6400+)
-  - Kill tracking wired into CollisionSystem and ShipAISystem
-  - Cargo release: destroyed ships spawn cargo canisters at death position
-  - `CanisterModel` entities drift in space after ship destruction
 - **MCNT-driven task scheduler** — authentic Elite-style frame-spread task scheduling (Phase 1.5)
   - `MainLoopCounter` — 8-bit counter cycling 0-255, decrements each Update()
   - `TaskScheduler` — registers actions with (mask, offset) pairs, fires when (mcnt & mask) == offset

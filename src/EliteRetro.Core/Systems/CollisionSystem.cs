@@ -82,6 +82,7 @@ public static class CollisionSystem
     /// Resolve a collision between two ships.
     /// Both take hull damage proportional to relative speed.
     /// Player collisions reduce shield/hull via LocalBubbleManager.
+    /// Small ships (low vertex count) are destroyed instantly on collision.
     /// </summary>
     private static void ResolveCollision(ShipInstance a, ShipInstance b, LocalBubbleManager bubbleManager)
     {
@@ -107,7 +108,7 @@ public static class CollisionSystem
         // Damage NPC ships normally
         if (a.SlotIndex != GameConstants.PlayerSlot)
         {
-            bool destroyed = a.TakeDamage(damageA);
+            bool destroyed = ResolveShipCollisionDamage(a, damageA);
             if (destroyed)
             {
                 OnShipDestroyed(a, b, bubbleManager);
@@ -116,7 +117,7 @@ public static class CollisionSystem
         }
         if (b.SlotIndex != GameConstants.PlayerSlot)
         {
-            bool destroyed = b.TakeDamage(damageB);
+            bool destroyed = ResolveShipCollisionDamage(b, damageB);
             if (destroyed)
             {
                 OnShipDestroyed(b, a, bubbleManager);
@@ -131,6 +132,46 @@ public static class CollisionSystem
             a.Position -= separation * 0.5f;
             b.Position += separation * 0.5f;
         }
+    }
+
+    /// <summary>
+    /// Apply collision damage to an NPC ship.
+    /// Small ships (vertex count < 15) lose all shields and are destroyed instantly.
+    /// Larger ships take proportional hull damage.
+    /// </summary>
+    private static bool ResolveShipCollisionDamage(ShipInstance ship, int damage)
+    {
+        int vertexCount = ship.Blueprint.Model.Vertices.Count;
+
+        // Small ships: instant destruction on any collision
+        if (vertexCount < 15)
+        {
+            System.Diagnostics.Debug.WriteLine($"[COLLISION] Small ship {ship.Blueprint.Name} (vertices={vertexCount}) instant-destroyed");
+            ship.Energy = 0;
+            ship.Hull = 0;
+            return true;
+        }
+
+        // Larger ships: damage shields first, then hull
+        if (ship.Energy > 0)
+        {
+            int shieldDmg = Math.Min(damage, ship.Energy);
+            ship.Energy = (byte)(ship.Energy - shieldDmg);
+            int hullDmg = damage - shieldDmg;
+            if (hullDmg > 0)
+            {
+                bool destroyed = ship.TakeDamage(hullDmg);
+                if (destroyed)
+                    System.Diagnostics.Debug.WriteLine($"[COLLISION] Large ship {ship.Blueprint.Name} destroyed (hull depleted)");
+                return destroyed;
+            }
+            return false;
+        }
+
+        bool hullDestroyed = ship.TakeDamage(damage);
+        if (hullDestroyed)
+            System.Diagnostics.Debug.WriteLine($"[COLLISION] Ship {ship.Blueprint.Name} hull-destroyed (no shields)");
+        return hullDestroyed;
     }
 
     /// <summary>

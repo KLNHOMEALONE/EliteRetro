@@ -63,12 +63,11 @@ public class GameInstance : Game
     /// </summary>
     private void RegisterScheduledTasks()
     {
-        // Every 8 frames, offset 0: energy/shield regen for all active entities (not player)
+        // Every 8 frames, offset 0: energy/shield regen for all active entities
         _taskScheduler.RegisterEvery(8, 0, () =>
         {
             foreach (var entity in _bubbleManager.GetAllActive())
             {
-                if (entity.SlotIndex == GameConstants.PlayerSlot) continue;
                 if (entity.Energy < (byte)entity.Blueprint.MaxEnergy)
                     entity.Energy = (byte)Math.Min(entity.Energy + 1, entity.Blueprint.MaxEnergy);
             }

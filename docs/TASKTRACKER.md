@@ -146,6 +146,11 @@
 - Collision detection with sphere-based radii
 - Bounty system: CommanderData with TALLY tracking → 9 combat ranks
 - Cargo release: destroyed ships drop cargo canisters
+- Collision destruction: small ships instant-kill, large ships take proportional damage
+- Explosion visual effects with proper screen projection and delayed cleanup
+- HUD messages and debug logging for destruction events
+- Player energy/shield regeneration fixed
+- Rock entity system (IsRock property) for asteroids/boulders/hermits
 
 **Next: Phase 7** — Game Systems (market, trading, fuel scooping, docking, missions, scanner)
 

@@ -45,6 +45,12 @@ public class ExplosionRenderer
 
         /// <summary>True when counter has completed its full lifecycle (expand + contract).</summary>
         public bool IsComplete => Counter <= 0;
+
+        /// <summary>Arbitrary tag for tracking the source entity.</summary>
+        public object? Tag { get; set; }
+
+        /// <summary>Frames to wait after visual completion before cleanup.</summary>
+        public int CleanupDelayFrames { get; set; } = 10;
     }
 
     /// <summary>

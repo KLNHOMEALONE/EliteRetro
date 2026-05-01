@@ -22,6 +22,8 @@ public class FlightScene : GameScene
     private SunRenderer _sunRenderer = null!;
     private RingRenderer _ringRenderer = null!;
     private StardustRenderer _stardustRenderer = null!;
+    private ExplosionRenderer _explosionRenderer = null!;
+    private readonly List<ExplosionRenderer.ExplosionCloud> _explosions = new();
     private HudRenderer _hudRenderer = null!;
     private BitmapFont _font = null!;
     private GraphicsDevice? _graphicsDevice;
@@ -50,6 +52,7 @@ public class FlightScene : GameScene
     private byte _lastPlayerEnergy; // track energy/shields for damage detection
     private Texture2D _whitePixel = null!; // 1x1 white texture for damage flash overlay
     private bool _ramMode; // when true, spawned entities aim directly at player
+    private GameTime _lastGameTime = null!;
 
     public FlightScene(Game? game = null)
     {
@@ -76,6 +79,7 @@ public class FlightScene : GameScene
         _sunRenderer = new SunRenderer(_graphicsDevice);
         _ringRenderer = new RingRenderer(_graphicsDevice);
         _stardustRenderer = new StardustRenderer(_graphicsDevice);
+        _explosionRenderer = new ExplosionRenderer(_graphicsDevice);
         _hudRenderer = new HudRenderer(_graphicsDevice);
         _stardustRenderer.Initialize(42); // Fixed seed for consistent starfield
 
@@ -153,6 +157,7 @@ public class FlightScene : GameScene
 
     public override void Update(GameTime gameTime)
     {
+        _lastGameTime = gameTime;
         var kb = Keyboard.GetState();
         var control = _flightControlService.Update(gameTime);
 
@@ -188,6 +193,9 @@ public class FlightScene : GameScene
             }
 
             // Periodic TIDY orthonormalization is handled by MCNT scheduler (every 16, offsets 0-11)
+
+            // Check for newly destroyed entities and spawn explosions
+            CheckExplosions();
 
             // Cleanup expired entities (lifetime or out of bounds)
             _bubbleManager.CleanupExpired();
@@ -297,6 +305,10 @@ public class FlightScene : GameScene
         // Draw stardust (starfield)
         _stardustRenderer.Draw(spriteBatch, new Vector2(512, 384), 500f);
 
+        // Draw explosions
+        foreach (var cloud in _explosions)
+            _explosionRenderer.UpdateAndDraw(spriteBatch, cloud, _lastGameTime);
+
         // Render bubble entities (skip planet and sun - rendered separately)
         foreach (var entity in _bubbleManager.GetAllActive())
         {
@@ -390,10 +402,11 @@ public class FlightScene : GameScene
         {
             Name = chosen.Name,
             Model = model,
-            MaxSpeed = 255,
-            MaxEnergy = 255,
-            HullStrength = 255,
-            ShieldStrength = 255
+            MaxSpeed = model.IsRock ? 0f : 255f,
+            MaxEnergy = model.IsRock ? (byte)0 : (byte)255,
+            HullStrength = model.IsRock ? (byte)1 : (byte)255,
+            ShieldStrength = model.IsRock ? (byte)0 : (byte)255,
+            IsRock = model.IsRock
         };
 
         // 50% chance: fly toward player (spawn ahead, move toward origin)
@@ -572,6 +585,71 @@ public class FlightScene : GameScene
         // Object is in front if dot(worldPos, forward) > 0
         Vector3 forward = new Vector3(-_view.M31, -_view.M32, -_view.M33);
         return Vector3.Dot(worldPos, forward) > 0;
+    }
+
+    /// <summary>
+    /// Check for inactive entities and spawn explosion effects.
+    /// Inactive entities are kept for explosion animation, then cleaned up.
+    /// </summary>
+    private void CheckExplosions()
+    {
+        for (int i = GameConstants.FirstAvailableSlot; i < GameConstants.MaxSlots; i++)
+        {
+            var entity = _bubbleManager.GetSlot(i);
+            if (entity != null && !entity.IsActive && !_explosions.Any(e => e.Tag == entity))
+            {
+                System.Diagnostics.Debug.WriteLine($"[EXPLOSION] Creating explosion for {entity.Blueprint.Name} at {entity.Position}, slot {entity.SlotIndex}");
+                _lastEventMessage = $"{entity.Blueprint.Name} destroyed!";
+                _eventMessageTimer = 120;
+
+                // Create explosion at entity position
+                Vector2 screenPos = ProjectToScreen(entity.Position);
+                float distance = entity.Position.Length();
+                var cloud = _explosionRenderer.CreateExplosion(entity.Blueprint.Model, screenPos, distance);
+                cloud.Tag = entity;
+                _explosions.Add(cloud);
+            }
+        }
+
+        // Update and clean up explosions (with delay after visual completion)
+        _explosions.RemoveAll(cloud =>
+        {
+            if (cloud.Counter <= 0)
+            {
+                cloud.CleanupDelayFrames--;
+                if (cloud.CleanupDelayFrames <= 0 && cloud.Tag is ShipInstance tagged)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[EXPLOSION] Cleaning up {tagged.Blueprint.Name} from slot {tagged.SlotIndex}");
+                    _bubbleManager.Despawn(tagged.SlotIndex, "explosion complete");
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
+
+    /// <summary>
+    /// Project a world position to screen coordinates using the view/projection matrices.
+    /// </summary>
+    private Vector2 ProjectToScreen(Vector3 worldPos)
+    {
+        // Apply view transform (camera at origin, looking along -Z in Elite coords)
+        // The view matrix transforms world → view space
+        Vector3 viewPos = Vector3.Transform(worldPos, _view);
+
+        // Apply projection transform
+        Vector4 projected = Vector4.Transform(new Vector4(viewPos, 1f), _projection);
+
+        // Perspective divide
+        if (projected.W == 0) return new Vector2(512, 384);
+        float ndcX = projected.X / projected.W;
+        float ndcY = projected.Y / projected.W;
+
+        // NDC to screen space: [-1,1] → [0,1024] × [0,768]
+        float screenX = (ndcX + 1f) * 0.5f * 1024f;
+        float screenY = (-ndcY + 1f) * 0.5f * 768f;
+
+        return new Vector2(screenX, screenY);
     }
 
     /// <summary>

@@ -61,6 +61,7 @@ public class BoulderModel : ShipModel
             Vertices = vertices,
             Edges = edgeList,
             Faces = faces.ToList(),
+            IsRock = true,
         };
     }
 }

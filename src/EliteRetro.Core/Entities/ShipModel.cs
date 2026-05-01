@@ -29,6 +29,9 @@ public class ShipModel
     public List<Edge> Edges { get; init; } = new();
     public List<Face> Faces { get; init; } = new();
 
+    /// <summary>True for non-ship entities: asteroids, boulders, rock hermits.</summary>
+    public bool IsRock { get; init; }
+
     /// <summary>
     /// Create a simple cube model for testing.
     /// </summary>
