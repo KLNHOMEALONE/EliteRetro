@@ -71,6 +71,9 @@ public class LocalBubbleManager
     /// <summary>Player legal status (0=clean, 1=fugitive, 2=offender, 3=criminal).</summary>
     public byte LegalStatus { get; set; }
 
+    /// <summary>Player commander data (kills, credits, cargo, rank).</summary>
+    public CommanderData Commander { get; set; } = new();
+
     public LocalBubbleManager(int capacity = GameConstants.MaxSlots)
     {
         _capacity = capacity;

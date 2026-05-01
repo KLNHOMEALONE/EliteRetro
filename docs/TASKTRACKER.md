@@ -107,8 +107,8 @@
 - [x] **6.5** Create `SpawnSystem.cs` — danger level × altitude → ship type selection, pack spawning
 - [x] **6.6** Implement combat — laser firing (4 mounts, power from blueprint), missile launch (homing), E.C.M. (countermeasure, mutual cancellation), energy depletion on hit
 - [x] **6.7** Create `CollisionSystem.cs` — entity vs entity collision detection
-- [ ] **6.8** Implement bounty system — TALLY (16-bit) → 9 ranks (Harmless 0-7, Mostly Harmless 8-15, Poor 16-31, Average 32-63, Above Average 64-127, Competent 128-511, Dangerous 512-2559, Deadly 2560-6399, Elite 6400+)
-- [ ] **6.9** Implement cargo release — destroyed ships drop canisters (max_cargo from blueprint)
+- [x] **6.8** Implement bounty system — TALLY (16-bit) → 9 ranks (Harmless 0-7, Mostly Harmless 8-15, Poor 16-31, Average 32-63, Above Average 64-127, Competent 128-511, Dangerous 512-2559, Deadly 2560-6399, Elite 6400+)
+- [x] **6.9** Implement cargo release — destroyed ships drop canisters (max_cargo from blueprint)
 
 ## Phase 7: Game Systems
 
@@ -136,19 +136,18 @@
 
 ## Current Focus
 
-**Phase 1.5: Main Loop Counter** — COMPLETE. All 11 tasks done:
-- MCNT and TaskScheduler infrastructure (previously done)
-- Energy/shield regen every 8 frames
-- Tactics processing every 8 frames (offsets 0-3, placeholders for Phase 6 AI)
-- TIDY orthonormalization every 16 frames (replaces round-robin TidyOne)
-- Station proximity check every 32 frames
-- Altitude/crash/low-energy warnings every 32 frames (placeholder)
-- Sun effects every 32 frames (placeholder)
-- Ship spawn consideration every 256 frames (placeholder)
-- MCNT decrement and task evaluation in GameInstance.Update()
-- Counter resets deferred to Phase 7 (fuel/dock/launch events)
+**Phase 6: Ship AI & Combat** — COMPLETE. All 9 tasks done:
+- TACTICS routine with energy recharge, targeting, missile/laser combat
+- NEWB personality flags (8 behavior bits per ship type)
+- HITCH targeting with crosshair alignment
+- Aggression system (0-63 scale)
+- SpawnSystem with danger level × altitude selection
+- Full combat: lasers, missiles, E.C.M., energy depletion
+- Collision detection with sphere-based radii
+- Bounty system: CommanderData with TALLY tracking → 9 combat ranks
+- Cargo release: destroyed ships drop cargo canisters
 
-**Next: Phase 6** — Ship AI & Combat (TACTICS, NEWB flags, aggression, spawning, combat)
+**Next: Phase 7** — Game Systems (market, trading, fuel scooping, docking, missions, scanner)
 
 ---
 
@@ -161,3 +160,4 @@
 - **Phase 3** — All 9 tasks (Tribonacci galaxy generation, verified TIBEDIED and LAVE)
 - **Phase 4** — All 9 tasks (Circle & Planet Rendering)
 - **Phase 5** — All 10 tasks (FlightScene complete)
+- **Phase 6** — All 9 tasks (Ship AI, combat, bounty system, cargo release)

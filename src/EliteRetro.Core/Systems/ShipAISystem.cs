@@ -89,9 +89,9 @@ namespace EliteRetro.Core.Systems
             if (CanFireLaser(ship, target, out bool accurate))
             {
                 if (!accurate)
-                    FireLaser(ship, target, false);  // Fire but miss
+                    FireLaser(ship, target, false, bubbleManager);  // Fire but miss
                 else
-                    FireLaser(ship, target, true);   // Register hit
+                    FireLaser(ship, target, true, bubbleManager);   // Register hit
             }
 
             // Part 7: Movement — determine direction based on personality
@@ -224,7 +224,7 @@ namespace EliteRetro.Core.Systems
         /// <summary>
         /// Part 6: Fire laser at target.
         /// </summary>
-        private static void FireLaser(ShipInstance ship, ShipInstance target, bool hit)
+        private static void FireLaser(ShipInstance ship, ShipInstance target, bool hit, LocalBubbleManager bubbleManager)
         {
             if (hit)
             {
@@ -232,12 +232,27 @@ namespace EliteRetro.Core.Systems
                 bool destroyed = target.TakeDamage(damage);
 
                 if (destroyed)
+                {
                     target.IsActive = false;
+                    OnAIDestroyedShip(target, ship, bubbleManager);
+                }
                 else
                     ship.Speed = Math.Max(0, ship.Speed - 0.5f);
             }
 
             ship.IsFiring = true;
+        }
+
+        /// <summary>
+        /// Called when AI destroys a ship — track kills and spawn cargo.
+        /// </summary>
+        private static void OnAIDestroyedShip(ShipInstance destroyed, ShipInstance destroyer, LocalBubbleManager bubbleManager)
+        {
+            // Track kill if player was the target (player ship destroyed by AI)
+            // For now just spawn cargo — player kills tracked via CollisionSystem
+
+            // Spawn cargo canisters from destroyed ship
+            CollisionSystem.SpawnCargoDrops(destroyed, bubbleManager);
         }
 
         /// <summary>

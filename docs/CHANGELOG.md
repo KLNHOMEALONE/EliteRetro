@@ -7,6 +7,12 @@ All notable changes to this project.
 ## [Unreleased]
 
 ### Added
+- **Phase 6: Ship AI & Combat complete** — full TACTICS routine, bounty system, cargo release
+  - `CommanderData.cs` — player stats: TALLY (kill count), Credits, LegalStatus, CargoHold
+  - Combat rank system: 9 ranks from Harmless (0-7 kills) to Elite (6400+)
+  - Kill tracking wired into CollisionSystem and ShipAISystem
+  - Cargo release: destroyed ships spawn cargo canisters at death position
+  - `CanisterModel` entities drift in space after ship destruction
 - **MCNT-driven task scheduler** — authentic Elite-style frame-spread task scheduling (Phase 1.5)
   - `MainLoopCounter` — 8-bit counter cycling 0-255, decrements each Update()
   - `TaskScheduler` — registers actions with (mask, offset) pairs, fires when (mcnt & mask) == offset

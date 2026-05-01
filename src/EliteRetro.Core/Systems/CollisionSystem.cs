@@ -108,12 +108,20 @@ public static class CollisionSystem
         if (a.SlotIndex != GameConstants.PlayerSlot)
         {
             bool destroyed = a.TakeDamage(damageA);
-            if (destroyed) a.IsActive = false;
+            if (destroyed)
+            {
+                OnShipDestroyed(a, b, bubbleManager);
+                a.IsActive = false;
+            }
         }
         if (b.SlotIndex != GameConstants.PlayerSlot)
         {
             bool destroyed = b.TakeDamage(damageB);
-            if (destroyed) b.IsActive = false;
+            if (destroyed)
+            {
+                OnShipDestroyed(b, a, bubbleManager);
+                b.IsActive = false;
+            }
         }
 
         // Separate ships to prevent repeated collisions
@@ -123,6 +131,21 @@ public static class CollisionSystem
             a.Position -= separation * 0.5f;
             b.Position += separation * 0.5f;
         }
+    }
+
+    /// <summary>
+    /// Called when a ship is destroyed — track kills and spawn cargo drops.
+    /// </summary>
+    private static void OnShipDestroyed(ShipInstance destroyed, ShipInstance? destroyer, LocalBubbleManager bubbleManager)
+    {
+        // Track kill if player was involved
+        if (destroyer?.SlotIndex == GameConstants.PlayerSlot)
+        {
+            bubbleManager.Commander.AddKill();
+        }
+
+        // Spawn cargo canisters from destroyed ship's cargo
+        SpawnCargoDrops(destroyed, bubbleManager);
     }
 
     /// <summary>
@@ -165,8 +188,44 @@ public static class CollisionSystem
     }
 
     /// <summary>
-    /// Check if a ship has crashed into the planet.
+    /// Spawn cargo canisters from a destroyed ship.
+    /// Each cargo item becomes a drifting canister entity.
     /// </summary>
+    public static void SpawnCargoDrops(ShipInstance destroyed, LocalBubbleManager bubbleManager)
+    {
+        if (destroyed.Cargo.Count == 0) return;
+
+        var rng = new Random((int)destroyed.Position.X * 17 + (int)destroyed.Position.Y * 31);
+        var canisterBlueprint = new ShipBlueprint
+        {
+            Name = "Cargo Canister",
+            Model = CanisterModel.Create(8),
+            MaxSpeed = 0,
+            MaxEnergy = 0,
+            HullStrength = 1,
+            ShieldStrength = 0,
+        };
+
+        foreach (var kvp in destroyed.Cargo)
+        {
+            for (int i = 0; i < kvp.Value; i++)
+            {
+                var canister = new ShipInstance(canisterBlueprint)
+                {
+                    Position = destroyed.Position + new Vector3(
+                        (float)(rng.NextDouble() * 2 - 1) * 20,
+                        (float)(rng.NextDouble() * 2 - 1) * 20,
+                        (float)(rng.NextDouble() * 2 - 1) * 20
+                    ),
+                    Speed = 0,
+                    Energy = 0,
+                    Hull = 1,
+                };
+                canister.AddCargo(kvp.Key, 1);
+                bubbleManager.TrySpawn(canister);
+            }
+        }
+    }
     public static bool CheckPlanetCrash(ShipInstance ship, ShipInstance? planet)
     {
         if (planet == null) return false;
