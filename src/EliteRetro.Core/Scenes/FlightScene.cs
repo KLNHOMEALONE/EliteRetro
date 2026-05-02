@@ -426,6 +426,14 @@ public class FlightScene : GameScene
             spriteBatch.Draw(_whitePixel, new Rectangle(0, 0, 1024, 768), flashColor);
         }
 
+        // Crosshair at center of screen (targeting reticle)
+        const int crossX = 512;
+        const int crossY = 384;
+        const int crossSize = 8;
+        Color amber = new Color(255, 180, 50);
+        spriteBatch.Draw(_whitePixel, new Rectangle(crossX - crossSize, crossY - 1, crossSize * 2, 2), amber);
+        spriteBatch.Draw(_whitePixel, new Rectangle(crossX - 1, crossY - crossSize, 2, crossSize * 2), amber);
+
         // HUD overlay
         DrawHUD(spriteBatch);
 
