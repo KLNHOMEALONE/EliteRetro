@@ -206,9 +206,20 @@ public class ScannerRenderer
     /// Project a ship's position (in player's local coordinate frame) to scanner screen coordinates.
     /// Expects: X = lateral (positive = right), Y = altitude (positive = up), Z = depth (positive = ahead).
     /// Returns the dot position and stick base for rendering.
+    ///
+    /// Follows BBC Elite's SCAN routine conventions (https://elite.bbcelite.com/deep_dives/the_3d_scanner.html):
+    ///   X1 = center + x_hi          (lateral: right of player → right on scanner)
+    ///   SC = center - z_hi / 4      (depth: ahead of player → top of scanner)
+    ///   A  = -(y_hi / 2)            (altitude: above player → stick goes up from base)
+    ///
+    /// The original BBC Elite scanner was 138×36 pixels with x_hi in [-63, 63].
+    /// This scanner is larger (RadiusX×2 by RadiusY×2), so all three axes are
+    /// proportionally scaled to fill the ellipse while preserving the BBC Elite
+    /// depth-to-lateral ratio (1:4) and altitude-to-lateral ratio (1:2).
     /// </summary>
     public static (Vector2 dotPos, Vector2 stickBase, bool visible)? ProjectToScanner(Vector3 localPos)
     {
+        // Scale world units to scanner range [-MaxRange, MaxRange]
         float scale = MaxRange / 1000f;
 
         int xHi = (int)(localPos.X * scale);
@@ -219,23 +230,47 @@ public class ScannerRenderer
         yHi = Math.Clamp(yHi, -MaxRange, MaxRange);
         zHi = Math.Clamp(zHi, -MaxRange, MaxRange);
 
+        // Lateral position: positive X (right of player) → right on scanner
+        // Matches BBC Elite: X1 = 123 + x_hi, scaled to our scanner width
         int screenX = CenterX + (int)(xHi * (RadiusX / (float)MaxRange));
-        // Z = depth: positive (ahead) maps to top of ellipse, negative (behind) to bottom
-        int stickBaseY = CenterY - (zHi / 4);
-        int stickHeight = -(yHi / 2);
-        int dotY = stickBaseY + stickHeight;
+
+        // Depth position: positive Z (ahead of player) → top of scanner (smaller Y)
+        // BBC Elite: SC = 220 - z_hi/4, where z_hi/4 spans ~88% of the 18-pixel half-height.
+        // We scale depth to fill the same proportion of our larger scanner.
+        float depthScale = RadiusY * 0.875f / MaxRange;
+        int stickBaseY = CenterY - (int)(zHi * depthScale);
+
+        // Altitude (stick height): positive Y (above player) → negative stick (dot above base)
+        // BBC Elite: A = -(y_hi/2). Stick sensitivity is 2x depth sensitivity.
+        float stickScale = depthScale * 2f;
+        int stickHeight = -(int)(yHi * stickScale);
 
         // Ensure minimum stick length for visibility
         if (stickHeight == 0)
-            stickHeight = (zHi > 0) ? -4 : 4;
-        dotY = stickBaseY + stickHeight;
+        {
+            int minStick = Math.Max(4, (int)(depthScale * 4));
+            stickHeight = (zHi > 0) ? -minStick : minStick;
+        }
 
-        // Clip to ellipse
-        float dx = screenX - CenterX;
-        float dy = dotY - CenterY;
-        float ellipseDist = (dx * dx) / (RadiusX * RadiusX) + (dy * dy) / (RadiusY * RadiusY);
-        if (ellipseDist > 1.1f)
+        int dotY = stickBaseY + stickHeight;
+
+        // --- Visibility test ---
+        // BBC Elite checks the stick BASE against the ellipse (the x/z plane position),
+        // not the dot (which includes altitude). If the base is outside the ellipse,
+        // the ship is too far away on the scanner plane and we skip it entirely.
+        float baseDx = screenX - CenterX;
+        float baseDy = stickBaseY - CenterY;
+        float baseEllipseDist = (baseDx * baseDx) / (RadiusX * RadiusX) + (baseDy * baseDy) / (RadiusY * RadiusY);
+        if (baseEllipseDist > 1.1f)
             return null;
+
+        // --- Dot Y clamping ---
+        // BBC Elite clamps the dot's screen Y to the dashboard boundaries (194-246)
+        // so sticks of distant ships get shortened but still appear. We clamp to
+        // our scanner's bounding box (with 1px margin for the dot size).
+        int scannerTop = CenterY - RadiusY + 1;
+        int scannerBot = CenterY + RadiusY - 1;
+        dotY = Math.Clamp(dotY, scannerTop, scannerBot);
 
         return (new Vector2(screenX, dotY), new Vector2(screenX, stickBaseY), true);
     }
