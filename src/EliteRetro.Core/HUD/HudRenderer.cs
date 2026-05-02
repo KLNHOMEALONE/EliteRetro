@@ -195,6 +195,10 @@ public class HudRenderer
         spriteBatch.Draw(_whitePixel, new Rectangle(midX - 1, DashY + 5, 2, DashH - 10), AmberDim);
         spriteBatch.Draw(_whitePixel, new Rectangle(CenterX + 5, midY - 1, CenterW - 10, 2), AmberDim);
 
+        // Crosshair at center of compass
+        spriteBatch.Draw(_whitePixel, new Rectangle(midX - 6, midY - 1, 12, 2), Amber);
+        spriteBatch.Draw(_whitePixel, new Rectangle(midX - 1, midY - 6, 2, 12), Amber);
+
         spriteBatch.Draw(_whitePixel, new Rectangle(midX - 3, DashY + 7, 1, 8), Amber);
         spriteBatch.Draw(_whitePixel, new Rectangle(midX + 2, DashY + 7, 1, 8), Amber);
 

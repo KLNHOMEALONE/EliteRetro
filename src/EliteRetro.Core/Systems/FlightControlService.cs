@@ -16,6 +16,8 @@ public struct FlightControlState
     public float SpeedDelta;
     /// <summary>View index: 0=front, 1=rear, 2=left, 3=right.</summary>
     public int ViewIndex;
+    /// <summary>Laser fire requested this frame.</summary>
+    public bool FireLaser;
     /// <summary>Pause toggle requested this frame.</summary>
     public bool PauseToggled;
     /// <summary>Whether the service is currently paused.</summary>
@@ -41,7 +43,8 @@ public class FlightControlService
     /// - Up/Down Arrow: pitch down/up (inverted: Down = pitch up = pull stick back)
     /// - W/S: speed increase/decrease
     /// - V: view switch (cycles front → rear → left → right)
-    /// - P or Space: pause toggle
+    /// - Space: fire laser
+    /// - P: pause toggle
     /// </summary>
     public FlightControlState Update(GameTime gameTime)
     {
@@ -76,11 +79,17 @@ public class FlightControlService
                 _currentViewIndex = (_currentViewIndex + 1) % 4;
             }
             control.ViewIndex = _currentViewIndex;
+
+            // Laser fire: Space key (single shot per press)
+            if (state.IsKeyDown(Keys.Space) && !_previousState.IsKeyDown(Keys.Space))
+            {
+                control.FireLaser = true;
+            }
         }
 
-        // Pause toggle: P key or Space
-        bool currentPause = state.IsKeyDown(Keys.P) || state.IsKeyDown(Keys.Space);
-        bool prevPause = _previousState.IsKeyDown(Keys.P) || _previousState.IsKeyDown(Keys.Space);
+        // Pause toggle: P key only
+        bool currentPause = state.IsKeyDown(Keys.P);
+        bool prevPause = _previousState.IsKeyDown(Keys.P);
         if (currentPause && !prevPause)
         {
             _isPaused = !_isPaused;

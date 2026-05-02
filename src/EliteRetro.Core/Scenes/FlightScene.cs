@@ -189,6 +189,14 @@ public class FlightScene : GameScene
         var kb = Keyboard.GetState();
         var control = _flightControlService.Update(gameTime);
 
+        // Handle laser fire
+        if (control.FireLaser)
+        {
+            _gameInstance?.Audio.PlayLaser();
+            // Check for targets in crosshairs
+            FireLaserAtTarget();
+        }
+
         if (!control.IsPaused)
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -279,8 +287,8 @@ public class FlightScene : GameScene
             // TODO: Apply heat damage, fuel scooping, etc. based on sunEffect
         }
 
-        // Toggle local pause on Space (separate from flight control pause)
-        if (kb.IsKeyDown(Keys.Space) && _prevKb.IsKeyUp(Keys.Space) && !control.IsPaused)
+        // Toggle local pause on P (when not already paused by flight control)
+        if (kb.IsKeyDown(Keys.P) && _prevKb.IsKeyUp(Keys.P) && !control.IsPaused)
             _paused = !_paused;
 
         // Save game with F5
@@ -622,7 +630,7 @@ public class FlightScene : GameScene
         }
 
         // Controls
-        _font.DrawString(spriteBatch, "ARROWS: PITCH/ROLL  W/S: SPEED  V: VIEW  +/-: ZOOM  SPACE: PAUSE  I: EDGES  F5: SAVE  ESC: MENU", new Vector2(10, 740), Color.Gray, 0.8f);
+        _font.DrawString(spriteBatch, "ARROWS: PITCH/ROLL  W/S: SPEED  V: VIEW  SPACE: FIRE  P: PAUSE  +/-: ZOOM  I: EDGES  F5: SAVE  ESC: MENU", new Vector2(10, 740), Color.Gray, 0.8f);
 
         // Entity event messages (spawn/despawn)
         if (_eventMessageTimer > 0 && !string.IsNullOrEmpty(_lastEventMessage))
@@ -759,6 +767,43 @@ public class FlightScene : GameScene
         {
             _lastSaveMessage = $"SAVE FAILED: {ex.Message}";
             _saveMessageTimer = 180;
+        }
+    }
+
+    /// <summary>
+    /// Fire laser at target in crosshairs. Checks if any entity is aligned
+    /// with the player's nose vector (within a narrow cone) and in front.
+    /// </summary>
+    private void FireLaserAtTarget()
+    {
+        var player = _bubbleManager.PlayerShip;
+        if (player == null) return;
+
+        const float hitConeCos = 0.98f; // ~11° cone (cos(11°) ≈ 0.98)
+        const float maxRange = 300f;
+
+        foreach (var entity in _bubbleManager.GetAllActive())
+        {
+            if (entity.SlotIndex == GameConstants.PlayerSlot) continue;
+            if (!entity.IsActive) continue;
+            if (entity.Blueprint.Name == "Planet" || entity.Blueprint.Name == "Sun") continue;
+
+            float dist = entity.Position.Length();
+            if (dist > maxRange) continue;
+
+            Vector3 toTarget = Vector3.Normalize(entity.Position);
+            float dot = Vector3.Dot(player.Orientation.Nosev, toTarget);
+            if (dot < hitConeCos) continue;
+
+            // Hit! Deal damage
+            int laserDamage = player.Blueprint.LaserPower > 0 ? player.Blueprint.LaserPower * 10 : 20;
+            if (entity.TakeDamage(laserDamage))
+            {
+                entity.IsActive = false;
+                _lastEventMessage = $"{entity.Blueprint.Name} destroyed!";
+                _eventMessageTimer = 120;
+            }
+            break; // Only hit first target
         }
     }
 
