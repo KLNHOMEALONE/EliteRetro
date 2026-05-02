@@ -166,6 +166,7 @@ public class GameInstance : Game
         // Every 256 frames, offset 0: consider spawning a new ship
         _taskScheduler.RegisterEvery(256, 0, () =>
         {
+            if (_bubbleManager.TargetPracticeMode) return;
             // TODO: calculate danger level and altitude from current system
             byte dangerLevel = 3; // placeholder
             byte altitude = 10;   // placeholder

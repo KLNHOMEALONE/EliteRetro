@@ -62,6 +62,9 @@ public class ShipInstance
     /// <summary>Rotation timer for TIDY round-robin.</summary>
     public int TidyCounter;
 
+    /// <summary>Ship is a target practice dummy (stationary, directly ahead).</summary>
+    public bool IsTargetPractice;
+
     public ShipInstance(ShipBlueprint blueprint)
     {
         Blueprint = blueprint;

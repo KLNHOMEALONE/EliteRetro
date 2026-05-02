@@ -57,6 +57,8 @@ public class FlightScene : GameScene
     private GameTime _lastGameTime = null!;
     private string _lastSaveMessage = ""; // HUD message for save confirmation
     private int _saveMessageTimer; // frames remaining to display save message
+    private bool _isFiring; // true when player is firing lasers
+    private bool _targetPracticeMode; // when true, spawn stationary target ship ahead
 
     public FlightScene(Game? game = null)
     {
@@ -97,7 +99,7 @@ public class FlightScene : GameScene
 
         _projection = Matrix.CreatePerspectiveFieldOfView(
             MathHelper.ToRadians(75f),
-            _graphicsDevice.Viewport.AspectRatio,
+            1024f / 480f, // Space view aspect ratio (1024x480)
             0.1f, 1000f);
     }
 
@@ -190,7 +192,8 @@ public class FlightScene : GameScene
         var control = _flightControlService.Update(gameTime);
 
         // Handle laser fire
-        if (control.FireLaser)
+        _isFiring = control.FireLaser;
+        if (_isFiring)
         {
             _gameInstance?.Audio.PlayLaser();
             // Check for targets in crosshairs
@@ -214,6 +217,9 @@ public class FlightScene : GameScene
             // Entity's own speed adds to this motion
             foreach (var entity in _bubbleManager.GetAllActive())
             {
+                // Skip target practice ships - they're stationary and stay centered
+                if (entity.IsTargetPractice) continue;
+
                 // Player's forward speed: entities move toward camera
                 // In Elite, speed makes the universe scroll toward the player
                 if (_playerSpeed > 0)
@@ -247,9 +253,13 @@ public class FlightScene : GameScene
                 _planetRotation = (_planetRotation + 1) % 64;
 
             // Random ship/asteroid spawning (about 1 per 3 seconds at 60fps)
-            _spawnCounter++;
-            if (_spawnCounter % 180 == 0 && _rng.NextDouble() < 0.3)
-                SpawnRandomEntity();
+            // Skip spawning in target practice mode
+            if (!_targetPracticeMode)
+            {
+                _spawnCounter++;
+                if (_spawnCounter % 180 == 0 && _rng.NextDouble() < 0.3)
+                    SpawnRandomEntity();
+            }
 
             // View switching from control service
             _viewMode = control.ViewIndex;
@@ -315,6 +325,17 @@ public class FlightScene : GameScene
         if (kb.IsKeyDown(Keys.I) && _prevKb.IsKeyUp(Keys.I))
             _showHiddenEdges = !_showHiddenEdges;
 
+        // Toggle target practice mode with L
+        if (kb.IsKeyDown(Keys.L) && _prevKb.IsKeyUp(Keys.L))
+        {
+            _targetPracticeMode = !_targetPracticeMode;
+            _bubbleManager.TargetPracticeMode = _targetPracticeMode;
+            if (_targetPracticeMode)
+                SpawnTargetPracticeShip();
+            else
+                ClearTargetPracticeShip();
+        }
+
         // Build view matrix from orientation.
         // The view matrix maps world space to camera space.
         // In Monogame (V * M convention), the View Matrix should have basis vectors in COLUMNS.
@@ -362,7 +383,7 @@ public class FlightScene : GameScene
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
 
         // Draw stardust (starfield)
-        _stardustRenderer.Draw(spriteBatch, new Vector2(512, 384), 500f, _view);
+        _stardustRenderer.Draw(spriteBatch, new Vector2(512, 240), 500f, _view);
 
         // Draw explosions
         foreach (var cloud in _explosions)
@@ -426,13 +447,36 @@ public class FlightScene : GameScene
             spriteBatch.Draw(_whitePixel, new Rectangle(0, 0, 1024, 768), flashColor);
         }
 
-        // Crosshair at center of screen (targeting reticle)
-        const int crossX = 512;
-        const int crossY = 384;
-        const int crossSize = 8;
-        Color amber = new Color(255, 180, 50);
-        spriteBatch.Draw(_whitePixel, new Rectangle(crossX - crossSize, crossY - 1, crossSize * 2, 2), amber);
-        spriteBatch.Draw(_whitePixel, new Rectangle(crossX - 1, crossY - crossSize, 2, crossSize * 2), amber);
+        // Crosshair at center of space view (BBC Elite targeting reticle)
+        const int cx = 512;
+        const int cy = 240;
+        const int inner = 16;
+        const int outer = 48;
+        var crossColor = Color.White;
+
+        // Central tiny dot
+        spriteBatch.Draw(_whitePixel, new Rectangle(cx - 1, cy - 1, 2, 2), crossColor);
+
+        // Orthogonal segments
+        spriteBatch.Draw(_whitePixel, new Rectangle(cx - 1, cy - outer, 2, outer - inner), crossColor); // Top
+        spriteBatch.Draw(_whitePixel, new Rectangle(cx - 1, cy + inner, 2, outer - inner), crossColor); // Bottom
+        spriteBatch.Draw(_whitePixel, new Rectangle(cx - outer, cy - 1, outer - inner, 2), crossColor); // Left
+        spriteBatch.Draw(_whitePixel, new Rectangle(cx + inner, cy - 1, outer - inner, 2), crossColor); // Right
+
+        // Target practice mode indicator
+        if (_targetPracticeMode)
+        {
+            var sz = _font.MeasureString("TARGET PRACTICE");
+            _font.DrawString(spriteBatch, "TARGET PRACTICE",
+                new Vector2(1024 / 2 - sz.X / 2, 10), new Color(255, 200, 50), 1.0f);
+        }
+
+        // Draw lasers when firing
+        if (_isFiring)
+        {
+            DrawLine(spriteBatch, new Vector2(0, 480), new Vector2(cx, cy), Color.Yellow, 2);
+            DrawLine(spriteBatch, new Vector2(1024, 480), new Vector2(cx, cy), Color.Yellow, 2);
+        }
 
         // HUD overlay
         DrawHUD(spriteBatch);
@@ -543,6 +587,68 @@ public class FlightScene : GameScene
         string direction = towardPlayer ? "approaching" : "departing";
         _lastEventMessage = $"{chosen.Name} {direction}";
         _eventMessageTimer = 120;
+    }
+
+    /// <summary>
+    /// Spawn a stationary Viper directly ahead for target practice.
+    /// Clears all entities except player and planet for a clean test range.
+    /// </summary>
+    private void SpawnTargetPracticeShip()
+    {
+        // Save planet before clearing
+        var planet = _bubbleManager.Planet;
+
+        // Clear everything except player
+        _bubbleManager.Clear();
+
+        // Re-add planet
+        if (planet != null)
+        {
+            planet.IsActive = true;
+            _bubbleManager.SetSlot(GameConstants.PlanetSlot, planet);
+        }
+
+        var model = ViperModel.Create(24f);
+        var blueprint = new ShipBlueprint
+        {
+            Name = "Target Viper",
+            Model = model,
+            MaxSpeed = 0,
+            MaxEnergy = 255,
+            HullStrength = 255,
+            ShieldStrength = 255
+        };
+
+        var target = new ShipInstance(blueprint)
+        {
+            Position = new Vector3(0, 0, -400), // 400 units ahead along -Z (Nosev direction at identity)
+            Speed = 0,
+            Orientation = OrientationMatrix.Identity,
+            IsTargetPractice = true
+        };
+
+        // Add cargo for drop testing
+        target.AddCargo(0, 3); // Food
+        target.AddCargo(6, 2); // Metals
+
+        _bubbleManager.TrySpawn(target);
+        _lastEventMessage = "Target practice: L to toggle off";
+        _eventMessageTimer = 120;
+    }
+
+    /// <summary>
+    /// Remove the target practice ship from the bubble.
+    /// </summary>
+    private void ClearTargetPracticeShip()
+    {
+        foreach (var entity in _bubbleManager.GetAllActive())
+        {
+            if (entity.IsTargetPractice)
+            {
+                entity.IsActive = false;
+                break;
+            }
+        }
     }
 
     private void DrawHUD(SpriteBatch spriteBatch)
@@ -658,11 +764,26 @@ public class FlightScene : GameScene
             _font.DrawString(spriteBatch, "PAUSED", new Vector2(400, 350), Color.Red, 2f);
     }
 
+    private void DrawLine(SpriteBatch spriteBatch, Vector2 start, Vector2 end, Color color, int thickness)
+    {
+        Vector2 edge = end - start;
+        float angle = (float)Math.Atan2(edge.Y, edge.X);
+        spriteBatch.Draw(_whitePixel,
+            start,
+            null,
+            color,
+            angle,
+            new Vector2(0, 0.5f),
+            new Vector2(edge.Length(), thickness),
+            SpriteEffects.None,
+            0);
+    }
+
     private bool IsInFrontOfCamera(Vector3 worldPos)
     {
-        // Camera is at origin, looking along 'forward' direction
-        // Object is in front if dot(worldPos, forward) > 0
-        Vector3 forward = new Vector3(-_view.M31, -_view.M32, -_view.M33);
+        // Screen center direction in world space = Nosev (points toward -Z at identity)
+        // Object is in front if it's in the same direction as Nosev
+        Vector3 forward = _universeOrientation.Nosev;
         return Vector3.Dot(worldPos, forward) > 0;
     }
 
@@ -723,13 +844,13 @@ public class FlightScene : GameScene
         Vector4 projected = Vector4.Transform(new Vector4(viewPos, 1f), _projection);
 
         // Perspective divide
-        if (projected.W == 0) return new Vector2(512, 384);
+        if (projected.W == 0) return new Vector2(512, 240);
         float ndcX = projected.X / projected.W;
         float ndcY = projected.Y / projected.W;
 
-        // NDC to screen space: [-1,1] → [0,1024] × [0,768]
+        // NDC to screen space: [-1,1] → [0,1024] × [0,480]
         float screenX = (ndcX + 1f) * 0.5f * 1024f;
-        float screenY = (-ndcY + 1f) * 0.5f * 768f;
+        float screenY = (1 - ndcY) * 0.5f * 480f;
 
         return new Vector2(screenX, screenY);
     }
@@ -780,15 +901,19 @@ public class FlightScene : GameScene
 
     /// <summary>
     /// Fire laser at target in crosshairs. Checks if any entity is aligned
-    /// with the player's nose vector (within a narrow cone) and in front.
+    /// with the player's forward direction (screen center) and in front.
     /// </summary>
     private void FireLaserAtTarget()
     {
         var player = _bubbleManager.PlayerShip;
         if (player == null) return;
 
-        const float hitConeCos = 0.98f; // ~11° cone (cos(11°) ≈ 0.98)
-        const float maxRange = 300f;
+        const float hitConeCos = 0.85f; // ~32° cone — matches visual crosshair tolerance
+        const float maxRange = 500f;
+
+        // Player's forward direction = screen center in world space
+        // View matrix forward column transforms world→camera; screen center = -forward = Nosev
+        Vector3 forward = _universeOrientation.Nosev;
 
         foreach (var entity in _bubbleManager.GetAllActive())
         {
@@ -800,13 +925,31 @@ public class FlightScene : GameScene
             if (dist > maxRange) continue;
 
             Vector3 toTarget = Vector3.Normalize(entity.Position);
-            float dot = Vector3.Dot(player.Orientation.Nosev, toTarget);
+            float dot = Vector3.Dot(forward, toTarget);
             if (dot < hitConeCos) continue;
 
-            // Hit! Deal damage
-            int laserDamage = player.Blueprint.LaserPower > 0 ? player.Blueprint.LaserPower * 10 : 20;
-            if (entity.TakeDamage(laserDamage))
+            // Hit! Deal damage (shields first, then hull)
+            // 90 damage per shot: 3 shots strip shields (255), 3 more destroy hull
+            int laserDamage = 90;
+            bool destroyed = false;
+            if (entity.Energy > 0)
             {
+                int shieldDmg = Math.Min(laserDamage, entity.Energy);
+                entity.Energy = (byte)(entity.Energy - shieldDmg);
+                int hullDmg = laserDamage - shieldDmg;
+                if (hullDmg > 0)
+                    destroyed = entity.TakeDamage(hullDmg);
+            }
+            else
+            {
+                destroyed = entity.TakeDamage(laserDamage);
+            }
+
+            if (destroyed)
+            {
+                // Spawn cargo drops before deactivating
+                CollisionSystem.SpawnCargoDrops(entity, _bubbleManager);
+
                 entity.IsActive = false;
                 _lastEventMessage = $"{entity.Blueprint.Name} destroyed!";
                 _eventMessageTimer = 120;
@@ -826,11 +969,10 @@ public class FlightScene : GameScene
 
         float ndcX = projected.X / projected.Z;
         float ndcY = projected.Y / projected.Z;
-        var viewport = _graphicsDevice.Viewport;
-        float screenX = (ndcX + 1) / 2 * viewport.Width;
-        float screenY = (1 - ndcY) / 2 * viewport.Height;
+        float screenX = (ndcX + 1) / 2 * 1024;
+        float screenY = (1 - ndcY) / 2 * 480;
 
-        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * viewport.Height / 2;
+        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * 480 / 2;
         if (screenRadius > 0 && screenRadius < 500)
             _ringRenderer.DrawAxisAlignedRings(spriteBatch, new Vector2(screenX, screenY), screenRadius, 1.4f, 2.2f, color, tiltAngle, layer);
     }
@@ -845,11 +987,10 @@ public class FlightScene : GameScene
 
         float ndcX = projected.X / projected.Z;
         float ndcY = projected.Y / projected.Z;
-        var viewport = _graphicsDevice.Viewport;
-        float screenX = (ndcX + 1) / 2 * viewport.Width;
-        float screenY = (1 - ndcY) / 2 * viewport.Height;
+        float screenX = (ndcX + 1) / 2 * 1024;
+        float screenY = (1 - ndcY) / 2 * 480;
 
-        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * viewport.Height / 2;
+        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * 480 / 2;
         if (screenRadius > 0 && screenRadius < 500)
             _sunRenderer.DrawSun(spriteBatch, new Vector2(screenX, screenY), screenRadius, color);
     }
@@ -864,11 +1005,10 @@ public class FlightScene : GameScene
 
         float ndcX = projected.X / projected.Z;
         float ndcY = projected.Y / projected.Z;
-        var viewport = _graphicsDevice.Viewport;
-        float screenX = (ndcX + 1) / 2 * viewport.Width;
-        float screenY = (1 - ndcY) / 2 * viewport.Height;
+        float screenX = (ndcX + 1) / 2 * 1024;
+        float screenY = (1 - ndcY) / 2 * 480;
 
-        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * viewport.Height / 2;
+        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * 480 / 2;
         if (screenRadius > 0 && screenRadius < 500)
             _planetRenderer.DrawPlanet(spriteBatch, new Vector2(screenX, screenY), screenRadius, color, rotationAngle);
     }

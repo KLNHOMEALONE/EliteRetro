@@ -37,6 +37,9 @@ public static class CollisionSystem
                 // Skip reserved slots vs each other
                 if (a.SlotIndex < 2 && b.SlotIndex < 2) continue;
 
+                // Skip target practice ships
+                if (a.IsTargetPractice || b.IsTargetPractice) continue;
+
                 if (CheckCollision(a, b))
                 {
                     ResolveCollision(a, b, bubbleManager);
@@ -138,10 +141,16 @@ public static class CollisionSystem
     /// Apply collision damage to an NPC ship.
     /// Small ships (vertex count < 15) lose all shields and are destroyed instantly.
     /// Larger ships take proportional hull damage.
+    /// Cargo canisters (hull=1) are not destroyed by collision but still deal damage.
     /// </summary>
     private static bool ResolveShipCollisionDamage(ShipInstance ship, int damage)
     {
         int vertexCount = ship.Blueprint.Model.Vertices.Count;
+
+        // Cargo canisters: not destroyed by collision (hull=1, just debris)
+        // But they still deal collision damage to the player
+        if (ship.Blueprint.Name == "Cargo Canister")
+            return false; // Canister survives, no destruction
 
         // Small ships: instant destruction on any collision
         if (vertexCount < 15)
@@ -306,6 +315,7 @@ public static class CollisionSystem
         {
             if (entity.SlotIndex == GameConstants.PlayerSlot) continue;
             if (!entity.IsActive) continue;
+            if (entity.IsTargetPractice) continue; // Skip target practice ships
 
             if (CheckCollision(player, entity))
             {

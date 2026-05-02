@@ -7,6 +7,19 @@ All notable changes to this project.
 ## [Unreleased]
 
 ### Added
+- **Laser targeting system** — cone-based hit detection (~32° cone, 500 unit range)
+  - Shields absorb damage first, then hull
+  - 90 damage per shot (3 shots strip shields, 3 more destroy hull)
+  - Visual crosshair at screen center (BBC Elite diamond reticle)
+  - Laser fire on Space key, pause on P key only
+- **Target practice mode** — L key spawns stationary Viper for testing
+  - Clears other ships for clean test range
+  - Fixed world position — unaffected by pitch/roll or collision
+  - "TARGET PRACTICE" indicator on screen
+- **Cargo canister drops** — destroyed ships release cargo as shootable canisters
+  - Canisters have hull=1, destructible by single laser hit
+  - No longer auto-destroyed by collision system
+  - Collision with canisters still damages player ship (authentic to original)
 - **SaveGameManager** — 256-byte binary commander file format
   - Layout matches BBC Elite: galactic coords (0x00-0x01), galaxy seed (0x02-0x07), credits (0x08-0x0B), fuel (0x0C), cargo (0x16-0x26), TALLY (0x47-0x48)
   - CHECK checksum: sum of bytes 0x00-0x4A, stored at 0x4B

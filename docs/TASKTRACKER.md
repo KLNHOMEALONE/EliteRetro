@@ -131,25 +131,30 @@
 - [ ] **8.5** Add options menu — key bindings, difficulty settings
 - [ ] **8.6** Performance optimization — object pooling, batched rendering
 - [ ] **8.7** Cougar easter egg — 1 in 9,000 spawn chance
+- [x] **8.8** Laser targeting system — cone-based hit detection (~32°), shields-first damage, cargo canister drops from destroyed ships
+- [x] **8.9** Target practice mode — L key spawns stationary target for testing, clears other ships, collision-safe cargo canisters
 
 ---
 
 ## Current Focus
 
-**Phase 8: Polish & Integration** — 4 of 7 tasks complete:
-- AudioManager: procedural audio (engine hum, laser, explosion) via DynamicSoundEffectInstance
+**Phase 8: Polish & Integration** — 6 of 9 tasks complete:
+- AudioManager: procedural audio (laser, explosion) via DynamicSoundEffectInstance
 - SaveGameManager: 256-byte binary commander file with CHECK/CHK2 checksums
 - MainMenuScene: "LOAD GAME" menu item, FlightScene: F5 save, ESC to menu
+- Laser combat: 90 damage/shot, shields-first, cargo drops on destruction
+- Target practice mode (L key): stationary Viper, clean test range
+- Cargo canisters: destructible by laser, collision-safe (no longer auto-destroyed)
+- Crosshair: BBC Elite diamond reticle at screen center
+- Pitch controls: corrected to natural flight feel (Up = nose up)
 
 **Remaining:**
 - Top pilots leaderboard (optional — not in original Elite)
 - Options menu (key bindings, difficulty)
 - Performance optimization (object pooling, batched rendering)
 - Cougar easter egg (1 in 9,000 spawn chance)
-- ScannerRenderer: 3D elliptical display with dot+stick projection and IFF coloring
-- Mission system still pending
 
-**Next: Phase 7.7** — Mission system (delivery, assassination, mining contracts), then Phase 8 (polish & integration)
+**Next: Phase 7.7** — Mission system (delivery, assassination, mining contracts), then remaining Phase 8 polish
 
 ---
 

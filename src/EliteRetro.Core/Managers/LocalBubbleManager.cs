@@ -59,6 +59,9 @@ public class LocalBubbleManager
     /// <summary>Player shield strength (0-255, aft).</summary>
     public byte PlayerShieldAft { get; set; } = 200;
 
+    /// <summary>When true, no ships spawn via scheduler or random spawning.</summary>
+    public bool TargetPracticeMode { get; set; }
+
     /// <summary>Player hull strength (0-255).</summary>
     public byte PlayerHull { get; set; } = 255;
 
