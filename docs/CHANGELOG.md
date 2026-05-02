@@ -7,6 +7,28 @@ All notable changes to this project.
 ## [Unreleased]
 
 ### Added
+- **SaveGameManager** — 256-byte binary commander file format
+  - Layout matches BBC Elite: galactic coords (0x00-0x01), galaxy seed (0x02-0x07), credits (0x08-0x0B), fuel (0x0C), cargo (0x16-0x26), TALLY (0x47-0x48)
+  - CHECK checksum: sum of bytes 0x00-0x4A, stored at 0x4B
+  - CHK2 secondary checksum: XOR of bytes 0x00-0x49, stored at 0x4A
+  - Save path: `%LOCALAPPDATA%/EliteRetro/commander.bin`
+  - Load validates checksum, restores commander data and bubble state
+- **AudioManager** — procedural sound generation (no external files)
+  - Menu select: 880Hz A5 beep with cosine attack/decay envelope
+  - Laser shot: noise burst with frequency sweep (2000→200Hz)
+  - Explosion: low-frequency noise with 60Hz rumble and slow decay
+  - All sounds generated as WAV in-memory via `DynamicSoundEffectInstance`
+- **MainMenuScene redesign** — Elite-style left sidebar layout
+  - 300px dark blue sidebar panel with separator lines
+  - Combat rating displayed prominently (large yellow text)
+  - 8 menu items with ">" selector prefix
+  - "LOAD GAME" item shows "(no save)" when no saved game exists
+  - Controls listed at bottom of sidebar
+- **FlightScene enhancements** — F5 to save, ESC to return to menu
+  - Save confirmation message on HUD
+  - Explosion sound on ship destruction
+  - Menu select sound on UP/DOWN navigation
+
 - **Phase 7: Game Systems** — market, docking, scanner, fuel scooping (8 of 9 tasks complete)
 - **MarketSystem** — QQ23 commodity table with 16 items (food, textiles, narcotics, luxuries, furs, liquor/wines, metals, gold, platinum, gem-stones, aliens, firearms, medical, machines, alcohols, computers)
   - Price formula: `(base + (rand & mask) + economy × factor) × 4`

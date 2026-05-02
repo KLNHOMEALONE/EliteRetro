@@ -124,9 +124,9 @@
 
 ## Phase 8: Polish & Integration
 
-- [ ] **8.1** Add audio — engine hum, laser shots, explosions
-- [ ] **8.2** Add save/load — 256-byte commander file (75 bytes used), CHECK checksum, competition code (4-byte encoded credit+rank+platform+tamper)
-- [ ] **8.3** Create `SaveGameManager.cs` — serialize/deserialize commander binary format, checksum validation
+- [x] **8.1** Add audio — engine hum (speed-modulated oscillator), laser shots (noise burst with freq sweep), explosions (noise envelope with decay)
+- [x] **8.2** Add save/load — 256-byte commander file (75 bytes used), CHECK checksum, competition code (4-byte encoded credit+rank+platform+tamper)
+- [x] **8.3** Create `SaveGameManager.cs` — serialize/deserialize commander binary format, checksum validation
 - [ ] **8.4** Add top pilots leaderboard — generated from galaxy data
 - [ ] **8.5** Add options menu — key bindings, difficulty settings
 - [ ] **8.6** Performance optimization — object pooling, batched rendering
@@ -136,12 +136,16 @@
 
 ## Current Focus
 
-**Phase 7: Game Systems** — 8 of 9 tasks complete:
-- MarketSystem: QQ23 commodity table (16 items), price/availability formulas based on economy+tech
-- CommanderData: cargo capacity, fuel level (0-70), buy/sell operations
-- Fuel scooping: active when within 1.33× planet diameter of sun, +1 fuel per 32 frames
-- DockingSystem: 5 geometric clearance checks (friendliness, approach angle, heading, safe cone, slot horizontal)
-- Docking computer: state machine (approaching → aligning → accelerating → docked) with fake keypress injection
+**Phase 8: Polish & Integration** — 4 of 7 tasks complete:
+- AudioManager: procedural audio (engine hum, laser, explosion) via DynamicSoundEffectInstance
+- SaveGameManager: 256-byte binary commander file with CHECK/CHK2 checksums
+- MainMenuScene: "LOAD GAME" menu item, FlightScene: F5 save, ESC to menu
+
+**Remaining:**
+- Top pilots leaderboard (optional — not in original Elite)
+- Options menu (key bindings, difficulty)
+- Performance optimization (object pooling, batched rendering)
+- Cougar easter egg (1 in 9,000 spawn chance)
 - ScannerRenderer: 3D elliptical display with dot+stick projection and IFF coloring
 - Mission system still pending
 
@@ -159,3 +163,4 @@
 - **Phase 4** — All 9 tasks (Circle & Planet Rendering)
 - **Phase 5** — All 10 tasks (FlightScene complete)
 - **Phase 6** — All 9 tasks (Ship AI, combat, bounty system, cargo release)
+- **Phase 7** — All 9 tasks (market, docking, scanner, HUD, save/load)

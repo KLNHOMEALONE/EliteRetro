@@ -37,7 +37,7 @@ No test projects exist yet. No linter configured.
 - `GalaxyGenerator` produces 8 galaxies × 256 systems using `SeededRandom`
 - Current implementation uses simple RNG; Tribonacci twist algorithm planned
 
-**Current scenes:** `MainMenuScene` (ship showcase), `MenuScene` (text menu), `SpaceScene` (interactive 3D viewer with Euler rotation), `GalaxyMapScene` (pannable galaxy map)
+**Current scenes:** `MainMenuScene` (ship showcase + menu with load game), `SpaceScene` (interactive 3D viewer), `GalaxyMapScene` (pannable galaxy map), `FlightScene` (first-person cockpit gameplay with save/load)
 
 ## Key Files
 
@@ -54,4 +54,6 @@ No test projects exist yet. No linter configured.
 
 ## Implementation Status
 
-Phase 0 (Foundation) in progress. See `docs/IMPLEMENTATION_PLAN.md` for full roadmap covering: LocalBubbleManager, Minsky flight system, Tribonacci galaxy generation, circle/planet rendering, FlightScene, ship AI, and game systems.
+Phases 0-7 complete. Phase 8 (Polish & Integration) mostly complete — save/load system and procedural audio implemented.
+
+See `docs/IMPLEMENTATION_PLAN.md` for full roadmap and `docs/TASKTRACKER.md` for current task tracking.

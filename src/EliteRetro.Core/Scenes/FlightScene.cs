@@ -55,6 +55,8 @@ public class FlightScene : GameScene
     private Texture2D _whitePixel = null!; // 1x1 white texture for damage flash overlay
     private bool _ramMode; // when true, spawned entities aim directly at player
     private GameTime _lastGameTime = null!;
+    private string _lastSaveMessage = ""; // HUD message for save confirmation
+    private int _saveMessageTimer; // frames remaining to display save message
 
     public FlightScene(Game? game = null)
     {
@@ -85,6 +87,9 @@ public class FlightScene : GameScene
         _hudRenderer = new HudRenderer(_graphicsDevice);
         _scannerRenderer = new ScannerRenderer(_graphicsDevice);
         _stardustRenderer.Initialize(42); // Fixed seed for consistent starfield
+
+        // Initialize audio
+        _gameInstance?.Audio.Initialize();
 
         // Create 1x1 white texture for damage flash overlay
         _whitePixel = new Texture2D(graphicsDevice, 1, 1);
@@ -274,6 +279,22 @@ public class FlightScene : GameScene
         // Toggle local pause on Space (separate from flight control pause)
         if (kb.IsKeyDown(Keys.Space) && _prevKb.IsKeyUp(Keys.Space) && !control.IsPaused)
             _paused = !_paused;
+
+        // Save game with F5
+        if (kb.IsKeyDown(Keys.F5) && _prevKb.IsKeyUp(Keys.F5))
+        {
+            SaveGame();
+        }
+
+        // Return to menu with Escape
+        if (kb.IsKeyDown(Keys.Escape) && _prevKb.IsKeyUp(Keys.Escape))
+        {
+            if (_gameInstance != null)
+            {
+                _gameInstance.ChangeScene(new MainMenuScene(_gameInstance));
+                return;
+            }
+        }
 
         // Toggle ram mode with R
         if (kb.IsKeyDown(Keys.R) && _prevKb.IsKeyUp(Keys.R))
@@ -598,13 +619,20 @@ public class FlightScene : GameScene
         }
 
         // Controls
-        _font.DrawString(spriteBatch, "ARROWS: PITCH/ROLL  W/S: SPEED  V: VIEW  +/-: ZOOM  SPACE: PAUSE  I: EDGES  ESC: MENU", new Vector2(10, 740), Color.Gray, 0.8f);
+        _font.DrawString(spriteBatch, "ARROWS: PITCH/ROLL  W/S: SPEED  V: VIEW  +/-: ZOOM  SPACE: PAUSE  I: EDGES  F5: SAVE  ESC: MENU", new Vector2(10, 740), Color.Gray, 0.8f);
 
         // Entity event messages (spawn/despawn)
         if (_eventMessageTimer > 0 && !string.IsNullOrEmpty(_lastEventMessage))
         {
             _font.DrawString(spriteBatch, $">> {_lastEventMessage}", new Vector2(300, 350), Color.Yellow, 1.2f);
             _eventMessageTimer--;
+        }
+
+        // Save confirmation message
+        if (_saveMessageTimer > 0 && !string.IsNullOrEmpty(_lastSaveMessage))
+        {
+            _font.DrawString(spriteBatch, _lastSaveMessage, new Vector2(400, 380), Color.Green, 1.4f);
+            _saveMessageTimer--;
         }
 
         if (_paused)
@@ -633,6 +661,9 @@ public class FlightScene : GameScene
                 System.Diagnostics.Debug.WriteLine($"[EXPLOSION] Creating explosion for {entity.Blueprint.Name} at {entity.Position}, slot {entity.SlotIndex}");
                 _lastEventMessage = $"{entity.Blueprint.Name} destroyed!";
                 _eventMessageTimer = 120;
+
+                // Play explosion sound
+                _gameInstance?.Audio.PlayExplosion();
 
                 // Create explosion at entity position
                 Vector2 screenPos = ProjectToScreen(entity.Position);
@@ -707,6 +738,27 @@ public class FlightScene : GameScene
         _eventMessageTimer = 120; // show for 2 seconds
     }
 
+    /// <summary>
+    /// Save current game state to disk.
+    /// </summary>
+    private void SaveGame()
+    {
+        try
+        {
+            var savePath = SaveGameManager.GetDefaultSavePath();
+            // Use Galaxy 0, System 0 as default (full galaxy context tracking to be added)
+            var seed = GalaxySeed.Galaxy0System0;
+            SaveGameManager.Save(savePath, _bubbleManager, 0, 0, seed);
+            _lastSaveMessage = "GAME SAVED";
+            _saveMessageTimer = 120; // show for 2 seconds
+        }
+        catch (Exception ex)
+        {
+            _lastSaveMessage = $"SAVE FAILED: {ex.Message}";
+            _saveMessageTimer = 180;
+        }
+    }
+
     private void DrawCelestialRings(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color, string layer = "all", int tiltAngle = 16)
     {
         // Skip if object is behind the camera
@@ -765,5 +817,7 @@ public class FlightScene : GameScene
             _planetRenderer.DrawPlanet(spriteBatch, new Vector2(screenX, screenY), screenRadius, color, rotationAngle);
     }
 
-    public override void UnloadContent() { }
+    public override void UnloadContent()
+    {
+    }
 }

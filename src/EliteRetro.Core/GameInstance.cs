@@ -4,6 +4,7 @@ using EliteRetro.Core.Scenes;
 using EliteRetro.Core.Managers;
 using EliteRetro.Core.Systems;
 using EliteRetro.Core.Entities;
+using EliteRetro.Core.Audio;
 
 namespace EliteRetro.Core;
 
@@ -16,6 +17,7 @@ public class GameInstance : Game
     private LocalBubbleManager _bubbleManager = null!;
     private MainLoopCounter _mcnt = null!;
     private Systems.TaskScheduler _taskScheduler = null!;
+    private AudioManager _audioManager = null!;
 
     /// <summary>
     /// Global access to the local bubble manager.
@@ -31,6 +33,11 @@ public class GameInstance : Game
     /// Task scheduler driven by MCNT.
     /// </summary>
     public Systems.TaskScheduler Scheduler => _taskScheduler;
+
+    /// <summary>
+    /// Audio manager for procedural sound effects.
+    /// </summary>
+    public AudioManager Audio => _audioManager;
 
     public GameInstance()
     {
@@ -50,6 +57,7 @@ public class GameInstance : Game
         _bubbleManager = new LocalBubbleManager();
         _mcnt = new MainLoopCounter();
         _taskScheduler = new Systems.TaskScheduler(_mcnt);
+        _audioManager = new AudioManager();
 
         // Register MCNT-driven scheduled tasks (Phase 1.5)
         RegisterScheduledTasks();
@@ -199,5 +207,12 @@ public class GameInstance : Game
     public void PushScene(GameScene scene)
     {
         _sceneManager.PushScene(scene);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            _audioManager?.Dispose();
+        base.Dispose(disposing);
     }
 }
