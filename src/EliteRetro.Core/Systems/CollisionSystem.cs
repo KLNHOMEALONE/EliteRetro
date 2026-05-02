@@ -12,9 +12,9 @@ public static class CollisionSystem
 {
     /// <summary>
     /// Base collision radius for ships (in local coordinates).
-    /// Scaled by ship model size.
+    /// Large radius to catch fast-moving entities that might tunnel through.
     /// </summary>
-    private const float BaseCollisionRadius = 120f;
+    private const float BaseCollisionRadius = 200f;
 
     /// <summary>
     /// Check all active entities for collisions.
@@ -290,5 +290,27 @@ public static class CollisionSystem
 
         float dist = Vector3.Distance(ship.Position, sun.Position);
         return dist < (sunRadius + shipRadius);
+    }
+
+    /// <summary>
+    /// Check player ship collision against all nearby entities.
+    /// O(n) per frame — matches BBC Elite's approach of checking
+    /// only the player against the local bubble, not all pairs.
+    /// </summary>
+    public static void CheckPlayerCollisions(LocalBubbleManager bubbleManager)
+    {
+        var player = bubbleManager.PlayerShip;
+        if (player == null || !player.IsActive) return;
+
+        foreach (var entity in bubbleManager.GetAllActive())
+        {
+            if (entity.SlotIndex == GameConstants.PlayerSlot) continue;
+            if (!entity.IsActive) continue;
+
+            if (CheckCollision(player, entity))
+            {
+                ResolveCollision(player, entity, bubbleManager);
+            }
+        }
     }
 }

@@ -228,6 +228,9 @@ public class FlightScene : GameScene
             _bubbleManager.TidyOne();
             CheckExplosions();
 
+            // Check player collision against nearby entities (every frame, O(n) not O(n²))
+            CollisionSystem.CheckPlayerCollisions(_bubbleManager);
+
             // Cleanup expired entities (lifetime or out of bounds)
             _bubbleManager.CleanupExpired();
 
