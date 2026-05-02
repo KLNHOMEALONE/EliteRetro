@@ -40,6 +40,7 @@ public class FlightScene : GameScene
     private int _planetRotation;
     private int _planetRotationCounter;
     private int _viewMode; // 0=front, 1=rear, 2=left, 3=right
+    private Vector3 _cameraLookDir = -Vector3.UnitZ; // current camera look direction in world space
     private KeyboardState _prevKb;
     private float _cameraDistance = 80f;
     private float _playerSpeed;
@@ -58,7 +59,10 @@ public class FlightScene : GameScene
     private string _lastSaveMessage = ""; // HUD message for save confirmation
     private int _saveMessageTimer; // frames remaining to display save message
     private bool _isFiring; // true when player is firing lasers
+    private int _laserCooldown; // frames until next shot allowed
+    private int _laserFlashTimer; // frames remaining to show laser beam
     private bool _targetPracticeMode; // when true, spawn stationary target ship ahead
+    private FlightControlState _lastControl; // store last input state for HUD
 
     public FlightScene(Game? game = null)
     {
@@ -189,57 +193,61 @@ public class FlightScene : GameScene
     {
         _lastGameTime = gameTime;
         var kb = Keyboard.GetState();
-        var control = _flightControlService.Update(gameTime);
+        _lastControl = _flightControlService.Update(gameTime);
 
         // Handle laser fire
-        _isFiring = control.FireLaser;
-        if (_isFiring)
+        if (_laserCooldown > 0) _laserCooldown--;
+        if (_laserFlashTimer > 0) _laserFlashTimer--;
+
+        _isFiring = _lastControl.FireLaser;
+        if (_isFiring && _laserCooldown <= 0)
         {
             _gameInstance?.Audio.PlayLaser();
-            // Check for targets in crosshairs
             FireLaserAtTarget();
+            _laserCooldown = 15; // 4 shots per second
+            _laserFlashTimer = 6; // beam visible for 6 frames (~100ms)
         }
 
-        if (!control.IsPaused)
+        if (!_lastControl.IsPaused)
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Apply rotation to the player's orientation (frame-rate independent)
-            float rollDelta = control.RollAngle * dt * 60f;
-            float pitchDelta = control.PitchAngle * dt * 60f;
-            _universeOrientation.ApplyUniverseRotation(rollDelta, pitchDelta);
+            // 1. ROTATE UNIVERSE (Minsky algorythm)
+            // Roll and Pitch are applied to ALL entities in the universe.
+            // ShipInstance.ApplyUniverseRotation uses authentic Elite MVS4 logic.
+            // Signs are set for aircraft-style control (UP = Dive, planet goes UP):
+            // Positive Roll (Right) -> rotate universe LEFT (negative rollDelta).
+            // Positive Pitch (Up/Climb) -> rotate universe DOWN (negative pitchDelta).
+            float rollDelta = Math.Clamp(_lastControl.RollAngle * dt * 60f, -0.1f, 0.1f);
+            float pitchDelta = Math.Clamp(_lastControl.PitchAngle * dt * 60f, -0.1f, 0.1f);
+            _bubbleManager.ApplyUniverseRotation(-rollDelta, -pitchDelta);
 
             // Track cumulative roll for planet/ring counter-rotation
             _cumulativeRoll += rollDelta;
 
-            // Move entities forward
-            // Player speed makes all entities move toward the player (Z increases)
-            // Entity's own speed adds to this motion
+            // 2. MOVE UNIVERSE (Forward move = objects move toward player)
+            // Forward = objects' Z increases towards camera (0) in RH.
+            float moveStep = _playerSpeed * dt * 60f;
             foreach (var entity in _bubbleManager.GetAllActive())
             {
-                // Skip target practice ships - they're stationary and stay centered
-                if (entity.IsTargetPractice) continue;
+                // Skip player - player does not move
+                if (entity.SlotIndex == GameConstants.PlayerSlot) continue;
 
-                // Player's forward speed: entities move toward camera
-                // In Elite, speed makes the universe scroll toward the player
-                if (_playerSpeed > 0)
+                if (_playerSpeed != 0)
                 {
-                    // Entities move in +Z direction (toward player at origin)
-                    entity.Position.Z += _playerSpeed;
+                    entity.Position.Z += moveStep;
                 }
-                // Entity's own movement
+                // Entity's own relative movement
                 if (entity.Speed != 0)
                     entity.MoveForward();
             }
 
+            // Update stardust - rotates and moves with the same logic
+            _stardustRenderer.Update(_playerSpeed, -rollDelta, -pitchDelta);
+
             // Periodic TIDY orthonormalization to correct Minsky drift
-            _tidyCounter++;
-            if (_tidyCounter >= 60)
-            {
-                _tidyCounter = 0;
-                _universeOrientation.Tidy();
-            }
-            _bubbleManager.TidyOne();
+            // Tidy ALL entities EVERY frame for absolute stability of orientations
+            _bubbleManager.TidyAllActive();
             CheckExplosions();
 
             // Check player collision against nearby entities (every frame, O(n) not O(n²))
@@ -262,7 +270,7 @@ public class FlightScene : GameScene
             }
 
             // View switching from control service
-            _viewMode = control.ViewIndex;
+            _viewMode = _lastControl.ViewIndex;
 
             // Zoom with +/-
             float speed = 2f * (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -271,11 +279,8 @@ public class FlightScene : GameScene
             _cameraDistance = MathHelper.Clamp(_cameraDistance, 2f, 20f);
 
             // Speed control via W/S keys
-            if (control.SpeedDelta != 0)
-                _playerSpeed = Math.Clamp(_playerSpeed + control.SpeedDelta * (float)gameTime.ElapsedGameTime.TotalSeconds * 60, 0f, 40f);
-
-            // Update stardust
-            _stardustRenderer.Update(_playerSpeed);
+            if (_lastControl.SpeedDelta != 0)
+                _playerSpeed = Math.Clamp(_playerSpeed + _lastControl.SpeedDelta * (float)gameTime.ElapsedGameTime.TotalSeconds * 60, 0f, 40f);
 
             // Check for player damage (shield or hull decrease)
             if (_bubbleManager.PlayerShip != null)
@@ -295,10 +300,21 @@ public class FlightScene : GameScene
             // Check sun proximity effects
             var sunEffect = _bubbleManager.CheckSunProximity();
             // TODO: Apply heat damage, fuel scooping, etc. based on sunEffect
+
+            // Toggle local target practice practice mode with L
+            if (kb.IsKeyDown(Keys.L) && _prevKb.IsKeyUp(Keys.L))
+            {
+                _targetPracticeMode = !_targetPracticeMode;
+                _bubbleManager.TargetPracticeMode = _targetPracticeMode;
+                if (_targetPracticeMode)
+                    SpawnTargetPracticeShip();
+                else
+                    ClearTargetPracticeShip();
+            }
         }
 
         // Toggle local pause on P (when not already paused by flight control)
-        if (kb.IsKeyDown(Keys.P) && _prevKb.IsKeyUp(Keys.P) && !control.IsPaused)
+        if (kb.IsKeyDown(Keys.P) && _prevKb.IsKeyUp(Keys.P) && !_lastControl.IsPaused)
             _paused = !_paused;
 
         // Save game with F5
@@ -325,46 +341,43 @@ public class FlightScene : GameScene
         if (kb.IsKeyDown(Keys.I) && _prevKb.IsKeyUp(Keys.I))
             _showHiddenEdges = !_showHiddenEdges;
 
-        // Toggle target practice mode with L
-        if (kb.IsKeyDown(Keys.L) && _prevKb.IsKeyUp(Keys.L))
-        {
-            _targetPracticeMode = !_targetPracticeMode;
-            _bubbleManager.TargetPracticeMode = _targetPracticeMode;
-            if (_targetPracticeMode)
-                SpawnTargetPracticeShip();
-            else
-                ClearTargetPracticeShip();
-        }
+        // FIXED VIEW DIRECTIONS for Rotating Universe model.
+        // Camera is fixed at origin looking at these axes.
+        _cameraLookDir = -Vector3.UnitZ; // default front
+        Vector3 forwardBasis = Vector3.UnitZ; // camera Z-basis (backwards in RH)
+        Vector3 sideBasis = Vector3.UnitX;
+        Vector3 upBasis = Vector3.UnitY;
 
-        // Build view matrix from orientation.
-        // The view matrix maps world space to camera space.
-        // In Monogame (V * M convention), the View Matrix should have basis vectors in COLUMNS.
-        // Row 0 = Right.X, Up.X, Forward.X, 0
-        // Row 1 = Right.Y, Up.Y, Forward.Y, 0
-        // Row 2 = Right.Z, Up.Z, Forward.Z, 0
-        Vector3 side = _universeOrientation.Sidev;
-        Vector3 roof = _universeOrientation.Roofv;
-        Vector3 nose = _universeOrientation.Nosev;
-        Vector3 forward = -nose; // camera looks along the ship's nose direction (-nose in world is +Z in cam space)
-
-        // Apply view direction changes based on current view mode
         switch (_viewMode)
         {
-            case 1: // Rear view: look opposite direction
-                forward = nose;
+            case 0: // Front: look at -Z
+                _cameraLookDir = -Vector3.UnitZ;
+                forwardBasis = Vector3.UnitZ;
+                sideBasis = Vector3.UnitX;
                 break;
-            case 2: // Left view: look 90° to port
-                forward = Vector3.Normalize(Vector3.Cross(roof, nose));
+            case 1: // Rear: look at +Z
+                _cameraLookDir = Vector3.UnitZ;
+                forwardBasis = -Vector3.UnitZ;
+                sideBasis = -Vector3.UnitX;
                 break;
-            case 3: // Right view: look 90° to starboard
-                forward = Vector3.Normalize(Vector3.Cross(-roof, nose));
+            case 2: // Left: look at -X
+                _cameraLookDir = -Vector3.UnitX;
+                forwardBasis = Vector3.UnitX;
+                sideBasis = Vector3.UnitZ;
+                break;
+            case 3: // Right: look at +X
+                _cameraLookDir = Vector3.UnitX;
+                forwardBasis = -Vector3.UnitX;
+                sideBasis = -Vector3.UnitZ;
                 break;
         }
 
+        // Fixed View matrix basis vectors in COLUMNS for MonoGame v * M convention.
+        // Column 0 = Sidev (X_cam), Column 1 = Roofv (Y_cam), Column 2 = forwardBasis (Z_cam)
         _view = new Matrix(
-            side.X, roof.X, forward.X, 0,
-            side.Y, roof.Y, forward.Y, 0,
-            side.Z, roof.Z, forward.Z, 0,
+            sideBasis.X, upBasis.X, forwardBasis.X, 0,
+            sideBasis.Y, upBasis.Y, forwardBasis.Y, 0,
+            sideBasis.Z, upBasis.Z, forwardBasis.Z, 0,
             0, 0, 0, 1);
 
         _prevKb = kb;
@@ -392,24 +405,25 @@ public class FlightScene : GameScene
         // Render bubble entities (skip planet and sun - rendered separately)
         foreach (var entity in _bubbleManager.GetAllActive())
         {
+            // Skip player ship - do not render self in cockpit view
+            if (entity.SlotIndex == GameConstants.PlayerSlot) continue;
+
             if (entity.Blueprint?.Model != null &&
                 entity.Blueprint.Name != "Planet" &&
                 entity.Blueprint.Name != "Sun" &&
                 IsInFrontOfCamera(entity.Position))
             {
-                // Build world matrix from entity orientation.
                 // In XNA (V * M convention), a World Matrix (Model-to-World) should have basis vectors in ROWS.
-                // Row 0 = Right vector in world
-                // Row 1 = Up vector in world
-                // Row 2 = Forward vector in world
                 Matrix entityOrientation = new Matrix(
                     entity.Orientation.Sidev.X, entity.Orientation.Sidev.Y, entity.Orientation.Sidev.Z, 0,
                     entity.Orientation.Roofv.X, entity.Orientation.Roofv.Y, entity.Orientation.Roofv.Z, 0,
                     entity.Orientation.Nosev.X, entity.Orientation.Nosev.Y, entity.Orientation.Nosev.Z, 0,
                     0, 0, 0, 1);
-                Matrix entityWorld = Matrix.CreateScale(0.0004f) *
-                                     entityOrientation *
-                                     Matrix.CreateTranslation(entity.Position * 0.0001f);
+                
+                // Map Elite (X, Y, Z_depth) to MonoGame (X, Y, -Z_depth)
+                Vector3 entityPosMG = new Vector3(entity.Position.X, entity.Position.Y, -entity.Position.Z);
+                
+                Matrix entityWorld = entityOrientation * Matrix.CreateTranslation(entityPosMG);
                 _wireframeRenderer.Draw(entity.Blueprint.Model, entityWorld, _view, _projection, spriteBatch, drawHiddenEdges: _showHiddenEdges);
             }
         }
@@ -463,16 +477,26 @@ public class FlightScene : GameScene
         spriteBatch.Draw(_whitePixel, new Rectangle(cx - outer, cy - 1, outer - inner, 2), crossColor); // Left
         spriteBatch.Draw(_whitePixel, new Rectangle(cx + inner, cy - 1, outer - inner, 2), crossColor); // Right
 
-        // Target practice mode indicator
+        // Target practice mode indicator and health status
         if (_targetPracticeMode)
         {
             var sz = _font.MeasureString("TARGET PRACTICE");
             _font.DrawString(spriteBatch, "TARGET PRACTICE",
                 new Vector2(1024 / 2 - sz.X / 2, 10), new Color(255, 200, 50), 1.0f);
+
+            // Find the target ship to show its health
+            var targetShip = _bubbleManager.GetAllActive().FirstOrDefault(e => e.IsTargetPractice);
+            if (targetShip != null)
+            {
+                string status = $"S: {targetShip.Energy} H: {targetShip.Hull}";
+                var statSz = _font.MeasureString(status);
+                _font.DrawString(spriteBatch, status,
+                    new Vector2(1024 / 2 - statSz.X / 2, 40), Color.White, 0.8f);
+            }
         }
 
         // Draw lasers when firing
-        if (_isFiring)
+        if (_laserFlashTimer > 0)
         {
             DrawLine(spriteBatch, new Vector2(0, 480), new Vector2(cx, cy), Color.Yellow, 2);
             DrawLine(spriteBatch, new Vector2(1024, 480), new Vector2(cx, cy), Color.Yellow, 2);
@@ -598,10 +622,10 @@ public class FlightScene : GameScene
         // Save planet before clearing
         var planet = _bubbleManager.Planet;
 
-        // Clear everything except player
+        // Clear ships/entities
         _bubbleManager.Clear();
 
-        // Re-add planet
+        // Restore planet
         if (planet != null)
         {
             planet.IsActive = true;
@@ -694,8 +718,8 @@ public class FlightScene : GameScene
             MaxMissiles = 4,
             ShieldForward = (byte)(_bubbleManager.PlayerShip?.Energy ?? 200),
             ShieldAft = (byte)(_bubbleManager.PlayerShip?.Energy ?? 200),
-            Pitch = 0,
-            Roll = _cumulativeRoll,
+            Pitch = _lastControl.PitchAngle / GameConstants.PitchMax, // Normalized rate -1 to 1
+            Roll = _lastControl.RollAngle / GameConstants.RollMax,   // Normalized rate -1 to 1
             CompassHeading = _cumulativeRoll,
             ECMBulbs = 0,
             ViewMode = _viewMode switch
@@ -781,10 +805,10 @@ public class FlightScene : GameScene
 
     private bool IsInFrontOfCamera(Vector3 worldPos)
     {
-        // Screen center direction in world space = Nosev (points toward -Z at identity)
-        // Object is in front if it's in the same direction as Nosev
-        Vector3 forward = _universeOrientation.Nosev;
-        return Vector3.Dot(worldPos, forward) > 0;
+        // Object is in front of camera if the vector to it from origin
+        // has a positive dot product with the current camera look direction.
+        if (worldPos.LengthSquared() < 0.001f) return true;
+        return Vector3.Dot(Vector3.Normalize(worldPos), _cameraLookDir) > 0;
     }
 
     /// <summary>
@@ -833,11 +857,11 @@ public class FlightScene : GameScene
 
     /// <summary>
     /// Project a world position to screen coordinates using the view/projection matrices.
+    /// World coordinates use standard MonoGame convention (-Z is ahead).
     /// </summary>
     private Vector2 ProjectToScreen(Vector3 worldPos)
     {
-        // Apply view transform (camera at origin, looking along -Z in Elite coords)
-        // The view matrix transforms world → view space
+        // Apply view transform
         Vector3 viewPos = Vector3.Transform(worldPos, _view);
 
         // Apply projection transform
@@ -900,20 +924,22 @@ public class FlightScene : GameScene
     }
 
     /// <summary>
-    /// Fire laser at target in crosshairs. Checks if any entity is aligned
-    /// with the player's forward direction (screen center) and in front.
+    /// Fire laser at target in crosshairs.
+    /// Uses standard MonoGame coordinates (-Z is ahead).
     /// </summary>
     private void FireLaserAtTarget()
     {
         var player = _bubbleManager.PlayerShip;
         if (player == null) return;
 
-        const float hitConeCos = 0.85f; // ~32° cone — matches visual crosshair tolerance
-        const float maxRange = 500f;
+        const float hitConeCos = 0.96f; // ~15° cone
+        const float maxRange = 600f;
 
-        // Player's forward direction = screen center in world space
-        // View matrix forward column transforms world→camera; screen center = -forward = Nosev
-        Vector3 forward = _universeOrientation.Nosev;
+        // Forward is -Z in standard MonoGame convention.
+        Vector3 forward = new Vector3(0, 0, -1);
+
+        ShipInstance? bestTarget = null;
+        float bestDot = -1f;
 
         foreach (var entity in _bubbleManager.GetAllActive())
         {
@@ -921,40 +947,73 @@ public class FlightScene : GameScene
             if (!entity.IsActive) continue;
             if (entity.Blueprint.Name == "Planet" || entity.Blueprint.Name == "Sun") continue;
 
-            float dist = entity.Position.Length();
-            if (dist > maxRange) continue;
+            float distSq = entity.Position.LengthSquared();
+            if (distSq > maxRange * maxRange) continue;
 
-            Vector3 toTarget = Vector3.Normalize(entity.Position);
-            float dot = Vector3.Dot(forward, toTarget);
-            if (dot < hitConeCos) continue;
+            // Objects must be in front (negative Z in MonoGame system)
+            if (entity.Position.Z >= 0) continue;
 
-            // Hit! Deal damage (shields first, then hull)
-            // 90 damage per shot: 3 shots strip shields (255), 3 more destroy hull
-            int laserDamage = 90;
-            bool destroyed = false;
-            if (entity.Energy > 0)
+            float dist = (float)Math.Sqrt(distSq);
+            float dot;
+            
+            if (dist < 5.0f) 
             {
-                int shieldDmg = Math.Min(laserDamage, entity.Energy);
-                entity.Energy = (byte)(entity.Energy - shieldDmg);
-                int hullDmg = laserDamage - shieldDmg;
-                if (hullDmg > 0)
-                    destroyed = entity.TakeDamage(hullDmg);
+                // Extremely close: automatic hit if in front
+                dot = 1.0f;
             }
             else
             {
-                destroyed = entity.TakeDamage(laserDamage);
+                Vector3 toTarget = entity.Position / dist;
+                dot = Vector3.Dot(forward, toTarget);
             }
+            
+            if (dot >= hitConeCos && dot > bestDot)
+            {
+                bestDot = dot;
+                bestTarget = entity;
+            }
+        }
+
+        if (bestTarget != null)
+        {
+            // Hit! Play sound and deal damage
+            _gameInstance?.Audio.PlayLaserHit();
+            
+            // Deal damage (shields first, then hull)
+            int laserDamage = 90;
+            bool destroyed = false;
+
+            byte oldEnergy = bestTarget.Energy;
+            byte oldHull = bestTarget.Hull;
+            
+            if (bestTarget.Energy > 0)
+            {
+                int shieldDmg = Math.Min(laserDamage, (int)bestTarget.Energy);
+                bestTarget.Energy = (byte)(bestTarget.Energy - shieldDmg);
+                int hullDmg = laserDamage - shieldDmg;
+                if (hullDmg > 0)
+                    destroyed = bestTarget.TakeDamage(hullDmg);
+            }
+            else
+            {
+                destroyed = bestTarget.TakeDamage(laserDamage);
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[LASER] HIT on {bestTarget.Blueprint.Name}! Dist: {bestTarget.Position.Length():F0}, Dot: {bestDot:F4}, E: {oldEnergy}->{bestTarget.Energy}, H: {oldHull}->{bestTarget.Hull}");
+
+            // Provide visual/text feedback for hits
+            _lastEventMessage = "HIT!";
+            _eventMessageTimer = 10;
 
             if (destroyed)
             {
                 // Spawn cargo drops before deactivating
-                CollisionSystem.SpawnCargoDrops(entity, _bubbleManager);
+                CollisionSystem.SpawnCargoDrops(bestTarget, _bubbleManager);
 
-                entity.IsActive = false;
-                _lastEventMessage = $"{entity.Blueprint.Name} destroyed!";
+                bestTarget.IsActive = false;
+                _lastEventMessage = $"{bestTarget.Blueprint.Name} destroyed!";
                 _eventMessageTimer = 120;
             }
-            break; // Only hit first target
         }
     }
 
@@ -963,54 +1022,44 @@ public class FlightScene : GameScene
         // Skip if object is behind the camera
         if (!IsInFrontOfCamera(worldPos)) return;
 
-        Vector3 pos = worldPos * 0.0001f;
-        Vector3 projected = Vector3.Transform(pos, _view * _projection);
-        if (projected.Z == 0) return;
+        Vector2 screenPos = ProjectToScreen(worldPos);
+        float dist = worldPos.Length();
+        if (dist < 0.001f) return;
 
-        float ndcX = projected.X / projected.Z;
-        float ndcY = projected.Y / projected.Z;
-        float screenX = (ndcX + 1) / 2 * 1024;
-        float screenY = (1 - ndcY) / 2 * 480;
+        // Screen radius calculation: (worldRadius / distance) * verticalFOVFactor * screenHeight
+        // FOV is 75 deg. tan(75/2) = 0.767
+        float screenRadius = (radius / dist) * (1.0f / 0.767f) * (480 / 2);
 
-        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * 480 / 2;
-        if (screenRadius > 0 && screenRadius < 500)
-            _ringRenderer.DrawAxisAlignedRings(spriteBatch, new Vector2(screenX, screenY), screenRadius, 1.4f, 2.2f, color, tiltAngle, layer);
+        if (screenRadius > 0 && screenRadius < 1000)
+            _ringRenderer.DrawAxisAlignedRings(spriteBatch, screenPos, screenRadius, 1.4f, 2.2f, color, tiltAngle, layer);
     }
 
     private void DrawCelestialSun(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color)
     {
         if (!IsInFrontOfCamera(worldPos)) return;
 
-        Vector3 pos = worldPos * 0.0001f;
-        Vector3 projected = Vector3.Transform(pos, _view * _projection);
-        if (projected.Z == 0) return;
+        Vector2 screenPos = ProjectToScreen(worldPos);
+        float dist = worldPos.Length();
+        if (dist < 0.001f) return;
 
-        float ndcX = projected.X / projected.Z;
-        float ndcY = projected.Y / projected.Z;
-        float screenX = (ndcX + 1) / 2 * 1024;
-        float screenY = (1 - ndcY) / 2 * 480;
+        float screenRadius = (radius / dist) * (1.0f / 0.767f) * (480 / 2);
 
-        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * 480 / 2;
-        if (screenRadius > 0 && screenRadius < 500)
-            _sunRenderer.DrawSun(spriteBatch, new Vector2(screenX, screenY), screenRadius, color);
+        if (screenRadius > 0 && screenRadius < 2000)
+            _sunRenderer.DrawSun(spriteBatch, screenPos, screenRadius, color);
     }
 
     private void DrawCelestialPlanet(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color, int rotationAngle = 0)
     {
         if (!IsInFrontOfCamera(worldPos)) return;
 
-        Vector3 pos = worldPos * 0.0001f;
-        Vector3 projected = Vector3.Transform(pos, _view * _projection);
-        if (projected.Z == 0) return;
+        Vector2 screenPos = ProjectToScreen(worldPos);
+        float dist = worldPos.Length();
+        if (dist < 0.001f) return;
 
-        float ndcX = projected.X / projected.Z;
-        float ndcY = projected.Y / projected.Z;
-        float screenX = (ndcX + 1) / 2 * 1024;
-        float screenY = (1 - ndcY) / 2 * 480;
+        float screenRadius = (radius / dist) * (1.0f / 0.767f) * (480 / 2);
 
-        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * 480 / 2;
-        if (screenRadius > 0 && screenRadius < 500)
-            _planetRenderer.DrawPlanet(spriteBatch, new Vector2(screenX, screenY), screenRadius, color, rotationAngle);
+        if (screenRadius > 0 && screenRadius < 1000)
+            _planetRenderer.DrawPlanet(spriteBatch, screenPos, screenRadius, color, rotationAngle);
     }
 
     public override void UnloadContent()

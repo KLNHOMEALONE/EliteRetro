@@ -124,22 +124,21 @@ public class SpaceScene : GameScene
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Apply Minsky rotation to the player's orientation (frame-rate independent)
-            float rollDelta = control.RollAngle * dt * 60f;
-            float pitchDelta = control.PitchAngle * dt * 60f;
-            _universeOrientation.ApplyUniverseRotation(rollDelta, pitchDelta);
+            // 1. ROTATE UNIVERSE (Minsky algorythm)
+            // Roll and Pitch are applied to ALL entities in the universe.
+            // ShipInstance.ApplyUniverseRotation uses authentic Elite MVS4 logic.
+            // Signs are set for aircraft-style control (UP = Dive, planet goes UP):
+            // Positive Roll (Right) -> rotate universe LEFT (negative rollDelta).
+            // Positive Pitch (Up/Climb) -> rotate universe DOWN (negative pitchDelta).
+            float rollDelta = Math.Clamp(control.RollAngle * dt * 60f, -0.1f, 0.1f);
+            float pitchDelta = Math.Clamp(control.PitchAngle * dt * 60f, -0.1f, 0.1f);
+            _bubbleManager.ApplyUniverseRotation(-rollDelta, -pitchDelta);
 
             // Track cumulative roll for planet/ring counter-rotation
             _cumulativeRoll += rollDelta;
 
-            // Periodic TIDY orthonormalization
-            _tidyCounter++;
-            if (_tidyCounter >= 60)
-            {
-                _tidyCounter = 0;
-                _universeOrientation.Tidy();
-            }
-            _bubbleManager.TidyOne();
+            // Periodic TIDY orthonormalization to correct Minsky drift
+            _bubbleManager.TidyAllActive();
 
             // Slow planet rotation (1 full rotation every ~32 seconds at 60fps)
             if (_planetRotationCounter++ % 32 == 0)
@@ -164,23 +163,20 @@ public class SpaceScene : GameScene
             _prevT = kb.IsKeyDown(Keys.T);
         }
 
-        // View matrix: camera at origin, looking forward along -Z.
-        // The orientation matrix defines the camera's direction (nosev = forward, roofv = up, sidev = right).
-        // This is the same construction as FlightScene for consistent controls.
-        Vector3 side = _universeOrientation.Sidev;
-        Vector3 roof = _universeOrientation.Roofv;
-        Vector3 nose = _universeOrientation.Nosev;
+        // FIXED VIEW DIRECTIONS for Rotating Universe model (Front View).
+        Vector3 forwardBasis = Vector3.UnitZ; // camera Z-basis (backwards in RH)
+        Vector3 sideBasis = Vector3.UnitX;
+        Vector3 upBasis = Vector3.UnitY;
 
-        // View matrix: basis vectors in COLUMNS for World-to-Camera transformation
-        // Camera right = sidev, camera up = roofv, camera forward (toward -Z) = -nosev
+        // Fixed View matrix basis vectors in COLUMNS for MonoGame v * M convention.
         _view = new Matrix(
-            side.X, roof.X, -nose.X, 0,
-            side.Y, roof.Y, -nose.Y, 0,
-            side.Z, roof.Z, -nose.Z, 0,
+            sideBasis.X, upBasis.X, forwardBasis.X, 0,
+            sideBasis.Y, upBasis.Y, forwardBasis.Y, 0,
+            sideBasis.Z, upBasis.Z, forwardBasis.Z, 0,
             0, 0, 0, 1);
 
         // Debug: cycle highlighted edge with Up/Down when paused
-        if (_paused)
+        if (control.IsPaused)
         {
             if (kb.IsKeyDown(Keys.Up) && !_prevUp)
                 _debugHighlightedEdge = (_debugHighlightedEdge + 1) % 12; // cube has 12 edges
@@ -216,6 +212,9 @@ public class SpaceScene : GameScene
         // Render bubble entities (skip planet and sun - rendered separately)
         foreach (var entity in _bubbleManager.GetAllActive())
         {
+            // Skip player ship
+            if (entity.SlotIndex == GameConstants.PlayerSlot) continue;
+
             if (entity.Blueprint?.Model != null &&
                 entity.Blueprint.Name != "Planet" &&
                 entity.Blueprint.Name != "Sun")

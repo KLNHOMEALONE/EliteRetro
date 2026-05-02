@@ -249,8 +249,22 @@ public class LocalBubbleManager
     }
 
     /// <summary>
+    /// Run TIDY orthonormalization on all active entities.
+    /// Called each frame to ensure numerical stability under rotation.
+    /// </summary>
+    public void TidyAllActive()
+    {
+        for (int i = 0; i < _capacity; i++)
+        {
+            if (_slots[i] != null && _slots[i]!.IsActive)
+            {
+                _slots[i]!.Orientation.Tidy();
+            }
+        }
+    }
+
+    /// <summary>
     /// Run TIDY orthonormalization on one entity (round-robin).
-    /// Called once per frame to spread the cost.
     /// </summary>
     public void TidyOne()
     {
@@ -266,12 +280,16 @@ public class LocalBubbleManager
     }
 
     /// <summary>
-    /// Apply universe rotation to all entities in the bubble.
+    /// Apply universe rotation to all entities in the bubble except the player.
+    /// The player ship is the stationary center of the rotating universe.
     /// </summary>
     public void ApplyUniverseRotation(float alpha, float beta)
     {
         for (int i = 0; i < _capacity; i++)
         {
+            // Skip player slot - player does not rotate
+            if (i == GameConstants.PlayerSlot) continue;
+
             if (_slots[i] != null && _slots[i]!.IsActive)
                 _slots[i]!.ApplyUniverseRotation(alpha, beta);
         }

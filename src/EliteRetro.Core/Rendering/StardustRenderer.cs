@@ -64,54 +64,49 @@ public class StardustRenderer
     }
 
     /// <summary>
-    /// Update star positions based on player speed.
-    /// Roll and pitch are handled by the universe orientation matrix, not here.
+    /// Update star positions based on player speed and universe rotation.
+    /// Implements the authentic Elite MVS4 rotation and movement.
     /// </summary>
-    public void Update(float speed)
+    public void Update(float speed, float alpha, float beta)
     {
         _currentSpeed = speed;
 
-        // Scale speed so that ship speed 5 produces the same stardust motion as speed 40 did before
-        // Original max zDelta was 10 * 64 = 640. At speed 5: 5 * factor * 64 = 640 → factor = 2
-        // So effective speed = speed * 8, capped at 40 equivalent
+        // Scale speed for stardust motion
         float effectiveSpeed = Math.Min(speed * 8f, 40f);
+        float zDelta = effectiveSpeed * 64 / 40f;
 
         for (int i = 0; i < StarCount; i++)
         {
             ref StarData s = ref _stars[i];
 
             // Extract signed values from sign-magnitude
+            // sz represents depth magnitude. World Z = -sz.
             int sx = SignMagToSigned(s.X);
             int sy = SignMagToSigned(s.Y);
             int sz = SignMagToSigned(s.Z);
 
             if (sz <= 0) continue;
 
-            // Forward motion: Z decreases by effective speed
-            int zDelta = (int)(effectiveSpeed * 64 / 40f);
-            int oldZ = sz;
-            sz -= zDelta;
+            // 1. ROTATE UNIVERSE (Minsky MVS4 routine)
+            // Roll then Pitch applied to star world coordinates
+            // Use float math to maintain precision with ship positions
+            float fsx = sx;
+            float fsy = sy;
+            float fsz = -sz; // Depth magnitude to world Z
 
-            // Perspective expansion: as stars get closer, they spread outward
-            if (sz > 0 && effectiveSpeed > 0)
-            {
-                if (oldZ > 0)
-                {
-                    float expand = oldZ / (float)sz;
-                    // Clamp expansion to prevent extreme jumps
-                    expand = Math.Clamp(expand, 1f, 1.5f);
-                    sx = (int)(sx * expand);
-                    sy = (int)(sy * expand);
-                }
-            }
+            float k2 = fsy - alpha * fsx;
+            fsz = fsz + beta * k2;
+            fsy = k2 - beta * fsz;
+            fsx = fsx + alpha * fsy;
 
-            // Note: Roll and pitch are handled by the universe orientation matrix
-            // (ApplyUniverseRotation), not here. Stardust positions are in world space.
+            // 2. MOVE FORWARD (Forward = objects' world Z increases towards camera)
+            fsz += zDelta;
 
-            // Clamp to prevent overflow
-            sx = Math.Clamp(sx, -16383, 16383);
-            sy = Math.Clamp(sy, -16383, 16383);
+            sx = (int)fsx;
+            sy = (int)fsy;
+            sz = (int)(-fsz); // Back to depth magnitude
 
+            // Perspective expansion is handled by the 3D projection in Draw.
             // Wrap around: if star goes too far or behind camera, respawn in distance
             if (sz <= 0 || sz > 16383 || Math.Abs(sx) > 16000 || Math.Abs(sy) > 16000)
             {
@@ -131,7 +126,7 @@ public class StardustRenderer
     }
 
     /// <summary>
-    /// Draw the starfield projected onto screen space using the camera's view matrix.
+    /// Draw the starfield projected onto screen space.
     /// </summary>
     public void Draw(SpriteBatch spriteBatch, Vector2 center, float scale, Matrix view)
     {
@@ -141,12 +136,11 @@ public class StardustRenderer
 
             int x = SignMagToSigned(s.X);
             int y = SignMagToSigned(s.Y);
-            int z = SignMagToSigned(s.Z);
+            int z = SignMagToSigned(s.Z); // magnitude of depth
 
             if (z <= 0 || z > 16383) continue;
 
-            // Transform star coordinate by view matrix
-            // Stardust is at very far distance, so we treat it as being around origin
+            // World position: X=right, Y=up, Z=-depth (ahead)
             Vector3 worldPos = new Vector3(x, y, -z);
             Vector3 viewPos = Vector3.Transform(worldPos, view);
 

@@ -110,12 +110,12 @@ public class HudRenderer
         DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, (int)(speedRatio * barMaxW), barMaxW, "SP", font);
         barY += BarSlotH;
 
-        float pitchNorm = (state.Pitch + 1) / 2;
-        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, (int)(MathHelper.Clamp(pitchNorm, 0, 1) * barMaxW), barMaxW, "RL", font);
+        float rollNorm = (state.Roll + 1) / 2;
+        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, (int)(MathHelper.Clamp(rollNorm, 0, 1) * barMaxW), barMaxW, "RL", font);
         barY += BarSlotH;
 
-        float rollNorm = (state.Roll % MathHelper.TwoPi) / MathHelper.TwoPi;
-        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, (int)(rollNorm * barMaxW), barMaxW, "DC", font);
+        float pitchNorm = (state.Pitch + 1) / 2;
+        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, (int)(MathHelper.Clamp(pitchNorm, 0, 1) * barMaxW), barMaxW, "DC", font);
         barY += BarSlotH;
 
         float msRatio = state.MaxMissiles > 0 ? MathHelper.Clamp((float)state.Missiles / state.MaxMissiles, 0, 1) : 0;

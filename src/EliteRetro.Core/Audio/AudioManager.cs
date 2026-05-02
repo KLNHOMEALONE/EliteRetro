@@ -9,12 +9,14 @@ namespace EliteRetro.Core.Audio;
 /// Sounds:
 ///   - Menu select: short beep for menu navigation
 ///   - Laser shot: short noise burst with frequency sweep
+///   - Laser hit: sharp high-pitched metallic ping
 ///   - Explosion: noise envelope with decay
 /// </summary>
 public class AudioManager : IDisposable
 {
     private SoundEffect? _menuSelectEffect;
     private SoundEffect? _laserEffect;
+    private SoundEffect? _laserHitEffect;
     private SoundEffect? _explosionEffect;
     private bool _disposed;
 
@@ -36,6 +38,7 @@ public class AudioManager : IDisposable
             // Generate one-shot effects
             _menuSelectEffect = GenerateMenuSelectEffect();
             _laserEffect = GenerateLaserEffect();
+            _laserHitEffect = GenerateLaserHitEffect();
             _explosionEffect = GenerateExplosionEffect();
             IsInitialized = true;
         }
@@ -62,6 +65,15 @@ public class AudioManager : IDisposable
     {
         if (!IsInitialized) return;
         _laserEffect?.Play(volume: MasterVolume, pitch: 0f, pan: 0f);
+    }
+
+    /// <summary>
+    /// Play laser hit sound (when shot connects with target).
+    /// </summary>
+    public void PlayLaserHit()
+    {
+        if (!IsInitialized) return;
+        _laserHitEffect?.Play(volume: MasterVolume * 0.8f, pitch: 0.2f, pan: 0f);
     }
 
     /// <summary>
@@ -123,6 +135,36 @@ public class AudioManager : IDisposable
             // Mix with noise
             float noise = (float)(Random.Shared.NextDouble() * 2 - 1) * 0.3f;
             float sample = (carrier * 0.7f + noise) * envelope * 0.5f;
+
+            short value = (short)(sample * 32767);
+            samples[i * 2] = value;
+            samples[i * 2 + 1] = value;
+        }
+
+        return CreateSoundEffect(samples);
+    }
+
+    /// <summary>
+    /// Generate a laser hit sound effect (short sharp metallic ping).
+    /// </summary>
+    private SoundEffect? GenerateLaserHitEffect()
+    {
+        const int durationMs = 60;
+        const int sampleCount = SampleRate * durationMs / 1000;
+        var samples = new short[sampleCount * 2]; // stereo
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = i / (float)sampleCount;
+            float envelope = (float)Math.Exp(-t * 25); // Very fast decay
+
+            // High frequency ping
+            float freq = 3500f;
+            float carrier = (float)Math.Sin(2 * Math.PI * freq * t / 1000 * durationMs);
+
+            // Mix with a bit of noise for texture
+            float noise = (float)(Random.Shared.NextDouble() * 2 - 1) * 0.4f;
+            float sample = (carrier * 0.8f + noise * 0.2f) * envelope * 0.5f;
 
             short value = (short)(sample * 32767);
             samples[i * 2] = value;
@@ -211,6 +253,7 @@ public class AudioManager : IDisposable
 
         _menuSelectEffect?.Dispose();
         _laserEffect?.Dispose();
+        _laserHitEffect?.Dispose();
         _explosionEffect?.Dispose();
     }
 }

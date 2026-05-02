@@ -59,9 +59,9 @@ public class FlightControlService
             else if (state.IsKeyDown(Keys.Right))
                 control.RollAngle = GameConstants.RollMax;
 
-            // Pitch: Up Arrow = nose up (view moves down on screen)
-            // Down Arrow = nose down (view moves up on screen)
-            // Flight standard: push forward (Down) = dive, pull back (Up) = climb
+            // Pitch: Up Arrow = nose up (Climb)
+            // Down Arrow = nose down (Dive)
+            // Mathematical standard: UP = Positive, DOWN = Negative
             if (state.IsKeyDown(Keys.Up))
                 control.PitchAngle = GameConstants.PitchMax;
             else if (state.IsKeyDown(Keys.Down))
@@ -80,11 +80,8 @@ public class FlightControlService
             }
             control.ViewIndex = _currentViewIndex;
 
-            // Laser fire: Space key (single shot per press)
-            if (state.IsKeyDown(Keys.Space) && !_previousState.IsKeyDown(Keys.Space))
-            {
-                control.FireLaser = true;
-            }
+            // Laser fire: Space key (continuous fire while held)
+            control.FireLaser = state.IsKeyDown(Keys.Space);
         }
 
         // Pause toggle: P key only
