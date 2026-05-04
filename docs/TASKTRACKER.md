@@ -155,12 +155,18 @@
 - Collision: bounding-radius-based collision radii (replaces vertex-count scaling)
 - ShipInstance: `FaceTarget()` guarded against near-parallel up-vector NaNs
 - MCNT: `DecrementTimeBased()` accumulator now persists across frames
+- Flight controls: smooth speed acceleration with inertia (matches original Elite timing)
+- Ram mode: fixed orientation matrix using stale Roofv value
 
 **Remaining:**
 - Top pilots leaderboard (optional — not in original Elite)
 - Options menu (key bindings, difficulty)
 - Performance optimization (object pooling, batched rendering)
 - Cougar easter egg (1 in 9,000 spawn chance)
+- Target practice sun loss bug (clears sun/station on toggle)
+- Division by near-zero W in ProjectToScreen
+- Laser audio plays on miss
+- Double pause state tracking
 
 **Next: Phase 7.7** — Mission system (delivery, assassination, mining contracts), then remaining Phase 8 polish
 

@@ -49,6 +49,11 @@ public static class GameConstants
     // 0 = no quantization. Otherwise quantize turn rate into N discrete steps across [-max, +max].
     public static int TurnQuantizationSteps = 0;
 
+    // Speed control: max speed 40 units/sec, accel/decel in units/sec^2.
+    public const float SpeedMax = 40f;
+    public const float SpeedAccel = 30f;   // units/sec^2 when pressing W/S
+    public const float SpeedDecel = 45f;   // units/sec^2 when releasing (stronger braking)
+
     // --- Galaxy ---
     public const int GalaxiesCount = 8;
     public const int SystemsPerGalaxy = 256;

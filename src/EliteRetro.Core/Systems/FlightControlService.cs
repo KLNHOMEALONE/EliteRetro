@@ -12,7 +12,7 @@ public struct FlightControlState
     public float RollAngle;
     /// <summary>Pitch angle in radians per frame (at 60fps). Positive = pitch up.</summary>
     public float PitchAngle;
-    /// <summary>Speed delta: +1 (accelerate), -1 (decelerate), 0 (none).</summary>
+    /// <summary>Speed rate in units/sec. Positive=accelerate, negative=decelerate, smoothly interpolated.</summary>
     public float SpeedDelta;
     /// <summary>View index: 0=front, 1=rear, 2=left, 3=right.</summary>
     public int ViewIndex;
@@ -35,6 +35,7 @@ public class FlightControlService
     private int _currentViewIndex; // persistent view index across frames
     private float _rollRatePerSec;  // signed, radians/sec
     private float _pitchRatePerSec; // signed, radians/sec
+    private float _speedRatePerSec; // signed, units/sec (positive=accel, negative=decel)
 
     /// <summary>
     /// Process keyboard input and return flight control state.
@@ -92,11 +93,19 @@ public class FlightControlService
             control.RollAngle = _rollRatePerSec / 60f;
             control.PitchAngle = _pitchRatePerSec / 60f;
 
-            // Speed: W (increase) and S (decrease)
+            // Speed: W (increase) and S (decrease) with smooth acceleration/inertia.
+            float targetSpeedRate = 0f;
             if (state.IsKeyDown(Keys.W))
-                control.SpeedDelta = 1f;
+                targetSpeedRate = GameConstants.SpeedMax;
             else if (state.IsKeyDown(Keys.S))
-                control.SpeedDelta = -1f;
+                targetSpeedRate = -GameConstants.SpeedMax;
+
+            float speedAccel = GameConstants.SpeedAccel;
+            float speedDecel = GameConstants.SpeedDecel;
+            _speedRatePerSec = MoveTowards(_speedRatePerSec, targetSpeedRate,
+                (MathF.Abs(targetSpeedRate) > MathF.Abs(_speedRatePerSec) ? speedAccel : speedDecel) * dt);
+
+            control.SpeedDelta = _speedRatePerSec;
 
             // View switching: V key cycles through views
             if (state.IsKeyDown(Keys.V) && !_previousState.IsKeyDown(Keys.V))

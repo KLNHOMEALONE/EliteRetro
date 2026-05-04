@@ -260,9 +260,9 @@ public class FlightScene : GameScene
             if (kb.IsKeyDown(Keys.OemMinus) || kb.IsKeyDown(Keys.Subtract)) _cameraDistance += speed;
             _cameraDistance = MathHelper.Clamp(_cameraDistance, 2f, 20f);
 
-            // Speed control via W/S keys
+            // Speed control via W/S keys (SpeedDelta is in units/sec)
             if (_lastControl.SpeedDelta != 0)
-                _playerSpeed = Math.Clamp(_playerSpeed + _lastControl.SpeedDelta * (float)gameTime.ElapsedGameTime.TotalSeconds * 60, 0f, 40f);
+                _playerSpeed = Math.Clamp(_playerSpeed + _lastControl.SpeedDelta * (float)gameTime.ElapsedGameTime.TotalSeconds, 0f, GameConstants.SpeedMax);
 
             // Check for player damage (shield or hull decrease)
             if (_bubbleManager.PlayerShip != null)
@@ -547,11 +547,12 @@ public class FlightScene : GameScene
                 if (toPlayer.LengthSquared() > 0.01f)
                 {
                     toPlayer = Vector3.Normalize(toPlayer);
+                    var newRoofv = Vector3.Normalize(Vector3.Cross(toPlayer, Vector3.UnitY));
                     orientation = new OrientationMatrix
                     {
                         Nosev = toPlayer,
-                        Roofv = Vector3.Normalize(Vector3.Cross(toPlayer, Vector3.UnitY)),
-                        Sidev = Vector3.Normalize(Vector3.Cross(orientation.Roofv, toPlayer))
+                        Roofv = newRoofv,
+                        Sidev = Vector3.Normalize(Vector3.Cross(newRoofv, toPlayer))
                     };
                 }
             }
