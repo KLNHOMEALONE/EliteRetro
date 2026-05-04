@@ -27,7 +27,10 @@ _bubbleManager.SetSlot(GameConstants.SunStationSlot, sun);
 _bubbleManager.SetSlot(GameConstants.SunStationSlot, station); // Sun is lost!
 ```
 
-**Fix:** Use conditional slot assignment — sun OR station, not both.
+**Authenticity note:** The *design* of “sun **or** station” sharing the same reserved slot (i.e., the station replaces the sun when it spawns at the main planet) matches the original Elite’s local-bubble behavior.  
+**What’s incorrect here:** the overwrite happens unconditionally during bubble initialization (and therefore prevents sun effects / scooping from ever being observable in that session).
+
+**Fix:** Make the slot mutually exclusive by state: start with sun, replace with station only when the correct in-game condition triggers (safe-zone spawn / docking flow).
 
 ---
 
