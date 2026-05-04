@@ -343,3 +343,91 @@ The following were verified as working correctly:
 - ✅ Laser damage calculation (shields → hull)
 - ✅ Cargo drop spawning on ship destruction
 - ✅ Save file checksum computation (CHECK and CHK2)
+
+---
+
+# Repo-wide Code Review (EliteRetro.Core)
+
+**Date:** 2026-05-04  
+**Reviewer:** GPT-5.2 (Cursor agent)  
+**Scope:** `src/EliteRetro.Core` (entry/runtime loop, scenes, scheduling, local bubble, galaxy, save/load, rendering touchpoints)
+
+## Executive Summary
+
+The project has a clear “spine” (`Program` → `GameInstance` → `SceneManager` → active `GameScene`) and a convincing Elite-style simulation model (local bubble slots + MCNT frame-spread scheduling + rotating-universe math). Most issues are **correctness/robustness** (scene transitions and state ownership), plus a few **latent bugs** that will bite when features like variable timestep or more frequent scene creation are exercised.
+
+## Confirmed High-Impact Issues
+
+### A) **`GameInstance.ChangeScene()` does not change scenes (it pushes)**
+**Severity: HIGH (behavior + memory/state growth)**
+
+`GameInstance.ChangeScene(GameScene scene)` currently calls `SceneManager.PushScene(scene)` instead of `SceneManager.ChangeScene(...)`:
+- This means menu selections like “START NEW GAME” / “SPACE VIEW” / “GALAXY MAP” *stack scenes* rather than replacing them.
+- The name strongly suggests “replace stack”, but the implementation is “push”.
+- Symptoms: unexpected back-stack behavior, accumulated scene instances, potential lingering event subscriptions/resources if `UnloadContent()` is incomplete.
+
+**Evidence:** `src/EliteRetro.Core/GameInstance.cs` (lines ~203-211 in current file contents).
+
+### B) **`MainLoopCounter.DecrementTimeBased()` cannot work as written**
+**Severity: HIGH (bug; dead/incorrect utility)**
+
+`MainLoopCounter` declares `_tickAccumulator` as `readonly` and never stores the updated accumulator back to a field. As a result:
+- `DecrementTimeBased()` always starts from the default accumulator value, so it can only ever compute ticks for the current call and cannot accumulate remainder time.
+- If you ever switch to variable timestep, MCNT-driven scheduling will drift or stall.
+
+**Evidence:** `src/EliteRetro.Core/Systems/MainLoopCounter.cs` (fields + `DecrementTimeBased`).
+
+### C) **Collision radii are scaled in a way that makes collisions “always on”**
+**Severity: HIGH for gameplay feel, MEDIUM for correctness**
+
+`CollisionSystem` uses:
+- `BaseCollisionRadius = 200f`
+- `sizeFactor = 1f + (vertexCount / 20f)`
+
+For many models, this creates *kilounit* collision spheres (e.g., 200 vertices → \(200 * (1 + 10) = 2200\)). Given spawn distances in `FlightScene` (100–300), entities will collide immediately or constantly trip “close approach” logs.
+
+**Evidence:** `src/EliteRetro.Core/Systems/CollisionSystem.cs` (radius functions + debug threshold).
+
+### D) **`ShipInstance.FaceTarget()` can produce NaNs**
+**Severity: MEDIUM (rare, but catastrophic when hit)**
+
+`FaceTarget()` computes:
+
+- `Sidev = Normalize(Cross(direction, UnitY))`
+
+If `direction` is parallel/near-parallel to `UnitY`, the cross product approaches zero and normalization yields NaNs. This matches the prior review’s finding and remains present.
+
+**Evidence:** `src/EliteRetro.Core/Entities/ShipInstance.cs` (`FaceTarget`).
+
+## Confirmed “State Ownership” Smells
+
+### E) Player energy/hull duplicated across `LocalBubbleManager` and `PlayerShip`
+**Severity: MEDIUM (desync risk)**
+
+`LocalBubbleManager` exposes `PlayerEnergy`, `PlayerShieldFront`, `PlayerShieldAft`, `PlayerHull`, but also creates a `PlayerShip` in a reserved slot with its own `Energy` and `Hull`. Current gameplay code (e.g., collision + HUD in `FlightScene`) mainly reads/writes `PlayerShip.Energy/Hull`, while `SaveGameManager` writes `bubble.PlayerEnergy` and `bubble.PlayerMissiles`.
+
+This is a classic “two sources of truth” problem.
+
+**Evidence:** `src/EliteRetro.Core/Managers/LocalBubbleManager.cs` (player fields + player ship creation), `src/EliteRetro.Core/Systems/SaveGameManager.cs`.
+
+## Strengths Worth Keeping
+
+- **Scene stack architecture is simple and effective**: `SceneManager` owns push/pop, Escape-pop behavior is centralized, and `GameScene` is a tight interface.
+- **Galaxy generation is clean and deterministic**: `GalaxyGenerator` uses a seed that advances per system with explicit twist steps; the token-table approach is readable and faithful.
+- **Wireframe rendering is thoughtfully engineered**: back-face culling + hidden-line dashing + outline/silhouette handling shows strong intent and good internal documentation linkage.
+
+## Recommended Priority Order (repo-wide)
+
+1. **Fix/rename scene transition API**: make `GameInstance.ChangeScene()` actually clear/replace, or rename it to `PushScene()` and update call sites to use stack semantics intentionally.
+2. **Fix MCNT time-based decrement**: either remove `DecrementTimeBased()` until needed, or make it functional (store accumulator remainder).
+3. **Rework collision radius calculation**: use model extents or a per-blueprint radius, and lower the default base radius dramatically.
+4. **Resolve “player stats” single source of truth**: choose `PlayerShip` as authoritative (recommended) and have save/load/hud read from it, or keep manager fields but keep them synchronized in one place.
+5. **Harden vector-basis construction** (`FaceTarget`, station orientation): add fallback “up” vector selection when direction ~ `UnitY`.
+
+## Notes on the Existing Flight Review
+
+The existing “Flight Systems Code Review” is broadly accurate and already calls out many key issues. The repo-wide additions above mainly cover:
+- scene stack semantics (a systemic behavior issue),
+- time-based MCNT bug (cross-cutting scheduling),
+- collision radius scaling (systemic gameplay effect),
+- and state ownership duplication (source-of-truth risk).
