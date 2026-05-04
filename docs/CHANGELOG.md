@@ -14,7 +14,6 @@ All notable changes to this project.
 
 ### Fixed
 - **Target practice sun loss** — target practice mode now preserves sun/station when clearing the bubble
-- **Laser audio on miss** — laser sound only plays when a target is actually hit
 - **Near-zero projection W** — guards against near-singular perspective divide (`|W| < 0.001f`)
 - **Ram mode orientation** — fixed object initializer referencing its own not-yet-set `Roofv` field
 - **Screen magic numbers** — extracted 1024, 768, 480, 512, 240 into named constants for future resolution changes

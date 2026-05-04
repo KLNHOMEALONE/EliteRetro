@@ -188,8 +188,8 @@ public class FlightScene : GameScene
         _isFiring = _lastControl.FireLaser;
         if (_isFiring && _laserCooldown <= 0)
         {
-            var hit = FireLaserAtTarget();
-            if (hit) _gameInstance?.Audio.PlayLaser();
+            _gameInstance?.Audio.PlayLaser();
+            FireLaserAtTarget();
             _laserCooldown = 15; // 4 shots per second
             _laserFlashTimer = 6; // beam visible for 6 frames (~100ms)
         }
@@ -973,13 +973,12 @@ public class FlightScene : GameScene
 
     /// <summary>
     /// Fire laser at target in crosshairs.
-    /// Returns true if a target was hit.
     /// Uses the current view direction in Elite-world coordinates.
     /// </summary>
-    private bool FireLaserAtTarget()
+    private void FireLaserAtTarget()
     {
         var player = _bubbleManager.PlayerShip;
-        if (player == null) return false;
+        if (player == null) return;
 
         const float hitConeCos = 0.96f; // ~15° cone
         const float maxRange = 600f;
@@ -1072,13 +1071,10 @@ public class FlightScene : GameScene
                 _lastEventMessage = $"{bestTarget.Blueprint.Name} destroyed!";
                 _eventMessageTimer = 120;
             }
-
-            return true;
         }
         else
         {
             System.Diagnostics.Debug.WriteLine($"[LASER] MISS (view={_viewMode}, forward={forward})");
-            return false;
         }
     }
 
