@@ -202,7 +202,7 @@ public class GameInstance : Game
 
     public void ChangeScene(GameScene scene)
     {
-        _sceneManager.PushScene(scene);
+        _sceneManager.ChangeScene(scene);
     }
 
     public void PushScene(GameScene scene)

@@ -17,13 +17,29 @@ public class SceneManager
 
     public void ChangeScene(GameScene newScene, ContentManager content, GraphicsDevice graphicsDevice, Game? game = null, BitmapFont? font = null)
     {
-        _sceneStack.Clear();
+        while (_sceneStack.Count > 0)
+        {
+            var old = _sceneStack.Pop();
+            old.UnloadContent();
+        }
         _content = content;
         _graphicsDevice = graphicsDevice;
         _game = game;
         if (font != null) _font = font;
 
         newScene.LoadContent(content, _font, graphicsDevice);
+        _sceneStack.Push(newScene);
+    }
+
+    public void ChangeScene(GameScene newScene)
+    {
+        while (_sceneStack.Count > 0)
+        {
+            var old = _sceneStack.Pop();
+            old.UnloadContent();
+        }
+
+        newScene.LoadContent(_content, _font, _graphicsDevice);
         _sceneStack.Push(newScene);
     }
 
