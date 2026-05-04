@@ -107,7 +107,7 @@ public static class SaveGameManager
         data[OffBOMB] = 0;  // Energy bomb — would be set by equipment system
 
         // Energy/shield level
-        data[OffENGY] = bubble.PlayerEnergy;
+        data[OffENGY] = bubble.PlayerShip?.Energy ?? bubble.PlayerEnergy;
 
         // Docking computer
         data[OffDKCMP] = 0; // Would be set by equipment system

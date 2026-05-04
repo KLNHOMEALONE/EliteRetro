@@ -51,7 +51,14 @@ public class LocalBubbleManager
     public Vector3 PlayerPosition { get; set; }
 
     /// <summary>Player energy (0-255).</summary>
-    public byte PlayerEnergy { get; set; } = 200;
+    public byte PlayerEnergy
+    {
+        get => PlayerShip?.Energy ?? 200;
+        set
+        {
+            if (PlayerShip != null) PlayerShip.Energy = value;
+        }
+    }
 
     /// <summary>Player shield strength (0-255, front).</summary>
     public byte PlayerShieldFront { get; set; } = 200;
@@ -63,7 +70,14 @@ public class LocalBubbleManager
     public bool TargetPracticeMode { get; set; }
 
     /// <summary>Player hull strength (0-255).</summary>
-    public byte PlayerHull { get; set; } = 255;
+    public byte PlayerHull
+    {
+        get => PlayerShip?.Hull ?? 255;
+        set
+        {
+            if (PlayerShip != null) PlayerShip.Hull = value;
+        }
+    }
 
     /// <summary>Player fuel level (0-70).</summary>
     public byte PlayerFuel { get; set; } = 35;

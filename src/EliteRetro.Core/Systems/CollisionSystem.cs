@@ -11,10 +11,10 @@ namespace EliteRetro.Core.Systems;
 public static class CollisionSystem
 {
     /// <summary>
-    /// Base collision radius for ships (in local coordinates).
-    /// Large radius to catch fast-moving entities that might tunnel through.
+    /// Collision radius multiplier applied to a model's bounding radius.
+    /// Kept slightly > 1 to reduce tunneling while staying proportional to model size.
     /// </summary>
-    private const float BaseCollisionRadius = 200f;
+    private const float BoundingRadiusMultiplier = 1.15f;
 
     /// <summary>
     /// Check all active entities for collisions.
@@ -75,10 +75,20 @@ public static class CollisionSystem
     /// </summary>
     private static float GetCollisionRadius(ShipInstance ship)
     {
-        // Estimate from model vertex count
-        int vertexCount = ship.Blueprint.Model.Vertices.Count;
-        float sizeFactor = 1f + (vertexCount / 20f);
-        return BaseCollisionRadius * sizeFactor;
+        var model = ship.Blueprint.Model;
+        if (model.Vertices == null || model.Vertices.Count == 0)
+            return 1f;
+
+        float maxSq = 0f;
+        for (int i = 0; i < model.Vertices.Count; i++)
+        {
+            var v = model.Vertices[i];
+            float d2 = v.X * v.X + v.Y * v.Y + v.Z * v.Z;
+            if (d2 > maxSq) maxSq = d2;
+        }
+
+        float radius = MathF.Sqrt(maxSq);
+        return MathF.Max(1f, radius * BoundingRadiusMultiplier);
     }
 
     /// <summary>

@@ -167,26 +167,6 @@ public class FlightScene : GameScene
             Speed = 0
         };
         _bubbleManager.SetSlot(GameConstants.SunStationSlot, sun);
-
-        // DEBUG: Spawn station immediately for testing
-        // Remove this when safe zone approach works naturally
-        var stationModel = ShuttleModel.Create(48);
-        var stationBlueprint = new ShipBlueprint
-        {
-            Name = "Coriolis Station",
-            Model = stationModel,
-            MaxSpeed = 0,
-            MaxEnergy = 255,
-            HullStrength = 255,
-            ShieldStrength = 255
-        };
-        var station = new ShipInstance(stationBlueprint)
-        {
-            Position = new Vector3(0, 0, -GameConstants.PlanetRadius * 2),
-            Speed = 0
-        };
-        station.Orientation.Nosev = Vector3.UnitZ; // Face player
-        _bubbleManager.SetSlot(GameConstants.SunStationSlot, station);
     }
 
     public override void Update(GameTime gameTime)
@@ -1064,5 +1044,12 @@ public class FlightScene : GameScene
 
     public override void UnloadContent()
     {
+        if (_bubbleManager != null)
+        {
+            _bubbleManager.EntityEvent -= OnEntityEvent;
+            _bubbleManager.CollisionEvent -= OnCollision;
+        }
+
+        _whitePixel?.Dispose();
     }
 }
