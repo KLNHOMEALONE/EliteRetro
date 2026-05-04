@@ -108,7 +108,14 @@ This produces non-linear acceleration (dt varies per frame) and no maximum accel
 if (entity.Position.Z >= 0) continue;  // Only checks if in front, not crosshair alignment
 ```
 
-The actual crosshair cone check (`hitConeCos = 0.96f`) is bypassed for very close entities (`dist < 5.0`). This means anything within 5 units of the player is always hit regardless of aim.
+**Update (2026-05-04):** The practical “laser doesn’t hit in front view” bug was caused by a **coordinate-space mismatch**:
+- Simulation positions are stored in Elite-world coordinates.
+- Rendering converts Elite → MonoGame by flipping Z (`mgZ = -eliteZ`).
+- Therefore “front view” (MonoGame looking down -Z) corresponds to **+Z in Elite-world**.
+
+Fix was applied in `FlightScene.FireLaserAtTarget()` by using the correct forward vector in sim space for front view.
+
+Note: the close-range bypass (`dist < 5.0`) still means extremely close entities are auto-hit regardless of aim.
 
 ---
 

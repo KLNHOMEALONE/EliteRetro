@@ -960,7 +960,7 @@ public class FlightScene : GameScene
 
     /// <summary>
     /// Fire laser at target in crosshairs.
-    /// Uses standard MonoGame coordinates (-Z is ahead).
+    /// Uses the current view direction in Elite-world coordinates.
     /// </summary>
     private void FireLaserAtTarget()
     {
@@ -970,8 +970,20 @@ public class FlightScene : GameScene
         const float hitConeCos = 0.96f; // ~15° cone
         const float maxRange = 600f;
 
-        // Forward is -Z in standard MonoGame convention.
-        Vector3 forward = new Vector3(0, 0, -1);
+        // Fire direction depends on current camera view mode.
+        // NOTE: entity.Position is stored in Elite-world coordinates (same space used by spawning and movement),
+        // so we keep the laser targeting math in that space as well.
+        // Important: our simulation state (`entity.Position`) is in "Elite-world" coordinates.
+        // Rendering converts Elite->MonoGame by flipping Z: mgZ = -eliteZ.
+        // With the front camera looking down -Z in MonoGame space, "in front" corresponds to +Z in Elite-world.
+        Vector3 forward = _viewMode switch
+        {
+            0 => new Vector3(0, 0, 1),   // front
+            1 => new Vector3(0, 0, -1),  // rear
+            2 => new Vector3(-1, 0, 0),  // left
+            3 => new Vector3(1, 0, 0),   // right
+            _ => new Vector3(0, 0, 1),
+        };
 
         ShipInstance? bestTarget = null;
         float bestDot = -1f;
@@ -984,9 +996,6 @@ public class FlightScene : GameScene
 
             float distSq = entity.Position.LengthSquared();
             if (distSq > maxRange * maxRange) continue;
-
-            // Objects must be in front (negative Z in MonoGame system)
-            if (entity.Position.Z >= 0) continue;
 
             float dist = (float)Math.Sqrt(distSq);
             float dot;
@@ -1049,6 +1058,10 @@ public class FlightScene : GameScene
                 _lastEventMessage = $"{bestTarget.Blueprint.Name} destroyed!";
                 _eventMessageTimer = 120;
             }
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine($"[LASER] MISS (view={_viewMode}, forward={forward})");
         }
     }
 
