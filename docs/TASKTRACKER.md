@@ -146,7 +146,15 @@
 - Target practice mode (L key): stationary Viper, clean test range
 - Cargo canisters: destructible by laser, collision-safe (no longer auto-destroyed)
 - Crosshair: BBC Elite diamond reticle at screen center
-- Pitch controls: corrected to natural flight feel (Up = nose up)
+- Flight controls: pitch/roll mapping under review (sign conventions differ between input and rotating-universe application)
+
+**Recent stability fixes (2026-05-04):**
+- Scene switching: `GameInstance.ChangeScene()` now replaces the scene stack (no longer pushes)
+- FlightScene: unsubscribes bubble event handlers on unload (prevents duplicate events on re-entry)
+- Sun/station slot: removed unconditional debug station overwrite so sun proximity can be tested
+- Collision: bounding-radius-based collision radii (replaces vertex-count scaling)
+- ShipInstance: `FaceTarget()` guarded against near-parallel up-vector NaNs
+- MCNT: `DecrementTimeBased()` accumulator now persists across frames
 
 **Remaining:**
 - Top pilots leaderboard (optional — not in original Elite)

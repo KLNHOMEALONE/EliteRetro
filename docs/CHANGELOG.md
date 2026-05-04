@@ -173,6 +173,9 @@ All notable changes to this project.
 - EconomyType enum expanded to 8 values (RichIndustrial through PoorAgricultural)
 - TechLevel changed from enum to int (0-14 range)
 - Galaxy map zoom defaults to 3.0, centered on galaxy
+- Scene switching: `GameInstance.ChangeScene()` now truly replaces the active scene stack (previously pushed a new scene)
+- Collision detection: collision radii now derive from model bounding radius (instead of vertex-count scaling)
+- Player ship state: Player energy/hull now uses `PlayerShip` as the single source of truth (manager fields forward to the ship instance)
 
 ### Fixed
 - Planet wireframe vertex overflow (removed erroneous ×1000 scaling)
@@ -180,6 +183,10 @@ All notable changes to this project.
 - Texture2D creation per frame in DrawFilledCircle (now cached)
 - Integer overflow in LocalBubbleManager (BubbleRadius² exceeded int range)
 - Back-face culling freeze on large models
+- FlightScene: unsubscribed LocalBubbleManager event handlers on scene unload (prevents handler accumulation on re-entry)
+- FlightScene: removed unconditional debug station spawn so sun can be observed initially (station still replaces sun via the proper spawn path)
+- ShipInstance: hardened `FaceTarget()` to avoid NaNs when target direction is near-parallel to `UnitY`
+- MCNT: fixed `MainLoopCounter.DecrementTimeBased()` to persist its accumulator across frames (variable timestep ready)
 
 ---
 

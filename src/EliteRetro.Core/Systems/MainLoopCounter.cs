@@ -13,7 +13,7 @@ namespace EliteRetro.Core.Systems;
 public class MainLoopCounter
 {
     private byte _mcnt;
-    private readonly float _tickAccumulator;
+    private float _tickAccumulator;
     private readonly float _tickInterval;
 
     /// <summary>Current counter value (0-255).</summary>
@@ -47,13 +47,13 @@ public class MainLoopCounter
     /// <returns>Number of ticks elapsed (0 or 1 for typical frame times).</returns>
     public int DecrementTimeBased(float elapsedSeconds)
     {
-        float accumulated = _tickAccumulator + elapsedSeconds;
+        _tickAccumulator += elapsedSeconds;
         int ticks = 0;
 
-        while (accumulated >= _tickInterval)
+        while (_tickAccumulator >= _tickInterval)
         {
             Decrement();
-            accumulated -= _tickInterval;
+            _tickAccumulator -= _tickInterval;
             ticks++;
         }
 

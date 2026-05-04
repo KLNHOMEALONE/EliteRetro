@@ -154,11 +154,27 @@ public class ShipInstance
     /// </summary>
     public void FaceTarget(Vector3 targetPos)
     {
-        Vector3 direction = Vector3.Normalize(targetPos - Position);
+        Vector3 toTarget = targetPos - Position;
+        if (toTarget.LengthSquared() < 0.0001f)
+            return;
+
+        Vector3 direction = Vector3.Normalize(toTarget);
         Orientation.Nosev = direction;
-        // Recompute sidev and roofv to maintain orthonormality
-        Vector3 up = Vector3.UnitY;
-        Orientation.Sidev = Vector3.Normalize(Vector3.Cross(direction, up));
-        Orientation.Roofv = Vector3.Cross(Orientation.Sidev, direction);
+
+        // Recompute sidev and roofv to maintain orthonormality.
+        // If direction is near-parallel to UnitY, choose a different reference up to avoid NaNs.
+        Vector3 up = MathF.Abs(Vector3.Dot(direction, Vector3.UnitY)) > 0.98f
+            ? Vector3.UnitZ
+            : Vector3.UnitY;
+
+        Vector3 side = Vector3.Cross(direction, up);
+        if (side.LengthSquared() < 0.0001f)
+        {
+            up = Vector3.UnitX;
+            side = Vector3.Cross(direction, up);
+        }
+
+        Orientation.Sidev = Vector3.Normalize(side);
+        Orientation.Roofv = Vector3.Normalize(Vector3.Cross(Orientation.Sidev, direction));
     }
 }

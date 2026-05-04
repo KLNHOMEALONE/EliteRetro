@@ -16,6 +16,7 @@ namespace EliteRetro.Core.Scenes;
 /// </summary>
 public class FlightScene : GameScene
 {
+    private const float RenderScale = 0.001f; // Elite internal units -> MonoGame world units
     private WireframeRenderer _wireframeRenderer = null!;
     private CircleRenderer _circleRenderer = null!;
     private PlanetRenderer _planetRenderer = null!;
@@ -151,7 +152,8 @@ public class FlightScene : GameScene
 
         // Slot 1: Sun - placed at 2.67-18.67 planet radii, behind player
         float sunDistance = GameConstants.PlanetRadius * (2.67f + (float)(new Random().NextDouble() * 16));
-        var sunModel = SunModel.Create(GameConstants.PlanetRadius * 80);
+        // Render-scale sanity: keep the sun large, but not orders of magnitude larger than the scene.
+        var sunModel = SunModel.Create(GameConstants.PlanetRadius * 6);
         var sunBlueprint = new ShipBlueprint
         {
             Name = "Sun",
@@ -206,7 +208,7 @@ public class FlightScene : GameScene
             _cumulativeRoll += rollDelta;
 
             // 2. MOVE UNIVERSE (Forward move = objects move toward player)
-            // Forward = objects' Z increases towards camera (0) in RH.
+            // In this coordinate system, forward motion makes objects move closer along -Z.
             float moveStep = _playerSpeed * dt * 60f;
             foreach (var entity in _bubbleManager.GetAllActive())
             {
@@ -215,7 +217,7 @@ public class FlightScene : GameScene
 
                 if (_playerSpeed != 0)
                 {
-                    entity.Position.Z += moveStep;
+                    entity.Position.Z -= moveStep;
                 }
                 // Entity's own relative movement
                 if (entity.Speed != 0)
@@ -401,32 +403,28 @@ public class FlightScene : GameScene
                     0, 0, 0, 1);
                 
                 // Map Elite (X, Y, Z_depth) to MonoGame (X, Y, -Z_depth)
-                Vector3 entityPosMG = new Vector3(entity.Position.X, entity.Position.Y, -entity.Position.Z);
+                Vector3 entityPosMG = new Vector3(entity.Position.X, entity.Position.Y, -entity.Position.Z) * RenderScale;
                 
-                Matrix entityWorld = entityOrientation * Matrix.CreateTranslation(entityPosMG);
+                Matrix entityWorld =
+                    Matrix.CreateScale(RenderScale) *
+                    entityOrientation *
+                    Matrix.CreateTranslation(entityPosMG);
                 _wireframeRenderer.Draw(entity.Blueprint.Model, entityWorld, _view, _projection, spriteBatch, drawHiddenEdges: _showHiddenEdges);
             }
         }
 
-        // Draw planet with surface features and rings
+        // Draw planet/sun/rings using the original 2D style renderers,
+        // but projected from true 3D world positions (Elite -> MonoGame conversion applied).
         if (_bubbleManager.Planet != null)
         {
-            // Convert cumulative roll to 0-63 units (1/64-turn)
-            // Negative roll (left) → planet features rotate right (counter-rotation)
             int rollAngle64 = ((int)(_cumulativeRoll * 64 / MathHelper.TwoPi) % 64 + 64) % 64;
             int totalPlanetRotation = (_planetRotation + rollAngle64) % 64;
 
-            // Back rings first (with counter-rotation)
             DrawCelestialRings(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(180, 160, 120), "back", rollAngle64);
-
-            // Planet (with counter-rotation)
             DrawCelestialPlanet(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(50, 100, 180), totalPlanetRotation);
-
-            // Front rings (with counter-rotation)
             DrawCelestialRings(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(180, 160, 120), "front", rollAngle64);
         }
 
-        // Draw sun
         if (_bubbleManager.SunOrStation != null && _bubbleManager.SunOrStation.Blueprint?.Name == "Sun")
         {
             DrawCelestialSun(spriteBatch, _bubbleManager.SunOrStation.Position, GameConstants.PlanetRadius * 6, SunRenderer.GetSunColor(0));
@@ -785,11 +783,14 @@ public class FlightScene : GameScene
 
     private bool IsInFrontOfCamera(Vector3 worldPos)
     {
-        // Object is in front of camera if the vector to it from origin
-        // has a positive dot product with the current camera look direction.
-        if (worldPos.LengthSquared() < 0.001f) return true;
-        return Vector3.Dot(Vector3.Normalize(worldPos), _cameraLookDir) > 0;
+        // Camera look dir is expressed in MonoGame space; convert worldPos accordingly.
+        Vector3 mg = ToMonoGameWorld(worldPos);
+        if (mg.LengthSquared() < 0.001f) return true;
+        return Vector3.Dot(Vector3.Normalize(mg), _cameraLookDir) > 0;
     }
+
+    private static Vector3 ToMonoGameWorld(Vector3 eliteWorldPos)
+        => new Vector3(eliteWorldPos.X, eliteWorldPos.Y, -eliteWorldPos.Z) * RenderScale;
 
     /// <summary>
     /// Check for inactive entities and spawn explosion effects.
@@ -810,8 +811,8 @@ public class FlightScene : GameScene
                 _gameInstance?.Audio.PlayExplosion();
 
                 // Create explosion at entity position
-                Vector2 screenPos = ProjectToScreen(entity.Position);
-                float distance = entity.Position.Length();
+                Vector2 screenPos = ProjectToScreenElite(entity.Position);
+                float distance = ToMonoGameWorld(entity.Position).Length();
                 var cloud = _explosionRenderer.CreateExplosion(entity.Blueprint.Model, screenPos, distance);
                 cloud.Tag = entity;
                 _explosions.Add(cloud);
@@ -821,6 +822,14 @@ public class FlightScene : GameScene
         // Update and clean up explosions (with delay after visual completion)
         _explosions.RemoveAll(cloud =>
         {
+            // Hard TTL: prevent any lingering artifacts from sticking around indefinitely.
+            if (cloud.AgeSeconds >= 5f)
+            {
+                if (cloud.Tag is ShipInstance taggedTtl)
+                    _bubbleManager.Despawn(taggedTtl.SlotIndex, "explosion ttl");
+                return true;
+            }
+
             if (cloud.Counter <= 0)
             {
                 cloud.CleanupDelayFrames--;
@@ -836,11 +845,13 @@ public class FlightScene : GameScene
     }
 
     /// <summary>
-    /// Project a world position to screen coordinates using the view/projection matrices.
-    /// World coordinates use standard MonoGame convention (-Z is ahead).
+    /// Project an Elite-world position to screen coordinates using the view/projection matrices.
+    /// Converts Elite (X,Y,Z) to MonoGame (X,Y,-Z) and applies RenderScale.
     /// </summary>
-    private Vector2 ProjectToScreen(Vector3 worldPos)
+    private Vector2 ProjectToScreenElite(Vector3 eliteWorldPos)
     {
+        Vector3 worldPos = ToMonoGameWorld(eliteWorldPos);
+
         // Apply view transform
         Vector3 viewPos = Vector3.Transform(worldPos, _view);
 
@@ -857,6 +868,50 @@ public class FlightScene : GameScene
         float screenY = (1 - ndcY) * 0.5f * 480f;
 
         return new Vector2(screenX, screenY);
+    }
+
+    private void DrawCelestialRings(SpriteBatch spriteBatch, Vector3 worldPosElite, float radiusElite, Color color, string layer = "all", int tiltAngle = 16)
+    {
+        if (!IsInFrontOfCamera(worldPosElite)) return;
+
+        Vector2 screenPos = ProjectToScreenElite(worldPosElite);
+        float dist = ToMonoGameWorld(worldPosElite).Length();
+        if (dist < 0.001f) return;
+
+        // FOV is 75 deg. tan(75/2) ≈ 0.767
+        float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (480 / 2);
+        if (screenRadius > 0 && screenRadius < 2000)
+            _ringRenderer.DrawAxisAlignedRings(spriteBatch, screenPos, screenRadius, 1.4f, 2.2f, color, tiltAngle, layer);
+    }
+
+    private void DrawCelestialSun(SpriteBatch spriteBatch, Vector3 worldPosElite, float radiusElite, Color color)
+    {
+        if (!IsInFrontOfCamera(worldPosElite)) return;
+
+        Vector2 screenPos = ProjectToScreenElite(worldPosElite);
+        float dist = ToMonoGameWorld(worldPosElite).Length();
+        if (dist < 0.001f) return;
+
+        float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (480 / 2);
+        if (screenRadius > 0 && screenRadius < 4000)
+            _sunRenderer.DrawSun(spriteBatch, screenPos, screenRadius, color);
+    }
+
+    private void DrawCelestialPlanet(SpriteBatch spriteBatch, Vector3 worldPosElite, float radiusElite, Color color, int rotationAngle = 0)
+    {
+        if (!IsInFrontOfCamera(worldPosElite)) return;
+
+        Vector2 screenPos = ProjectToScreenElite(worldPosElite);
+        var planet = _bubbleManager.Planet;
+        if (planet?.Orientation.Nosev == null) return;
+
+        // Project two world axes from the planet's orientation to get a view-dependent ellipse basis.
+        Vector3 pSide = worldPosElite + planet.Orientation.Sidev * radiusElite;
+        Vector3 pRoof = worldPosElite + planet.Orientation.Roofv * radiusElite;
+        Vector2 u = ProjectToScreenElite(pSide) - screenPos;
+        Vector2 v = ProjectToScreenElite(pRoof) - screenPos;
+
+        _planetRenderer.DrawPlanet(spriteBatch, screenPos, u, v, color, rotationAngle);
     }
 
     /// <summary>
@@ -995,51 +1050,6 @@ public class FlightScene : GameScene
                 _eventMessageTimer = 120;
             }
         }
-    }
-
-    private void DrawCelestialRings(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color, string layer = "all", int tiltAngle = 16)
-    {
-        // Skip if object is behind the camera
-        if (!IsInFrontOfCamera(worldPos)) return;
-
-        Vector2 screenPos = ProjectToScreen(worldPos);
-        float dist = worldPos.Length();
-        if (dist < 0.001f) return;
-
-        // Screen radius calculation: (worldRadius / distance) * verticalFOVFactor * screenHeight
-        // FOV is 75 deg. tan(75/2) = 0.767
-        float screenRadius = (radius / dist) * (1.0f / 0.767f) * (480 / 2);
-
-        if (screenRadius > 0 && screenRadius < 1000)
-            _ringRenderer.DrawAxisAlignedRings(spriteBatch, screenPos, screenRadius, 1.4f, 2.2f, color, tiltAngle, layer);
-    }
-
-    private void DrawCelestialSun(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color)
-    {
-        if (!IsInFrontOfCamera(worldPos)) return;
-
-        Vector2 screenPos = ProjectToScreen(worldPos);
-        float dist = worldPos.Length();
-        if (dist < 0.001f) return;
-
-        float screenRadius = (radius / dist) * (1.0f / 0.767f) * (480 / 2);
-
-        if (screenRadius > 0 && screenRadius < 2000)
-            _sunRenderer.DrawSun(spriteBatch, screenPos, screenRadius, color);
-    }
-
-    private void DrawCelestialPlanet(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color, int rotationAngle = 0)
-    {
-        if (!IsInFrontOfCamera(worldPos)) return;
-
-        Vector2 screenPos = ProjectToScreen(worldPos);
-        float dist = worldPos.Length();
-        if (dist < 0.001f) return;
-
-        float screenRadius = (radius / dist) * (1.0f / 0.767f) * (480 / 2);
-
-        if (screenRadius > 0 && screenRadius < 1000)
-            _planetRenderer.DrawPlanet(spriteBatch, screenPos, screenRadius, color, rotationAngle);
     }
 
     public override void UnloadContent()

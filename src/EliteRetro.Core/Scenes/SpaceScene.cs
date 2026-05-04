@@ -11,6 +11,7 @@ namespace EliteRetro.Core.Scenes;
 
 public class SpaceScene : GameScene
 {
+    private const float RenderScale = 0.001f; // Elite internal units -> MonoGame world units
     private WireframeRenderer _wireframeRenderer = null!;
     private CircleRenderer _circleRenderer = null!;
     private PlanetRenderer _planetRenderer = null!;
@@ -94,7 +95,7 @@ public class SpaceScene : GameScene
             _bubbleManager.SetSlot(GameConstants.PlanetSlot, planet);
 
             // Slot 1: Sun - much larger, placed more centrally
-            var sunModel = SunModel.Create(GameConstants.PlanetRadius * 80);
+            var sunModel = SunModel.Create(GameConstants.PlanetRadius * 6);
             var sunBlueprint = new ShipBlueprint
             {
                 Name = "Sun",
@@ -219,34 +220,26 @@ public class SpaceScene : GameScene
                 entity.Blueprint.Name != "Planet" &&
                 entity.Blueprint.Name != "Sun")
             {
-                Matrix entityWorld = Matrix.CreateScale(0.0001f) *
-                                     Matrix.CreateTranslation(entity.Position * 0.0001f);
+                // Map Elite (X,Y,Z) to MonoGame (X,Y,-Z) and apply shared render scale.
+                Vector3 posMG = new Vector3(entity.Position.X, entity.Position.Y, -entity.Position.Z) * RenderScale;
+                Matrix entityWorld = Matrix.CreateScale(RenderScale) * Matrix.CreateTranslation(posMG);
                 _wireframeRenderer.Draw(entity.Blueprint.Model, entityWorld, _view, _projection, spriteBatch);
             }
         }
 
-        // Draw planet with surface features
-        if (_bubbleManager.Planet != null)
+        // Draw planet and sun/station as true 3D models (consistent with world transforms)
+        if (_bubbleManager.Planet?.Blueprint?.Model != null)
         {
-            // Convert cumulative roll to 0-63 units (1/64-turn)
-            // Negative roll (left) → planet features rotate right (counter-rotation)
-            int rollAngle64 = ((int)(_cumulativeRoll * 64 / MathHelper.TwoPi) % 64 + 64) % 64;
-            int totalPlanetRotation = (_planetRotation + rollAngle64) % 64;
-
-            // Draw back half of rings first (behind planet, with counter-rotation)
-            DrawCelestialRings(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(180, 160, 120), "back", rollAngle64);
-
-            // Draw planet on top of back rings (with counter-rotation)
-            DrawCelestialPlanet(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(50, 100, 180), totalPlanetRotation);
-
-            // Draw front half of rings on top of planet (with counter-rotation)
-            DrawCelestialRings(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(180, 160, 120), "front", rollAngle64);
+            Vector3 posMG = new Vector3(_bubbleManager.Planet.Position.X, _bubbleManager.Planet.Position.Y, -_bubbleManager.Planet.Position.Z) * RenderScale;
+            Matrix world = Matrix.CreateScale(RenderScale) * Matrix.CreateTranslation(posMG);
+            _wireframeRenderer.Draw(_bubbleManager.Planet.Blueprint.Model, world, _view, _projection, spriteBatch);
         }
 
-        // Draw sun with scan lines and fringe
-        if (_bubbleManager.SunOrStation != null && _bubbleManager.SunOrStation.Blueprint?.Name == "Sun")
+        if (_bubbleManager.SunOrStation?.Blueprint?.Model != null)
         {
-            DrawCelestialSun(spriteBatch, _bubbleManager.SunOrStation.Position, GameConstants.PlanetRadius * 6, SunRenderer.GetSunColor(0));
+            Vector3 posMG = new Vector3(_bubbleManager.SunOrStation.Position.X, _bubbleManager.SunOrStation.Position.Y, -_bubbleManager.SunOrStation.Position.Z) * RenderScale;
+            Matrix world = Matrix.CreateScale(RenderScale) * Matrix.CreateTranslation(posMG);
+            _wireframeRenderer.Draw(_bubbleManager.SunOrStation.Blueprint.Model, world, _view, _projection, spriteBatch);
         }
 
         _font.DrawString(spriteBatch, "SPACE VIEW", new Vector2(10, 10), Color.Lime, 1.5f);
@@ -263,74 +256,6 @@ public class SpaceScene : GameScene
             _font.DrawString(spriteBatch, $"nosev=({_universeOrientation.Nosev.X:F3},{_universeOrientation.Nosev.Y:F3},{_universeOrientation.Nosev.Z:F3})", new Vector2(10, 140), Color.Cyan, 0.8f);
         }
         spriteBatch.End();
-    }
-
-    private void DrawCelestialRings(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color, string layer = "all", int tiltAngle = 16)
-    {
-        Vector3 pos = worldPos * 0.0001f;
-        Vector3 projected = Vector3.Transform(pos, _view * _projection);
-        if (projected.Z == 0) return;
-
-        float ndcX = projected.X / projected.Z;
-        float ndcY = projected.Y / projected.Z;
-        var viewport = _graphicsDevice.Viewport;
-        float screenX = (ndcX + 1) / 2 * viewport.Width;
-        float screenY = (1 - ndcY) / 2 * viewport.Height;
-
-        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * viewport.Height / 2;
-        if (screenRadius > 0 && screenRadius < 500)
-            _ringRenderer.DrawAxisAlignedRings(spriteBatch, new Vector2(screenX, screenY), screenRadius, 1.4f, 2.2f, color, tiltAngle, layer);
-    }
-
-    private void DrawCelestialSun(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color)
-    {
-        Vector3 pos = worldPos * 0.0001f;
-        Vector3 projected = Vector3.Transform(pos, _view * _projection);
-        if (projected.Z == 0) return;
-
-        float ndcX = projected.X / projected.Z;
-        float ndcY = projected.Y / projected.Z;
-        var viewport = _graphicsDevice.Viewport;
-        float screenX = (ndcX + 1) / 2 * viewport.Width;
-        float screenY = (1 - ndcY) / 2 * viewport.Height;
-
-        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * viewport.Height / 2;
-        if (screenRadius > 0 && screenRadius < 500)
-            _sunRenderer.DrawSun(spriteBatch, new Vector2(screenX, screenY), screenRadius, color);
-    }
-
-    private void DrawCelestialCircle(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color)
-    {
-        Vector3 pos = worldPos * 0.0001f;
-        Vector3 projected = Vector3.Transform(pos, _view * _projection);
-        if (projected.Z == 0) return;
-
-        float ndcX = projected.X / projected.Z;
-        float ndcY = projected.Y / projected.Z;
-        var viewport = _graphicsDevice.Viewport;
-        float screenX = (ndcX + 1) / 2 * viewport.Width;
-        float screenY = (1 - ndcY) / 2 * viewport.Height;
-
-        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * viewport.Height / 2;
-        if (screenRadius > 0 && screenRadius < 500)
-            _circleRenderer.DrawCircle(spriteBatch, new Vector2(screenX, screenY), screenRadius, color);
-    }
-
-    private void DrawCelestialPlanet(SpriteBatch spriteBatch, Vector3 worldPos, float radius, Color color, int rotationAngle = 0)
-    {
-        Vector3 pos = worldPos * 0.0001f;
-        Vector3 projected = Vector3.Transform(pos, _view * _projection);
-        if (projected.Z == 0) return;
-
-        float ndcX = projected.X / projected.Z;
-        float ndcY = projected.Y / projected.Z;
-        var viewport = _graphicsDevice.Viewport;
-        float screenX = (ndcX + 1) / 2 * viewport.Width;
-        float screenY = (1 - ndcY) / 2 * viewport.Height;
-
-        float screenRadius = radius * 0.0001f / Math.Abs(projected.Z) * viewport.Height / 2;
-        if (screenRadius > 0 && screenRadius < 500)
-            _planetRenderer.DrawPlanet(spriteBatch, new Vector2(screenX, screenY), screenRadius, color, rotationAngle);
     }
 
     private void SpawnStation()
