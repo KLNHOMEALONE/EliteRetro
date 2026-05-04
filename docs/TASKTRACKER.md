@@ -157,15 +157,16 @@
 - MCNT: `DecrementTimeBased()` accumulator now persists across frames
 - Flight controls: smooth speed acceleration with inertia (matches original Elite timing)
 - Ram mode: fixed orientation matrix using stale Roofv value
+- Target practice: preserves sun/station when spawning target ships
+- Laser audio: only plays on confirmed hit, not on miss
+- Projection: near-zero W guard prevents extreme screen values
+- Screen constants: extracted magic numbers (1024, 768, 480, 512, 240) into named constants
 
 **Remaining:**
 - Top pilots leaderboard (optional — not in original Elite)
 - Options menu (key bindings, difficulty)
 - Performance optimization (object pooling, batched rendering)
 - Cougar easter egg (1 in 9,000 spawn chance)
-- Target practice sun loss bug (clears sun/station on toggle)
-- Division by near-zero W in ProjectToScreen
-- Laser audio plays on miss
 - Double pause state tracking
 
 **Next: Phase 7.7** — Mission system (delivery, assassination, mining contracts), then remaining Phase 8 polish

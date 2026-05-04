@@ -17,6 +17,10 @@ namespace EliteRetro.Core.Scenes;
 public class FlightScene : GameScene
 {
     private const float RenderScale = 0.001f; // Elite internal units -> MonoGame world units
+    private const int ScreenWidth = 1024;
+    private const int ScreenHeight = 768;
+    private const int HudViewportHeight = 480; // HUD area is 1024x480 within 1024x768 screen
+    private static readonly Vector2 ScreenCenter = new(ScreenWidth / 2f, HudViewportHeight / 2f);
     private WireframeRenderer _wireframeRenderer = null!;
     private CircleRenderer _circleRenderer = null!;
     private PlanetRenderer _planetRenderer = null!;
@@ -184,8 +188,8 @@ public class FlightScene : GameScene
         _isFiring = _lastControl.FireLaser;
         if (_isFiring && _laserCooldown <= 0)
         {
-            _gameInstance?.Audio.PlayLaser();
-            FireLaserAtTarget();
+            var hit = FireLaserAtTarget();
+            if (hit) _gameInstance?.Audio.PlayLaser();
             _laserCooldown = 15; // 4 shots per second
             _laserFlashTimer = 6; // beam visible for 6 frames (~100ms)
         }
@@ -378,7 +382,7 @@ public class FlightScene : GameScene
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
 
         // Draw stardust (starfield)
-        _stardustRenderer.Draw(spriteBatch, new Vector2(512, 240), 500f, _view);
+        _stardustRenderer.Draw(spriteBatch, ScreenCenter, 500f, _view);
 
         // Draw explosions
         foreach (var cloud in _explosions)
@@ -436,12 +440,12 @@ public class FlightScene : GameScene
             float intensity = _damageFlashTimer / 15f;
             byte alpha = (byte)(intensity * 128);
             Color flashColor = new Color(255, 0, 0) { A = alpha };
-            spriteBatch.Draw(_whitePixel, new Rectangle(0, 0, 1024, 768), flashColor);
+            spriteBatch.Draw(_whitePixel, new Rectangle(0, 0, ScreenWidth, ScreenHeight), flashColor);
         }
 
         // Crosshair at center of space view (BBC Elite targeting reticle)
-        const int cx = 512;
-        const int cy = 240;
+        int cx = (int)ScreenCenter.X;
+        int cy = (int)ScreenCenter.Y;
         const int inner = 16;
         const int outer = 48;
         var crossColor = Color.White;
@@ -460,7 +464,7 @@ public class FlightScene : GameScene
         {
             var sz = _font.MeasureString("TARGET PRACTICE");
             _font.DrawString(spriteBatch, "TARGET PRACTICE",
-                new Vector2(1024 / 2 - sz.X / 2, 10), new Color(255, 200, 50), 1.0f);
+                new Vector2(ScreenWidth / 2f - sz.X / 2, 10), new Color(255, 200, 50), 1.0f);
 
             // Find the target ship to show its health
             var targetShip = _bubbleManager.GetAllActive().FirstOrDefault(e => e.IsTargetPractice);
@@ -469,15 +473,15 @@ public class FlightScene : GameScene
                 string status = $"S: {targetShip.Energy} H: {targetShip.Hull}";
                 var statSz = _font.MeasureString(status);
                 _font.DrawString(spriteBatch, status,
-                    new Vector2(1024 / 2 - statSz.X / 2, 40), Color.White, 0.8f);
+                    new Vector2(ScreenWidth / 2f - statSz.X / 2, 40), Color.White, 0.8f);
             }
         }
 
         // Draw lasers when firing
         if (_laserFlashTimer > 0)
         {
-            DrawLine(spriteBatch, new Vector2(0, 480), new Vector2(cx, cy), Color.Yellow, 2);
-            DrawLine(spriteBatch, new Vector2(1024, 480), new Vector2(cx, cy), Color.Yellow, 2);
+            DrawLine(spriteBatch, new Vector2(0, HudViewportHeight), new Vector2(cx, cy), Color.Yellow, 2);
+            DrawLine(spriteBatch, new Vector2(ScreenWidth, HudViewportHeight), new Vector2(cx, cy), Color.Yellow, 2);
         }
 
         // HUD overlay
@@ -594,12 +598,13 @@ public class FlightScene : GameScene
 
     /// <summary>
     /// Spawn a stationary Viper directly ahead for target practice.
-    /// Clears all entities except player and planet for a clean test range.
+    /// Clears all entities except player, planet, and sun/station for a clean test range.
     /// </summary>
     private void SpawnTargetPracticeShip()
     {
-        // Save planet before clearing
+        // Save planet and sun/station before clearing
         var planet = _bubbleManager.Planet;
+        var sunStation = _bubbleManager.GetSlot(GameConstants.SunStationSlot);
 
         // Clear ships/entities
         _bubbleManager.Clear();
@@ -609,6 +614,13 @@ public class FlightScene : GameScene
         {
             planet.IsActive = true;
             _bubbleManager.SetSlot(GameConstants.PlanetSlot, planet);
+        }
+
+        // Restore sun/station
+        if (sunStation != null)
+        {
+            sunStation.IsActive = true;
+            _bubbleManager.SetSlot(GameConstants.SunStationSlot, sunStation);
         }
 
         var model = ViperModel.Create(24f);
@@ -859,14 +871,14 @@ public class FlightScene : GameScene
         // Apply projection transform
         Vector4 projected = Vector4.Transform(new Vector4(viewPos, 1f), _projection);
 
-        // Perspective divide
-        if (projected.W == 0) return new Vector2(512, 240);
+        // Perspective divide — guard against near-zero W to avoid huge values
+        if (MathF.Abs(projected.W) < 0.001f) return ScreenCenter;
         float ndcX = projected.X / projected.W;
         float ndcY = projected.Y / projected.W;
 
         // NDC to screen space: [-1,1] → [0,1024] × [0,480]
-        float screenX = (ndcX + 1f) * 0.5f * 1024f;
-        float screenY = (1 - ndcY) * 0.5f * 480f;
+        float screenX = (ndcX + 1f) * 0.5f * ScreenWidth;
+        float screenY = (1 - ndcY) * 0.5f * HudViewportHeight;
 
         return new Vector2(screenX, screenY);
     }
@@ -880,7 +892,7 @@ public class FlightScene : GameScene
         if (dist < 0.001f) return;
 
         // FOV is 75 deg. tan(75/2) ≈ 0.767
-        float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (480 / 2);
+        float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (HudViewportHeight / 2f);
         if (screenRadius > 0 && screenRadius < 2000)
             _ringRenderer.DrawAxisAlignedRings(spriteBatch, screenPos, screenRadius, 1.4f, 2.2f, color, tiltAngle, layer);
     }
@@ -893,7 +905,7 @@ public class FlightScene : GameScene
         float dist = ToMonoGameWorld(worldPosElite).Length();
         if (dist < 0.001f) return;
 
-        float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (480 / 2);
+        float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (HudViewportHeight / 2f);
         if (screenRadius > 0 && screenRadius < 4000)
             _sunRenderer.DrawSun(spriteBatch, screenPos, screenRadius, color);
     }
@@ -961,12 +973,13 @@ public class FlightScene : GameScene
 
     /// <summary>
     /// Fire laser at target in crosshairs.
+    /// Returns true if a target was hit.
     /// Uses the current view direction in Elite-world coordinates.
     /// </summary>
-    private void FireLaserAtTarget()
+    private bool FireLaserAtTarget()
     {
         var player = _bubbleManager.PlayerShip;
-        if (player == null) return;
+        if (player == null) return false;
 
         const float hitConeCos = 0.96f; // ~15° cone
         const float maxRange = 600f;
@@ -1059,10 +1072,13 @@ public class FlightScene : GameScene
                 _lastEventMessage = $"{bestTarget.Blueprint.Name} destroyed!";
                 _eventMessageTimer = 120;
             }
+
+            return true;
         }
         else
         {
             System.Diagnostics.Debug.WriteLine($"[LASER] MISS (view={_viewMode}, forward={forward})");
+            return false;
         }
     }
 
