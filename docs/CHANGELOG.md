@@ -16,8 +16,8 @@ All notable changes to this project.
   - Killing a cop sets legal status to 64+ (instant Fugitive)
   - Every kill increments TALLY (kill count)
   - Combat rank derived from TALLY: Harmless (0) → Elite (6400+)
-  - HUD displays legal status (bottom-right) and combat rank
-  - "RIGHT ON COMMANDER!" message on rank promotion or every 256 kills
+  - HUD displays legal status (bottom-right) and combat rank (centered, gold)
+  - "RIGHT ON COMMANDER!" message on rank promotion or every 256 kills (centered, gold, 2x scale)
   - Escape pod: legal status resets to Clean, all cargo lost, TALLY preserved
   - Laser kills now properly track kills and legal status (was collision-only)
 

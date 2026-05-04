@@ -21,6 +21,9 @@ public class FlightScene : GameScene
     private const int ScreenHeight = 768;
     private const int HudViewportHeight = 480; // HUD area is 1024x480 within 1024x768 screen
     private static readonly Vector2 ScreenCenter = new(ScreenWidth / 2f, HudViewportHeight / 2f);
+    private const int EventMsgX = 300;
+    private const int EventMsgY = 350;
+    private const int MilestoneMsgY = 200;
     private WireframeRenderer _wireframeRenderer = null!;
     private CircleRenderer _circleRenderer = null!;
     private PlanetRenderer _planetRenderer = null!;
@@ -766,7 +769,13 @@ public class FlightScene : GameScene
         // Entity event messages (spawn/despawn)
         if (_eventMessageTimer > 0 && !string.IsNullOrEmpty(_lastEventMessage))
         {
-            _font.DrawString(spriteBatch, $">> {_lastEventMessage}", new Vector2(300, 350), Color.Yellow, 1.2f);
+            bool isMilestone = _lastEventMessage == "RIGHT ON COMMANDER!";
+            float scale = isMilestone ? 2.0f : 1.2f;
+            Color msgColor = isMilestone ? Color.Gold : Color.Yellow;
+            var msgSize = _font.MeasureString(_lastEventMessage);
+            float msgX = isMilestone ? (ScreenWidth - msgSize.X) / 2 : EventMsgX;
+            float msgY = isMilestone ? MilestoneMsgY : EventMsgY;
+            _font.DrawString(spriteBatch, $">> {_lastEventMessage}", new Vector2(msgX, msgY), msgColor, scale);
             _eventMessageTimer--;
         }
 

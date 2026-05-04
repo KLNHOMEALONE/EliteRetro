@@ -62,7 +62,7 @@ public class HudRenderer
                 new Vector2((SW - size.X) / 2, 15), state.StatusColor, 1.2f);
         }
 
-        // Legal status and combat rank (bottom-right of center panel)
+        // Combat rank and legal status in top-right corner
         string legalText = state.LegalStatus switch
         {
             0 => "CLEAN",
@@ -71,15 +71,15 @@ public class HudRenderer
         };
         var legalSz = font.MeasureString(legalText);
         font.DrawString(spriteBatch, legalText,
-            new Vector2(RightX - legalSz.X - 10, DashY + DashH - legalSz.Y - 4),
+            new Vector2(SW - legalSz.X - 10, 10),
             state.LegalStatus >= 50 ? Color.OrangeRed : Color.Lime, 1.0f);
 
         if (!string.IsNullOrEmpty(state.CombatRank))
         {
             var rankSz = font.MeasureString(state.CombatRank);
             font.DrawString(spriteBatch, state.CombatRank,
-                new Vector2(RightX - rankSz.X - 10, DashY + DashH - rankSz.Y - 22),
-                Amber, 0.8f);
+                new Vector2(SW - rankSz.X - 10, 32),
+                Color.Gold, 1.0f);
         }
     }
 
