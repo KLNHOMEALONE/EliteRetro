@@ -40,6 +40,22 @@ public class PlanetRenderer
         DrawCraters(spriteBatch, center, radius, color, rotationAngle);
     }
 
+    /// <summary>
+    /// Draw a planet using projected conjugate-diameter vectors (screen-space semi-axes).
+    /// This allows the planet to visually rotate with view direction instead of being a camera-facing billboard.
+    /// </summary>
+    public void DrawPlanet(SpriteBatch spriteBatch, Vector2 center, Vector2 u, Vector2 v, Color color, int rotationAngle = 0)
+    {
+        if (u.LengthSquared() < 1f || v.LengthSquared() < 1f) return;
+
+        // Outline as an ellipse defined by projected world axes.
+        _ellipseRenderer.DrawEllipse(spriteBatch, center, u, v, color, 32);
+
+        DrawEquator(spriteBatch, center, u, v, color, rotationAngle);
+        DrawMeridians(spriteBatch, center, u, v, color, rotationAngle);
+        DrawCraters(spriteBatch, center, u, v, color, rotationAngle);
+    }
+
     private void DrawEquator(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int rotationAngle)
     {
         // Equator is an ellipse: full width, compressed height based on tilt
@@ -54,6 +70,14 @@ public class PlanetRenderer
         v = new Vector2(-sin * radius, cos * radius * tiltFactor);
 
         _ellipseRenderer.DrawEllipse(spriteBatch, center, u * 0.95f, v * 0.95f, Darken(color, 0.7f), 24);
+    }
+
+    private void DrawEquator(SpriteBatch spriteBatch, Vector2 center, Vector2 u, Vector2 v, Color color, int rotationAngle)
+    {
+        var (sin, cos) = SineTable.SinCos(rotationAngle);
+        Vector2 uRot = cos * u + sin * v;
+        Vector2 vRot = -sin * u + cos * v;
+        _ellipseRenderer.DrawEllipse(spriteBatch, center, uRot * 0.95f, vRot * 0.35f, Darken(color, 0.7f), 24);
     }
 
     private void DrawMeridians(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int rotationAngle)
@@ -92,6 +116,34 @@ public class PlanetRenderer
         }
     }
 
+    private void DrawMeridians(SpriteBatch spriteBatch, Vector2 center, Vector2 u, Vector2 v, Color color, int rotationAngle)
+    {
+        Color frontColor = Darken(color, 0.6f);
+        Color backColor = Darken(color, 0.25f);
+
+        for (int i = 0; i < 3; i++)
+        {
+            int angle = rotationAngle + i * 21;
+            var (sin, cos) = SineTable.SinCos(angle);
+
+            // Meridian plane rotated around the "vertical" axis (v) in screen space.
+            Vector2 uMer = cos * u + sin * v;
+            Vector2 vMer = v * 0.95f;
+
+            float equatorX = uMer.X;
+            if (equatorX >= 0)
+            {
+                _ellipseRenderer.DrawEllipseArc(spriteBatch, center, uMer * 0.9f, vMer, frontColor, 16, 48, 16);
+                _ellipseRenderer.DrawEllipseArc(spriteBatch, center, uMer * 0.9f, vMer, backColor, 48, 16, 8);
+            }
+            else
+            {
+                _ellipseRenderer.DrawEllipseArc(spriteBatch, center, uMer * 0.9f, vMer, frontColor, 48, 16, 16);
+                _ellipseRenderer.DrawEllipseArc(spriteBatch, center, uMer * 0.9f, vMer, backColor, 16, 48, 8);
+            }
+        }
+    }
+
     private void DrawCraters(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int rotationAngle)
     {
         // Draw a few craters as small ellipses
@@ -124,6 +176,43 @@ public class PlanetRenderer
             if (rx > -0.3f)
             {
                 Vector2 craterCenter = center + new Vector2(rx * radius, ry * radius);
+                float foreshortening = MathF.Max(0.3f, MathF.Sqrt(MathF.Max(0, 1 - rx * rx)));
+                _ellipseRenderer.DrawAxisAlignedEllipse(spriteBatch, craterCenter,
+                    craterSize, craterSize * foreshortening, craterColor, 12);
+            }
+        }
+    }
+
+    private void DrawCraters(SpriteBatch spriteBatch, Vector2 center, Vector2 u, Vector2 v, Color color, int rotationAngle)
+    {
+        Color craterColor = Darken(color, 0.5f);
+
+        var craterPositions = new[]
+        {
+            new Vector2(0.4f, -0.3f),
+            new Vector2(-0.3f, 0.4f),
+            new Vector2(0.2f, 0.5f),
+            new Vector2(-0.5f, -0.2f),
+        };
+
+        float[] craterSizes = { 0.12f, 0.08f, 0.1f, 0.06f };
+        float rU = u.Length();
+        float rV = v.Length();
+        float approxRadius = MathF.Min(rU, rV);
+
+        for (int i = 0; i < craterPositions.Length; i++)
+        {
+            var localPos = craterPositions[i];
+
+            var (sin, cos) = SineTable.SinCos(rotationAngle + i * 10);
+            float rx = cos * localPos.X - sin * localPos.Y;
+            float ry = sin * localPos.X + cos * localPos.Y;
+
+            if (rx > -0.3f)
+            {
+                Vector2 craterCenter = center + rx * u + ry * v;
+
+                float craterSize = craterSizes[i] * approxRadius;
                 float foreshortening = MathF.Max(0.3f, MathF.Sqrt(MathF.Max(0, 1 - rx * rx)));
                 _ellipseRenderer.DrawAxisAlignedEllipse(spriteBatch, craterCenter,
                     craterSize, craterSize * foreshortening, craterColor, 12);

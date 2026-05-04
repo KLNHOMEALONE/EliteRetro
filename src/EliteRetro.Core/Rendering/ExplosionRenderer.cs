@@ -51,6 +51,9 @@ public class ExplosionRenderer
 
         /// <summary>Frames to wait after visual completion before cleanup.</summary>
         public int CleanupDelayFrames { get; set; } = 10;
+
+        /// <summary>Seconds since the explosion was created.</summary>
+        public float AgeSeconds { get; set; }
     }
 
     /// <summary>
@@ -86,6 +89,8 @@ public class ExplosionRenderer
     /// </summary>
     public bool UpdateAndDraw(SpriteBatch spriteBatch, ExplosionCloud cloud, GameTime gameTime)
     {
+        cloud.AgeSeconds += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
         // Increment counter by 4 per frame
         if (cloud.Counter < 128)
         {

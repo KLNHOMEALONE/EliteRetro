@@ -99,8 +99,8 @@ public class StardustRenderer
             fsy = k2 - beta * fsz;
             fsx = fsx + alpha * fsy;
 
-            // 2. MOVE FORWARD (Forward = objects' world Z increases towards camera)
-            fsz += zDelta;
+            // 2. MOVE FORWARD (Forward = objects move closer along -Z)
+            fsz -= zDelta;
 
             sx = (int)fsx;
             sy = (int)fsy;
