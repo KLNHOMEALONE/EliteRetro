@@ -184,6 +184,8 @@ All notable changes to this project.
 - Integer overflow in LocalBubbleManager (BubbleRadius² exceeded int range)
 - Back-face culling freeze on large models
 - Laser hit detection: corrected front-view forward vector (Elite→MonoGame Z flip)
+- Stardust: corrected forward-motion sign so stars move toward viewer
+- Scanner: fixed front/rear swap by flipping Z to match scanner convention
 - FlightScene: unsubscribed LocalBubbleManager event handlers on scene unload (prevents handler accumulation on re-entry)
 - FlightScene: removed unconditional debug station spawn so sun can be observed initially (station still replaces sun via the proper spawn path)
 - ShipInstance: hardened `FaceTarget()` to avoid NaNs when target direction is near-parallel to `UnitY`

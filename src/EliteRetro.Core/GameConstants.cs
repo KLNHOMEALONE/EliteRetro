@@ -42,6 +42,13 @@ public static class GameConstants
     public const float PitchMax = 1f / 72f;    // ≈0.0139 rad/frame
     public const float AiRotationAngle = 1f / 16f; // 3.6 degrees for NPC rotation
 
+    // ZX-style "digital input, smooth response" tuning.
+    // Keys still map to -max/0/+max, but the commanded turn rate ramps toward the target.
+    public const float TurnRampUpSeconds = 0.10f;    // reach max from 0
+    public const float TurnRampDownSeconds = 0.15f;  // ease back to 0
+    // 0 = no quantization. Otherwise quantize turn rate into N discrete steps across [-max, +max].
+    public static int TurnQuantizationSteps = 0;
+
     // --- Galaxy ---
     public const int GalaxiesCount = 8;
     public const int SystemsPerGalaxy = 256;

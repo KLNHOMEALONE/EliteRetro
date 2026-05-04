@@ -310,9 +310,10 @@ public class ScannerRenderer
             // Transform returns: X=side(right), Y=roof(up), Z=nose(forward)
             Vector3 rel = contact.Position - player.Position;
             Vector3 basisCoords = universeOrientation.Transform(rel);
-            // Scanner needs: X=lateral(right), Y=altitude(up), Z=depth(ahead)
-            // Transform already gives (right, up, forward) so use directly
-            Vector3 scannerLocal = basisCoords;
+            // Scanner expects: Z positive = ahead.
+            // In our local-bubble sim, ships ahead of player use negative Z (see FlightScene spawning/movement),
+            // so flip Z here to match the scanner convention.
+            Vector3 scannerLocal = new Vector3(basisCoords.X, basisCoords.Y, -basisCoords.Z);
 
             var pos = ProjectToScanner(scannerLocal);
             if (pos.HasValue)

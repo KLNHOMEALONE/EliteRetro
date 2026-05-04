@@ -99,8 +99,10 @@ public class StardustRenderer
             fsy = k2 - beta * fsz;
             fsx = fsx + alpha * fsy;
 
-            // 2. MOVE FORWARD (Forward = objects move closer along -Z)
-            fsz -= zDelta;
+            // 2. MOVE FORWARD
+            // World position uses Z = -depth (ahead is negative). Moving "forward" reduces depth,
+            // so world Z moves toward 0 (less negative), i.e. we ADD zDelta here.
+            fsz += zDelta;
 
             sx = (int)fsx;
             sy = (int)fsy;
