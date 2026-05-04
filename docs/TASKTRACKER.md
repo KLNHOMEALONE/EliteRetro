@@ -166,6 +166,9 @@
 - Milestone messages: "RIGHT ON COMMANDER!" on rank promotion or every 256 kills
 - Escape pod: legal status resets to Clean, cargo lost, TALLY preserved
 - HUD: combat rank centered in dashboard (gold, 1.0f), milestone message centered on screen (gold, 2.0f)
+- Options submenu: OPTIONS menu item opens submenu with toggleable options (DRAW WHITE, more to come)
+- Draw White persistence: options saved to `%LOCALAPPDATA%/EliteRetro/options.json`, loaded on startup
+- Draw White toggle: now in Options submenu, renders all objects in white (accessibility/testing feature)
 
 **Remaining:**
 - Top pilots leaderboard (optional — not in original Elite)

@@ -208,7 +208,7 @@ public class SpaceScene : GameScene
         // Draw a reference cube (small, at moderate distance)
         var cube = ShipModel.CreateCube(0.5f);
         Matrix cubeWorld = Matrix.CreateTranslation(0, 0, -30);
-        _wireframeRenderer.Draw(cube, cubeWorld, _view, _projection, spriteBatch, highlightedEdgeIndex: _debugHighlightedEdge);
+        _wireframeRenderer.Draw(cube, cubeWorld, _view, _projection, spriteBatch, highlightedEdgeIndex: _debugHighlightedEdge, drawWhite: _gameInstance?.DrawWhite ?? false);
 
         // Render bubble entities (skip planet and sun - rendered separately)
         foreach (var entity in _bubbleManager.GetAllActive())
@@ -223,7 +223,7 @@ public class SpaceScene : GameScene
                 // Map Elite (X,Y,Z) to MonoGame (X,Y,-Z) and apply shared render scale.
                 Vector3 posMG = new Vector3(entity.Position.X, entity.Position.Y, -entity.Position.Z) * RenderScale;
                 Matrix entityWorld = Matrix.CreateScale(RenderScale) * Matrix.CreateTranslation(posMG);
-                _wireframeRenderer.Draw(entity.Blueprint.Model, entityWorld, _view, _projection, spriteBatch);
+                _wireframeRenderer.Draw(entity.Blueprint.Model, entityWorld, _view, _projection, spriteBatch, drawWhite: _gameInstance?.DrawWhite ?? false);
             }
         }
 
@@ -232,14 +232,14 @@ public class SpaceScene : GameScene
         {
             Vector3 posMG = new Vector3(_bubbleManager.Planet.Position.X, _bubbleManager.Planet.Position.Y, -_bubbleManager.Planet.Position.Z) * RenderScale;
             Matrix world = Matrix.CreateScale(RenderScale) * Matrix.CreateTranslation(posMG);
-            _wireframeRenderer.Draw(_bubbleManager.Planet.Blueprint.Model, world, _view, _projection, spriteBatch);
+            _wireframeRenderer.Draw(_bubbleManager.Planet.Blueprint.Model, world, _view, _projection, spriteBatch, drawWhite: _gameInstance?.DrawWhite ?? false);
         }
 
         if (_bubbleManager.SunOrStation?.Blueprint?.Model != null)
         {
             Vector3 posMG = new Vector3(_bubbleManager.SunOrStation.Position.X, _bubbleManager.SunOrStation.Position.Y, -_bubbleManager.SunOrStation.Position.Z) * RenderScale;
             Matrix world = Matrix.CreateScale(RenderScale) * Matrix.CreateTranslation(posMG);
-            _wireframeRenderer.Draw(_bubbleManager.SunOrStation.Blueprint.Model, world, _view, _projection, spriteBatch);
+            _wireframeRenderer.Draw(_bubbleManager.SunOrStation.Blueprint.Model, world, _view, _projection, spriteBatch, drawWhite: _gameInstance?.DrawWhite ?? false);
         }
 
         _font.DrawString(spriteBatch, "SPACE VIEW", new Vector2(10, 10), Color.Lime, 1.5f);

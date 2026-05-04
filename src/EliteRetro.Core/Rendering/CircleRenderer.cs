@@ -25,9 +25,10 @@ public class CircleRenderer
     /// <param name="radius">Radius in pixels.</param>
     /// <param name="color">Circle color.</param>
     /// <param name="stepCount">Number of line segments (default 32).</param>
-    public void DrawCircle(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int stepCount = 32)
+    public void DrawCircle(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int stepCount = 32, bool drawWhite = false)
     {
         if (radius <= 0) return;
+        Color actualColor = drawWhite ? Color.White : color;
 
         for (int i = 0; i < stepCount; i++)
         {
@@ -38,16 +39,17 @@ public class CircleRenderer
             var p1 = center + new Vector2(cos1 * radius, sin1 * radius);
             var p2 = center + new Vector2(cos2 * radius, sin2 * radius);
 
-            DrawLine(spriteBatch, p1, p2, color);
+            DrawLine(spriteBatch, p1, p2, actualColor);
         }
     }
 
     /// <summary>
     /// Draw a filled circle using horizontal scan lines.
     /// </summary>
-    public void DrawFilledCircle(SpriteBatch spriteBatch, Vector2 center, float radius, Color color)
+    public void DrawFilledCircle(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, bool drawWhite = false)
     {
         if (radius <= 0) return;
+        Color actualColor = drawWhite ? Color.White : color;
 
         int r = (int)MathF.Ceiling(radius);
         for (int dy = -r; dy <= r; dy++)
@@ -59,7 +61,7 @@ public class CircleRenderer
             int width = (int)(right - left);
             if (width > 0)
             {
-                spriteBatch.Draw(_whitePixel, new Rectangle(x, (int)center.Y + dy, width, 1), color);
+                spriteBatch.Draw(_whitePixel, new Rectangle(x, (int)center.Y + dy, width, 1), actualColor);
             }
         }
     }

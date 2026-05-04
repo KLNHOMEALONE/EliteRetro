@@ -130,7 +130,7 @@ public class StardustRenderer
     /// <summary>
     /// Draw the starfield projected onto screen space.
     /// </summary>
-    public void Draw(SpriteBatch spriteBatch, Vector2 center, float scale, Matrix view)
+    public void Draw(SpriteBatch spriteBatch, Vector2 center, float scale, Matrix view, bool drawWhite = false)
     {
         for (int i = 0; i < StarCount; i++)
         {
@@ -170,10 +170,12 @@ public class StardustRenderer
             float brightness = s.Brightness / 255f * Math.Clamp(1.0f - z / 16384f, 0.4f, 1.0f);
             brightness = Math.Clamp(brightness * 1.5f * (1f + speedFactor * 0.5f), 0.1f, 1.0f);
 
-            Color starColor = new Color(
-                (int)(255 * brightness),
-                (int)(255 * brightness),
-                (int)(255 * brightness));
+            Color starColor = drawWhite
+                ? new Color((int)(255 * brightness), (int)(255 * brightness), (int)(255 * brightness))
+                : new Color(
+                    (int)(255 * brightness),
+                    (int)(255 * brightness),
+                    (int)(255 * brightness));
 
             if (dashLength > 1)
             {

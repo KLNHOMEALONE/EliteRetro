@@ -37,9 +37,11 @@ public class RingRenderer
         float outerRadius,
         Color color,
         int tiltAngle = 16,
-        string layer = "all")
+        string layer = "all",
+        bool drawWhite = false)
     {
         if (planetRadius <= 0 || outerRadius <= innerRadius) return;
+        Color actualColor = drawWhite ? Color.White : color;
 
         float inner = planetRadius * innerRadius;
         float outer = planetRadius * outerRadius;
@@ -51,7 +53,7 @@ public class RingRenderer
         for (int r = 0; r < ringCount; r++)
         {
             float t = inner + (outer - inner) * r / Math.Max(ringCount - 1, 1);
-            DrawEllipticalRing(spriteBatch, center, t, color, sin, cos, planetRadius, layer);
+            DrawEllipticalRing(spriteBatch, center, t, actualColor, sin, cos, planetRadius, layer);
         }
 
         // Draw scattered points for texture
@@ -89,10 +91,10 @@ public class RingRenderer
             float brightness = isBack ? 0.3f : 0.6f;
             brightness += 0.2f * (float)rng.NextDouble();
             Color pointColor = new Color(
-                (int)(color.R * brightness),
-                (int)(color.G * brightness),
-                (int)(color.B * brightness),
-                (int)(color.A * (isBack ? 0.4f : 0.6f)));
+                (int)(actualColor.R * brightness),
+                (int)(actualColor.G * brightness),
+                (int)(actualColor.B * brightness),
+                (int)(actualColor.A * (isBack ? 0.4f : 0.6f)));
 
             spriteBatch.Draw(_whitePixel,
                 new Rectangle((int)pos.X, (int)pos.Y, size, size),
@@ -113,8 +115,10 @@ public class RingRenderer
         float sin,
         float cos,
         float planetRadius,
-        string layer)
+        string layer,
+        bool drawWhite = false)
     {
+        Color actualColor = drawWhite ? Color.White : color;
         const int segments = 64;
         float prevScreenX = 0, prevScreenY = 0;
         bool prevValid = false;
@@ -158,10 +162,10 @@ public class RingRenderer
                 float brightness = isBack ? 0.3f : 0.7f;
                 brightness += 0.2f * (float)Math.Sin(angle * 3 + radius * 0.1f);
                 Color segColor = new Color(
-                    (int)(color.R * brightness),
-                    (int)(color.G * brightness),
-                    (int)(color.B * brightness),
-                    (int)(color.A * (isBack ? 0.5f : 0.8f)));
+                    (int)(actualColor.R * brightness),
+                    (int)(actualColor.G * brightness),
+                    (int)(actualColor.B * brightness),
+                    (int)(actualColor.A * (isBack ? 0.5f : 0.8f)));
 
                 DrawLine(spriteBatch, prevPos, pos, segColor, 2);
             }
@@ -202,9 +206,11 @@ public class RingRenderer
         float outerRadius,
         Color color,
         int tiltAngle = 16,
-        string layer = "all")
+        string layer = "all",
+        bool drawWhite = false)
     {
         if (planetRadius <= 0 || outerRadius <= innerRadius) return;
+        Color actualColor = drawWhite ? Color.White : color;
 
         float inner = planetRadius * innerRadius;
         float outer = planetRadius * outerRadius;
@@ -216,7 +222,7 @@ public class RingRenderer
         for (int r = 0; r < ringCount; r++)
         {
             float t = inner + (outer - inner) * r / Math.Max(ringCount - 1, 1);
-            DrawEllipticalRing(spriteBatch, center, t, color, sin, cos, planetRadius, layer);
+            DrawEllipticalRing(spriteBatch, center, t, actualColor, sin, cos, planetRadius, layer);
         }
 
         // Draw scattered points for texture
@@ -255,10 +261,10 @@ public class RingRenderer
             float brightness = isBack ? 0.3f : 0.6f;
             brightness += 0.2f * (float)rng.NextDouble();
             Color pointColor = new Color(
-                (int)(color.R * brightness),
-                (int)(color.G * brightness),
-                (int)(color.B * brightness),
-                (int)(color.A * (isBack ? 0.4f : 0.6f)));
+                (int)(actualColor.R * brightness),
+                (int)(actualColor.G * brightness),
+                (int)(actualColor.B * brightness),
+                (int)(actualColor.A * (isBack ? 0.4f : 0.6f)));
 
             spriteBatch.Draw(_whitePixel,
                 new Rectangle((int)pos.X, (int)pos.Y, size, size),
@@ -277,8 +283,10 @@ public class RingRenderer
         float radius,
         Color color,
         float planetRadius,
-        string layer)
+        string layer,
+        bool drawWhite = false)
     {
+        Color actualColor = drawWhite ? Color.White : color;
         const int segments = 64;
         float prevScreenX = 0, prevScreenY = 0;
         bool prevValid = false;
@@ -318,10 +326,10 @@ public class RingRenderer
                 float brightness = isBack ? 0.3f : 0.7f;
                 brightness += 0.2f * (float)Math.Sin(angle * 3 + radius * 0.1f);
                 Color segColor = new Color(
-                    (int)(color.R * brightness),
-                    (int)(color.G * brightness),
-                    (int)(color.B * brightness),
-                    (int)(color.A * (isBack ? 0.5f : 0.8f)));
+                    (int)(actualColor.R * brightness),
+                    (int)(actualColor.G * brightness),
+                    (int)(actualColor.B * brightness),
+                    (int)(actualColor.A * (isBack ? 0.5f : 0.8f)));
 
                 DrawLine(spriteBatch, prevPos, pos, segColor, 2);
             }

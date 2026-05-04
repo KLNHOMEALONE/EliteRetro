@@ -87,7 +87,7 @@ public class ExplosionRenderer
     /// <summary>
     /// Update and render an explosion cloud. Returns false when complete.
     /// </summary>
-    public bool UpdateAndDraw(SpriteBatch spriteBatch, ExplosionCloud cloud, GameTime gameTime)
+    public bool UpdateAndDraw(SpriteBatch spriteBatch, ExplosionCloud cloud, GameTime gameTime, bool drawWhite = false)
     {
         cloud.AgeSeconds += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -104,14 +104,14 @@ public class ExplosionRenderer
         if (cloud.Counter <= 0)
             return false;
 
-        DrawCloud(spriteBatch, cloud);
+        DrawCloud(spriteBatch, cloud, drawWhite);
         return true;
     }
 
     /// <summary>
     /// Draw the explosion cloud at current state.
     /// </summary>
-    private void DrawCloud(SpriteBatch spriteBatch, ExplosionCloud cloud)
+    private void DrawCloud(SpriteBatch spriteBatch, ExplosionCloud cloud, bool drawWhite)
     {
         if (cloud.OriginVertices.Length == 0) return;
 
@@ -147,10 +147,12 @@ public class ExplosionRenderer
 
                 // Color transitions from white-hot center to orange to dark red
                 float heat = cloud.Counter / 128f;
-                Color particleColor = heat > 0.7f ? Color.White :
-                                      heat > 0.4f ? Color.Orange :
-                                      heat > 0.2f ? Color.OrangeRed :
-                                      Color.DarkRed;
+                Color particleColor = drawWhite
+                    ? new Color((int)(255 * heat * 2f), (int)(255 * heat * 2f), (int)(255 * heat * 2f))
+                    : (heat > 0.7f ? Color.White :
+                       heat > 0.4f ? Color.Orange :
+                       heat > 0.2f ? Color.OrangeRed :
+                       Color.DarkRed);
                 particleColor = new Color(
                     particleColor.R, particleColor.G, particleColor.B,
                     (byte)(particleColor.A * Math.Min(1f, heat * 2f)));

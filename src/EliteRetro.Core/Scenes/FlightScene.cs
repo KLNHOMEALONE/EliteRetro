@@ -385,11 +385,11 @@ public class FlightScene : GameScene
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
 
         // Draw stardust (starfield)
-        _stardustRenderer.Draw(spriteBatch, ScreenCenter, 500f, _view);
+        _stardustRenderer.Draw(spriteBatch, ScreenCenter, 500f, _view, _gameInstance?.DrawWhite ?? false);
 
         // Draw explosions
         foreach (var cloud in _explosions)
-            _explosionRenderer.UpdateAndDraw(spriteBatch, cloud, _lastGameTime);
+            _explosionRenderer.UpdateAndDraw(spriteBatch, cloud, _lastGameTime, _gameInstance?.DrawWhite ?? false);
 
         // Render bubble entities (skip planet and sun - rendered separately)
         foreach (var entity in _bubbleManager.GetAllActive())
@@ -416,7 +416,7 @@ public class FlightScene : GameScene
                     Matrix.CreateScale(RenderScale) *
                     entityOrientation *
                     Matrix.CreateTranslation(entityPosMG);
-                _wireframeRenderer.Draw(entity.Blueprint.Model, entityWorld, _view, _projection, spriteBatch, drawHiddenEdges: _showHiddenEdges);
+                _wireframeRenderer.Draw(entity.Blueprint.Model, entityWorld, _view, _projection, spriteBatch, drawHiddenEdges: _showHiddenEdges, drawWhite: _gameInstance?.DrawWhite ?? false);
             }
         }
 
@@ -905,7 +905,7 @@ public class FlightScene : GameScene
         // FOV is 75 deg. tan(75/2) ≈ 0.767
         float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (HudViewportHeight / 2f);
         if (screenRadius > 0 && screenRadius < 2000)
-            _ringRenderer.DrawAxisAlignedRings(spriteBatch, screenPos, screenRadius, 1.4f, 2.2f, color, tiltAngle, layer);
+            _ringRenderer.DrawAxisAlignedRings(spriteBatch, screenPos, screenRadius, 1.4f, 2.2f, color, tiltAngle, layer, _gameInstance?.DrawWhite ?? false);
     }
 
     private void DrawCelestialSun(SpriteBatch spriteBatch, Vector3 worldPosElite, float radiusElite, Color color)
@@ -918,7 +918,7 @@ public class FlightScene : GameScene
 
         float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (HudViewportHeight / 2f);
         if (screenRadius > 0 && screenRadius < 4000)
-            _sunRenderer.DrawSun(spriteBatch, screenPos, screenRadius, color);
+            _sunRenderer.DrawSun(spriteBatch, screenPos, screenRadius, color, _gameInstance?.DrawWhite ?? false);
     }
 
     private void DrawCelestialPlanet(SpriteBatch spriteBatch, Vector3 worldPosElite, float radiusElite, Color color, int rotationAngle = 0)
@@ -935,7 +935,7 @@ public class FlightScene : GameScene
         Vector2 u = ProjectToScreenElite(pSide) - screenPos;
         Vector2 v = ProjectToScreenElite(pRoof) - screenPos;
 
-        _planetRenderer.DrawPlanet(spriteBatch, screenPos, u, v, color, rotationAngle);
+        _planetRenderer.DrawPlanet(spriteBatch, screenPos, u, v, color, rotationAngle, _gameInstance?.DrawWhite ?? false);
     }
 
     /// <summary>
@@ -1077,6 +1077,7 @@ public class FlightScene : GameScene
             {
                 // Track kill and check for milestones
                 bool milestone = _bubbleManager.Commander.AddKill();
+                System.Diagnostics.Debug.WriteLine($"[KILL] TALLY={_bubbleManager.Commander.Tally}, milestone={milestone}");
                 if (milestone)
                 {
                     _lastEventMessage = "RIGHT ON COMMANDER!";

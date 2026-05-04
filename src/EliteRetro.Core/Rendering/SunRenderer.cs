@@ -40,12 +40,13 @@ public class SunRenderer
     /// <param name="center">Screen-space center position.</param>
     /// <param name="radius">Sun radius in pixels.</param>
     /// <param name="color">Sun color (use GetSunColor for type-based color).</param>
-    public void DrawSun(SpriteBatch spriteBatch, Vector2 center, float radius, Color color)
+    public void DrawSun(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, bool drawWhite = false)
     {
         if (radius <= 0) return;
+        Color actualColor = drawWhite ? Color.White : color;
 
-        DrawScanLines(spriteBatch, center, radius, color);
-        DrawFringe(spriteBatch, center, radius, color);
+        DrawScanLines(spriteBatch, center, radius, actualColor);
+        DrawFringe(spriteBatch, center, radius, actualColor);
     }
 
     private void DrawScanLines(SpriteBatch spriteBatch, Vector2 center, float radius, Color color)

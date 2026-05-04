@@ -97,7 +97,7 @@ public class WireframeRenderer
     /// Draw a ship wireframe. Visible edges are solid, hidden edges are dashed.
     /// Optionally highlight a specific edge in red.
     /// </summary>
-    public void Draw(ShipModel model, Matrix world, Matrix view, Matrix projection, SpriteBatch spriteBatch, bool useBackFaceCulling = true, int highlightedEdgeIndex = -1, bool drawHiddenEdges = true)
+    public void Draw(ShipModel model, Matrix world, Matrix view, Matrix projection, SpriteBatch spriteBatch, bool useBackFaceCulling = true, int highlightedEdgeIndex = -1, bool drawHiddenEdges = true, bool drawWhite = false)
     {
         // Project all vertices
         var projected = new Vector2[model.Vertices.Count];
@@ -315,6 +315,7 @@ public class WireframeRenderer
             if (float.IsNaN(start.X) || float.IsNaN(end.X)) continue;
 
             Color drawColor = (i == highlightedEdgeIndex) ? Color.Red : (edge.Color ?? _primaryColor);
+            if (drawWhite) drawColor = Color.White;
 
             if (edgeVisible[i])
             {

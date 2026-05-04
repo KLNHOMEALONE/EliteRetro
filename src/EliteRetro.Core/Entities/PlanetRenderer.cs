@@ -27,36 +27,38 @@ public class PlanetRenderer
     /// <param name="radius">Planet radius in pixels.</param>
     /// <param name="color">Base planet color.</param>
     /// <param name="rotationAngle">Planet rotation angle in 1/64-turn units (0-63).</param>
-    public void DrawPlanet(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int rotationAngle = 0)
+    public void DrawPlanet(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int rotationAngle = 0, bool drawWhite = false)
     {
         if (radius <= 0) return;
+        Color actualColor = drawWhite ? Color.White : color;
 
         // Draw planet outline
-        _circleRenderer.DrawCircle(spriteBatch, center, radius, color, 32);
+        _circleRenderer.DrawCircle(spriteBatch, center, radius, actualColor, 32, drawWhite);
 
         // Draw surface features
-        DrawEquator(spriteBatch, center, radius, color, rotationAngle);
-        DrawMeridians(spriteBatch, center, radius, color, rotationAngle);
-        DrawCraters(spriteBatch, center, radius, color, rotationAngle);
+        DrawEquator(spriteBatch, center, radius, actualColor, rotationAngle, drawWhite);
+        DrawMeridians(spriteBatch, center, radius, actualColor, rotationAngle, drawWhite);
+        DrawCraters(spriteBatch, center, radius, actualColor, rotationAngle, drawWhite);
     }
 
     /// <summary>
     /// Draw a planet using projected conjugate-diameter vectors (screen-space semi-axes).
     /// This allows the planet to visually rotate with view direction instead of being a camera-facing billboard.
     /// </summary>
-    public void DrawPlanet(SpriteBatch spriteBatch, Vector2 center, Vector2 u, Vector2 v, Color color, int rotationAngle = 0)
+    public void DrawPlanet(SpriteBatch spriteBatch, Vector2 center, Vector2 u, Vector2 v, Color color, int rotationAngle = 0, bool drawWhite = false)
     {
         if (u.LengthSquared() < 1f || v.LengthSquared() < 1f) return;
+        Color actualColor = drawWhite ? Color.White : color;
 
         // Outline as an ellipse defined by projected world axes.
-        _ellipseRenderer.DrawEllipse(spriteBatch, center, u, v, color, 32);
+        _ellipseRenderer.DrawEllipse(spriteBatch, center, u, v, actualColor, 32);
 
-        DrawEquator(spriteBatch, center, u, v, color, rotationAngle);
-        DrawMeridians(spriteBatch, center, u, v, color, rotationAngle);
-        DrawCraters(spriteBatch, center, u, v, color, rotationAngle);
+        DrawEquator(spriteBatch, center, u, v, actualColor, rotationAngle, drawWhite);
+        DrawMeridians(spriteBatch, center, u, v, actualColor, rotationAngle, drawWhite);
+        DrawCraters(spriteBatch, center, u, v, actualColor, rotationAngle, drawWhite);
     }
 
-    private void DrawEquator(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int rotationAngle)
+    private void DrawEquator(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int rotationAngle, bool drawWhite)
     {
         // Equator is an ellipse: full width, compressed height based on tilt
         // For simplicity, draw as horizontal line when viewed pole-on, ellipse when tilted
@@ -69,24 +71,26 @@ public class PlanetRenderer
         u = new Vector2(cos * radius, sin * radius * tiltFactor);
         v = new Vector2(-sin * radius, cos * radius * tiltFactor);
 
-        _ellipseRenderer.DrawEllipse(spriteBatch, center, u * 0.95f, v * 0.95f, Darken(color, 0.7f), 24);
+        Color eqColor = drawWhite ? Color.White : Darken(color, 0.7f);
+        _ellipseRenderer.DrawEllipse(spriteBatch, center, u * 0.95f, v * 0.95f, eqColor, 24);
     }
 
-    private void DrawEquator(SpriteBatch spriteBatch, Vector2 center, Vector2 u, Vector2 v, Color color, int rotationAngle)
+    private void DrawEquator(SpriteBatch spriteBatch, Vector2 center, Vector2 u, Vector2 v, Color color, int rotationAngle, bool drawWhite)
     {
         var (sin, cos) = SineTable.SinCos(rotationAngle);
         Vector2 uRot = cos * u + sin * v;
         Vector2 vRot = -sin * u + cos * v;
-        _ellipseRenderer.DrawEllipse(spriteBatch, center, uRot * 0.95f, vRot * 0.35f, Darken(color, 0.7f), 24);
+        Color eqColor = drawWhite ? Color.White : Darken(color, 0.7f);
+        _ellipseRenderer.DrawEllipse(spriteBatch, center, uRot * 0.95f, vRot * 0.35f, eqColor, 24);
     }
 
-    private void DrawMeridians(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int rotationAngle)
+    private void DrawMeridians(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int rotationAngle, bool drawWhite)
     {
         // Draw 3 meridians (full ellipses from pole to pole)
         // Front-facing arcs drawn solid, back-facing arcs drawn dashed/invisible
         float tiltFactor = 0.3f;
-        Color frontColor = Darken(color, 0.6f);
-        Color backColor = Darken(color, 0.25f); // faint for back side
+        Color frontColor = drawWhite ? Color.White : Darken(color, 0.6f);
+        Color backColor = drawWhite ? Color.White : Darken(color, 0.25f); // faint for back side
 
         for (int i = 0; i < 3; i++)
         {
@@ -116,10 +120,10 @@ public class PlanetRenderer
         }
     }
 
-    private void DrawMeridians(SpriteBatch spriteBatch, Vector2 center, Vector2 u, Vector2 v, Color color, int rotationAngle)
+    private void DrawMeridians(SpriteBatch spriteBatch, Vector2 center, Vector2 u, Vector2 v, Color color, int rotationAngle, bool drawWhite)
     {
-        Color frontColor = Darken(color, 0.6f);
-        Color backColor = Darken(color, 0.25f);
+        Color frontColor = drawWhite ? Color.White : Darken(color, 0.6f);
+        Color backColor = drawWhite ? Color.White : Darken(color, 0.25f);
 
         for (int i = 0; i < 3; i++)
         {
@@ -144,11 +148,11 @@ public class PlanetRenderer
         }
     }
 
-    private void DrawCraters(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int rotationAngle)
+    private void DrawCraters(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int rotationAngle, bool drawWhite)
     {
         // Draw a few craters as small ellipses
         // Only draw craters on the visible hemisphere
-        Color craterColor = Darken(color, 0.5f);
+        Color craterColor = drawWhite ? Color.White : Darken(color, 0.5f);
 
         // Crater positions in planet-local space (normalized)
         var craterPositions = new[]
@@ -183,9 +187,9 @@ public class PlanetRenderer
         }
     }
 
-    private void DrawCraters(SpriteBatch spriteBatch, Vector2 center, Vector2 u, Vector2 v, Color color, int rotationAngle)
+    private void DrawCraters(SpriteBatch spriteBatch, Vector2 center, Vector2 u, Vector2 v, Color color, int rotationAngle, bool drawWhite)
     {
-        Color craterColor = Darken(color, 0.5f);
+        Color craterColor = drawWhite ? Color.White : Darken(color, 0.5f);
 
         var craterPositions = new[]
         {

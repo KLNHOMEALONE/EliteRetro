@@ -39,6 +39,11 @@ public class GameInstance : Game
     /// </summary>
     public AudioManager Audio => _audioManager;
 
+    /// <summary>
+    /// When true, all rendered objects use white color.
+    /// </summary>
+    public bool DrawWhite { get; set; }
+
     public GameInstance()
     {
         _graphics = new GraphicsDeviceManager(this);
@@ -178,6 +183,11 @@ public class GameInstance : Game
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _font = new BitmapFont(GraphicsDevice);
+
+        // Load persistent options
+        if (Systems.OptionsManager.TryLoad(out bool drawWhite))
+            DrawWhite = drawWhite;
+
         _sceneManager.ChangeScene(new MainMenuScene(this), Content, GraphicsDevice, this, _font);
     }
 
