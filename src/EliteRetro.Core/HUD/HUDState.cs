@@ -38,6 +38,10 @@ public struct HUDState
     public string StatusMessage;  // "STATION IN VIEW", "DANGER", etc.
     public Color StatusColor;     // color for status message
 
+    // Legal status and combat rank
+    public byte LegalStatus;      // 0=clean, 1-49=offender, 50+=fugitive
+    public string CombatRank;     // "Harmless", "Elite", etc.
+
     // Hidden edges toggle
     public bool ShowHiddenEdges;
 }

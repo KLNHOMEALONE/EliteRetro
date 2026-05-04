@@ -11,6 +11,15 @@ All notable changes to this project.
   - `SpeedAccel` (30 u/s²) and `SpeedDecel` (45 u/s²) constants for inertia feel
   - Matches original Elite timing: 0→40 in ~1.3 seconds
   - Uses `MoveTowards` pattern consistent with roll/pitch handling
+- **Bounty and legal status system** — authentic BBC Elite FIST mechanics
+  - Legal status: 0=Clean, 1-49=Offender, 50+=Fugitive
+  - Killing a cop sets legal status to 64+ (instant Fugitive)
+  - Every kill increments TALLY (kill count)
+  - Combat rank derived from TALLY: Harmless (0) → Elite (6400+)
+  - HUD displays legal status (bottom-right) and combat rank
+  - "RIGHT ON COMMANDER!" message on rank promotion or every 256 kills
+  - Escape pod: legal status resets to Clean, all cargo lost, TALLY preserved
+  - Laser kills now properly track kills and legal status (was collision-only)
 
 ### Fixed
 - **Target practice sun loss** — target practice mode now preserves sun/station when clearing the bubble

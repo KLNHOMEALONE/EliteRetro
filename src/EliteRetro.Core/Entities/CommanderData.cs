@@ -68,11 +68,24 @@ public class CommanderData
     }
 
     /// <summary>
-    /// Add a kill to TALLY.
+    /// Add a kill to TALLY. Returns true if a notable milestone was reached.
     /// </summary>
-    public void AddKill()
+    public bool AddKill()
     {
+        int oldTally = Tally;
         Tally++;
+
+        // "RIGHT ON COMMANDER!" at every 256 kills (original Elite behavior)
+        if (Tally > 0 && Tally % 256 == 0)
+            return true;
+
+        // Also check for rank promotion
+        CombatRank oldRank = GetRankFromTally(oldTally);
+        CombatRank newRank = GetRankFromTally(Tally);
+        if (newRank > oldRank)
+            return true;
+
+        return false;
     }
 
     /// <summary>
@@ -90,5 +103,16 @@ public class CommanderData
         else
             CargoHold[commodityIndex] = toAdd;
         return toAdd;
+    }
+
+    /// <summary>
+    /// Reset after player death and escape pod launch.
+    /// Legal status cleared, all cargo lost, TALLY preserved.
+    /// </summary>
+    public void ResetAfterEscape()
+    {
+        LegalStatus = 0;
+        CurrentBounty = 0;
+        CargoHold.Clear();
     }
 }

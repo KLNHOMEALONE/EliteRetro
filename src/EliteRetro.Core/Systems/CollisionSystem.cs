@@ -109,12 +109,12 @@ public static class CollisionSystem
         // Handle player collision specially
         if (a.SlotIndex == GameConstants.PlayerSlot)
         {
-            ApplyPlayerDamage(a, damageA, b);
+            ApplyPlayerDamage(a, damageA, b, bubbleManager);
             bubbleManager.RaiseCollision(b.Blueprint?.Name ?? "Unknown");
         }
         else if (b.SlotIndex == GameConstants.PlayerSlot)
         {
-            ApplyPlayerDamage(b, damageB, a);
+            ApplyPlayerDamage(b, damageB, a, bubbleManager);
             bubbleManager.RaiseCollision(a.Blueprint?.Name ?? "Unknown");
         }
 
@@ -211,7 +211,7 @@ public static class CollisionSystem
     /// <summary>
     /// Apply damage to player ship (shields first, then hull).
     /// </summary>
-    private static void ApplyPlayerDamage(ShipInstance playerShip, int damage, ShipInstance other)
+    private static void ApplyPlayerDamage(ShipInstance playerShip, int damage, ShipInstance other, LocalBubbleManager bubbleManager)
     {
         // Determine if hit is from front or rear
         Vector3 toOther = Vector3.Normalize(other.Position - playerShip.Position);
@@ -231,7 +231,8 @@ public static class CollisionSystem
                 bool destroyed = playerShip.TakeDamage(hullDmg);
                 if (destroyed)
                 {
-                    // TODO: player death / escape pod
+                    // Player destroyed — launch escape pod
+                    bubbleManager.Commander.ResetAfterEscape();
                     playerShip.IsActive = false;
                 }
             }
@@ -242,6 +243,8 @@ public static class CollisionSystem
             bool destroyed = playerShip.TakeDamage(damage);
             if (destroyed)
             {
+                // Player destroyed — launch escape pod
+                bubbleManager.Commander.ResetAfterEscape();
                 playerShip.IsActive = false;
             }
         }

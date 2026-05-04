@@ -723,6 +723,8 @@ public class FlightScene : GameScene
             },
             StatusMessage = statusMsg,
             StatusColor = statusColor,
+            LegalStatus = _bubbleManager.Commander.LegalStatus,
+            CombatRank = _bubbleManager.Commander.RankName,
             ShowHiddenEdges = _showHiddenEdges
         };
 
@@ -1064,12 +1066,29 @@ public class FlightScene : GameScene
 
             if (destroyed)
             {
+                // Track kill and check for milestones
+                bool milestone = _bubbleManager.Commander.AddKill();
+                if (milestone)
+                {
+                    _lastEventMessage = "RIGHT ON COMMANDER!";
+                    _eventMessageTimer = 180;
+                }
+                else if ((bestTarget.Blueprint.Personality & NewbFlags.Cop) != 0)
+                {
+                    _bubbleManager.Commander.LegalStatus = Math.Max(_bubbleManager.Commander.LegalStatus, (byte)64);
+                    _lastEventMessage = "FUGITIVE! Killed a cop!";
+                    _eventMessageTimer = 180;
+                }
+
                 // Spawn cargo drops before deactivating
                 CollisionSystem.SpawnCargoDrops(bestTarget, _bubbleManager);
 
                 bestTarget.IsActive = false;
-                _lastEventMessage = $"{bestTarget.Blueprint.Name} destroyed!";
-                _eventMessageTimer = 120;
+                if (string.IsNullOrEmpty(_lastEventMessage) || _eventMessageTimer <= 0)
+                {
+                    _lastEventMessage = $"{bestTarget.Blueprint.Name} destroyed!";
+                    _eventMessageTimer = 120;
+                }
             }
         }
         else

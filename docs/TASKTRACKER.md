@@ -161,6 +161,10 @@
 - Laser audio: only plays on confirmed hit, not on miss
 - Projection: near-zero W guard prevents extreme screen values
 - Screen constants: extracted magic numbers (1024, 768, 480, 512, 240) into named constants
+- Bounty system: laser kills now increment TALLY and check for cop kills (was collision-only)
+- Legal status: HUD displays Clean/Offender/Fugitive and combat rank
+- Milestone messages: "RIGHT ON COMMANDER!" on rank promotion or every 256 kills
+- Escape pod: legal status resets to Clean, cargo lost, TALLY preserved
 
 **Remaining:**
 - Top pilots leaderboard (optional — not in original Elite)
