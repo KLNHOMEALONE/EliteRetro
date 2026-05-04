@@ -24,7 +24,10 @@ public record struct StarSystem(
     int TechLevel,
     int Population,
     int Radius,
-    uint Seed)
+    uint Seed,
+    long GrossProductivity,
+    string Inhabitants,
+    string FlavourText)
 {
     public string Description => $"{Government} {Economy} tech level {TechLevel}";
 }

@@ -42,7 +42,7 @@ public class MenuScene : GameScene
                     break;
                 case 1:
                     if (_game is GameInstance gi2)
-                        gi2.PushScene(new GalaxyMapScene());
+                        gi2.PushScene(new GalaxyMapScene(gi2));
                     break;
             }
         }

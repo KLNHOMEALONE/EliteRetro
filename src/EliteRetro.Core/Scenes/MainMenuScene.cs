@@ -204,7 +204,7 @@ public class MainMenuScene : GameScene
                 break;
             case 4: // Galaxy Map
                 if (_game is GameInstance gi4)
-                    gi4.ChangeScene(new GalaxyMapScene());
+                    gi4.PushScene(new GalaxyMapScene(gi4));
                 break;
             case 6: // Options
                 if (_game is GameInstance giOptions)

@@ -154,10 +154,40 @@ public class GalaxyGenerator
         // Position in galaxy (spiral distribution based on galactic coords)
         var position = new Vector2(galacticX, galacticY);
 
+        uint flavourSeed = (uint)(seed.W0 ^ (seed.W1 << 8) ^ (seed.W2 << 4));
+        string flavour = BuildFlavourText(name, species!, economyType, flavourSeed);
+
         return new StarSystem(
             name, galaxyIndex, systemIndex, position,
             govType, economyType, techLevel, population, radius,
-            (uint)(seed.W0 ^ (seed.W1 << 8) ^ (seed.W2 << 4)));
+            flavourSeed,
+            productivity,
+            species!,
+            flavour);
+    }
+
+    /// <summary>Planet description line for galactic chart data panel (BBC Elite style).</summary>
+    private static string BuildFlavourText(string name, string inhabitants, EconomyType economy, uint seed)
+    {
+        if (string.IsNullOrEmpty(name))
+            name = "This System";
+
+        string[] features =
+        {
+            "weird volcanoes", "icy caves", "historic caves", "mud ballet",
+            "zero-G poets", "vacuum orchids", "glass forests", "dust hurricanes"
+        };
+        string[] fauna =
+        {
+            "mountain lobstoid", "tree wolf", "walking shrimp", "mud ape",
+            "radio cockroach", "stellar mongoose", "fang truffle"
+        };
+
+        int fi = (int)(seed % features.Length);
+        int fa = (int)((seed >> 8) % fauna.Length);
+        string demonym = name.Length >= 3 ? $"{name}ian" : $"{name} locals";
+
+        return $"The world {name} is fabled for its {features[fi]} and the {demonym} {fauna[fa]}.";
     }
 
     /// <summary>
