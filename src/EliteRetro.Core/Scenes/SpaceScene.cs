@@ -13,10 +13,7 @@ public class SpaceScene : GameScene
 {
     private const float RenderScale = 0.001f; // Elite internal units -> MonoGame world units
     private WireframeRenderer _wireframeRenderer = null!;
-    private CircleRenderer _circleRenderer = null!;
-    private PlanetRenderer _planetRenderer = null!;
-    private SunRenderer _sunRenderer = null!;
-    private RingRenderer _ringRenderer = null!;
+    private PlanetRenderer _planetRenderer = null!; // NE-20: retained as actually used
     private int _planetRotation;
     private int _planetRotationCounter;
     private Matrix _view;
@@ -24,14 +21,12 @@ public class SpaceScene : GameScene
     private BitmapFont _font = null!;
     private GraphicsDevice? _graphicsDevice;
     private GameInstance _gameInstance = null!;
+    private bool _isPaused;
     private LocalBubbleManager _bubbleManager = null!;
     private FlightControlService _flightControlService = null!;
-    private OrientationMatrix _universeOrientation = OrientationMatrix.Identity;
-    private bool _paused;
     private bool _prevSpaceState;
     private bool _prevT;
     private bool _initialized;
-    private Texture2D _pixelTexture = null!;
     private int _tidyCounter;
     private float _cumulativeRoll; // accumulated roll angle in radians, for planet/ring counter-rotation
     private int _debugHighlightedEdge = -1;
@@ -53,19 +48,12 @@ public class SpaceScene : GameScene
         _font = font;
         _graphicsDevice = graphicsDevice;
         _wireframeRenderer = new WireframeRenderer(_graphicsDevice);
-        _circleRenderer = new CircleRenderer(_graphicsDevice);
         _planetRenderer = new PlanetRenderer(_graphicsDevice);
-        _sunRenderer = new SunRenderer(_graphicsDevice);
-        _ringRenderer = new RingRenderer(_graphicsDevice);
         _projection = Matrix.CreatePerspectiveFieldOfView(
             MathHelper.ToRadians(75f),
             _graphicsDevice.Viewport.AspectRatio,
             0.1f, 1000f);
         _view = Matrix.CreateLookAt(new Vector3(0, 0, 5), Vector3.Zero, Vector3.Up);
-
-        // Create 1x1 white pixel texture for drawing celestial bodies
-        _pixelTexture = new Texture2D(_graphicsDevice, 1, 1);
-        _pixelTexture.SetData(new[] { Color.White });
     }
 
     private void EnsureInitialized()
@@ -94,7 +82,7 @@ public class SpaceScene : GameScene
             };
             _bubbleManager.SetSlot(GameConstants.PlanetSlot, planet);
 
-            // Slot 1: Sun - much larger, placed more centrally
+            // slot 1: Sun - much larger, placed more centrally
             var sunModel = SunModel.Create(GameConstants.PlanetRadius * 6);
             var sunBlueprint = new ShipBlueprint
             {
@@ -120,6 +108,7 @@ public class SpaceScene : GameScene
     {
         var control = _flightControlService.Update(gameTime);
         var kb = Keyboard.GetState();
+        _isPaused = control.IsPaused;
 
         if (!control.IsPaused)
         {
@@ -245,15 +234,11 @@ public class SpaceScene : GameScene
         _font.DrawString(spriteBatch, "SPACE VIEW", new Vector2(10, 10), Color.Lime, 1.5f);
         _font.DrawString(spriteBatch, $"Entities: {_bubbleManager.GetAllActive().Count()}", new Vector2(10, 30), Color.Cyan, 1f);
         _font.DrawString(spriteBatch, $"Cam: ({_view.Translation.X:F1}, {_view.Translation.Y:F1}, {_view.Translation.Z:F1})", new Vector2(10, 300), Color.Magenta, 1f);
-        _font.DrawString(spriteBatch, $"Nose: ({_universeOrientation.Nosev.X:F2}, {_universeOrientation.Nosev.Y:F2}, {_universeOrientation.Nosev.Z:F2})", new Vector2(10, 320), Color.Yellow, 1f);
         _font.DrawString(spriteBatch, "Arrows: Pitch/Roll  +/-: Zoom  P: Pause  T: Station  V: View", new Vector2(10, 50), Color.White, 1f);
-        if (_paused)
+        if (_isPaused)
         {
             _font.DrawString(spriteBatch, "PAUSED", new Vector2(10, 70), Color.Red, 1.5f);
             _font.DrawString(spriteBatch, $"Edge: {_debugHighlightedEdge}  Up/Down: cycle", new Vector2(10, 90), Color.Orange, 1f);
-            _font.DrawString(spriteBatch, $"sidev=({_universeOrientation.Sidev.X:F3},{_universeOrientation.Sidev.Y:F3},{_universeOrientation.Sidev.Z:F3})", new Vector2(10, 110), Color.Cyan, 0.8f);
-            _font.DrawString(spriteBatch, $"roofv=({_universeOrientation.Roofv.X:F3},{_universeOrientation.Roofv.Y:F3},{_universeOrientation.Roofv.Z:F3})", new Vector2(10, 125), Color.Cyan, 0.8f);
-            _font.DrawString(spriteBatch, $"nosev=({_universeOrientation.Nosev.X:F3},{_universeOrientation.Nosev.Y:F3},{_universeOrientation.Nosev.Z:F3})", new Vector2(10, 140), Color.Cyan, 0.8f);
         }
         spriteBatch.End();
     }
@@ -272,5 +257,9 @@ public class SpaceScene : GameScene
         });
     }
 
-    public override void UnloadContent() { }
+    public override void UnloadContent()
+    {
+        // NE-10: Dispose renderer textures to prevent GPU memory leaks
+        _wireframeRenderer?.Dispose();
+    }
 }

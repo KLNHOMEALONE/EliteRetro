@@ -127,6 +127,8 @@ public static class DockingSystem
         Vector3 localDir = station.Orientation.Transform(toShip);
 
         // z-component in fixed-point
+        // NOTE (NE-8): This check uses station-local coordinates which may not match
+        // original Elite docking geometry. Requires verification against Elite behavior.
         int fixedZ = (int)(localDir.Z * 255);
         return fixedZ >= SafeConeThreshold;
     }

@@ -243,7 +243,9 @@ public class AudioManager : IDisposable
             wav[44 + i * 2 + 1] = bytes[1];
         }
 
-        return SoundEffect.FromStream(new MemoryStream(wav));
+        // NE-17: Wrap MemoryStream in using to ensure proper disposal
+        using var stream = new MemoryStream(wav);
+        return SoundEffect.FromStream(stream);
     }
 
     public void Dispose()

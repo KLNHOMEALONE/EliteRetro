@@ -5,6 +5,11 @@ namespace EliteRetro.Core.Entities;
 /// Wraps position, velocity, orientation, and state for any entity
 /// (ship, planet, sun, missile, cargo canister).
 /// </summary>
+/// <remarks>
+/// NE-19: This class is unused - ShipInstance is used instead.
+/// Marked obsolete to prevent accidental use.
+/// </remarks>
+[Obsolete("Use ShipInstance instead. EntityInstance is unused.")]
 public class EntityInstance
 {
     /// <summary>Position in world coordinates.</summary>
