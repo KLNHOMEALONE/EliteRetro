@@ -35,6 +35,10 @@ public class HudRenderer
     private static readonly Color BarFill = Color.White;
     private static readonly Color BarBg = new Color(160, 20, 20); // deep red background
 
+    // Visual tuning: spacing between label box and bar, plus extra padding inside panels.
+    private const int LabelBarGap = 10;
+    private const int PanelInnerPad = 6;
+
     public HudRenderer(GraphicsDevice graphicsDevice)
     {
         _whitePixel = new Texture2D(graphicsDevice, 1, 1);
@@ -88,7 +92,7 @@ public class HudRenderer
         int barY = DashY + 2;
         int barH = BarSlotH - 4;
         int labelW = 36;
-        int barMaxW = LeftW - labelW - 10;
+        int barMaxW = LeftW - labelW - (LabelBarGap + PanelInnerPad);
 
         float fwdRatio = MathHelper.Clamp(state.ShieldForward / 255f, 0, 1);
         DrawBarH(spriteBatch, LeftX + 2, barY, labelW, barH, (int)(fwdRatio * barMaxW), barMaxW, "FS", font);
@@ -124,59 +128,138 @@ public class HudRenderer
         int barY = DashY + 2;
         int barH = BarSlotH - 4;
         int labelW = 36;
-        int barMaxW = RightW - labelW - 10;
+        int barMaxW = RightW - labelW - (LabelBarGap + PanelInnerPad);
 
         float speedRatio = MathHelper.Clamp(state.Speed / 40f, 0, 1);
-        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, (int)(speedRatio * barMaxW), barMaxW, "SP", font);
+        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, (int)(speedRatio * barMaxW), barMaxW, "SP", font, textRight: true, labelOnRight: true);
         barY += BarSlotH;
 
         float rollNorm = (state.Roll + 1) / 2;
-        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, (int)(MathHelper.Clamp(rollNorm, 0, 1) * barMaxW), barMaxW, "RL", font);
+        DrawBarV(spriteBatch, RightX + 2, barY, labelW, barH, rollNorm, "RL", font, textRight: true, labelOnRight: true);
         barY += BarSlotH;
 
         float pitchNorm = (state.Pitch + 1) / 2;
-        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, (int)(MathHelper.Clamp(pitchNorm, 0, 1) * barMaxW), barMaxW, "DC", font);
+        DrawBarV(spriteBatch, RightX + 2, barY, labelW, barH, pitchNorm, "DC", font, textRight: true, labelOnRight: true);
         barY += BarSlotH;
 
         float msRatio = state.MaxMissiles > 0 ? MathHelper.Clamp((float)state.Missiles / state.MaxMissiles, 0, 1) : 0;
-        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, (int)(msRatio * barMaxW), barMaxW, "1", font);
+        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, (int)(msRatio * barMaxW), barMaxW, "1", font, textRight: true, labelOnRight: true);
         barY += BarSlotH;
 
-        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, 0, barMaxW, "2", font);
+        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, barMaxW, barMaxW, "2", font, textRight: true, labelOnRight: true);
         barY += BarSlotH;
 
-        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, 0, barMaxW, "3", font);
+        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, barMaxW, barMaxW, "3", font, textRight: true, labelOnRight: true);
         barY += BarSlotH;
 
-        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, 0, barMaxW, "4", font);
+        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, barMaxW, barMaxW, "4", font, textRight: true, labelOnRight: true);
     }
 
     /// <summary>
     /// Horizontal bar: white text label on black (left), white fill on red background (right).
+    /// textRight: if true, label is right-aligned within labelW area.
     /// </summary>
-    private void DrawBarH(SpriteBatch spriteBatch, int x, int y, int labelW, int h, int filledW, int maxW, string label, BitmapFont font)
+    private void DrawBarH(
+        SpriteBatch spriteBatch,
+        int x,
+        int y,
+        int labelW,
+        int h,
+        int filledW,
+        int maxW,
+        string label,
+        BitmapFont font,
+        bool textRight = false,
+        bool labelOnRight = false)
     {
+        // Layout: either [label][gap][bar] (default) or [bar][gap][label] (labelOnRight)
+        int gap = LabelBarGap;
+        int labelX = labelOnRight ? x + maxW + gap : x;
+        int barX = labelOnRight ? x : x + labelW + gap;
+
         // Label background (black) + text (white)
-        spriteBatch.Draw(_whitePixel, new Rectangle(x, y, labelW, h), LabelBg);
+        spriteBatch.Draw(_whitePixel, new Rectangle(labelX, y, labelW, h), LabelBg);
         if (!string.IsNullOrEmpty(label))
         {
             var lsz = font.MeasureString(label);
-            font.DrawString(spriteBatch, label,
-                new Vector2(x + (labelW - lsz.X) / 2, y + (h - lsz.Y) / 2),
+            float textX = textRight ? labelX + labelW - lsz.X - 2 : labelX + 2;
+            DrawThickText(spriteBatch, font, label,
+                new Vector2(textX, y + (h - lsz.Y) / 2),
                 LabelText, 1.2f);
         }
 
-        // Bar area: red background, white fill
-        int barX = x + labelW + 4;
-        spriteBatch.Draw(_whitePixel, new Rectangle(barX, y + 2, maxW, h - 4), BarBg);
+        // Bar area: red background full height, white fill with visible padding
+        int barTopPad = 4;
+        int barBotPad = 4;
+        spriteBatch.Draw(_whitePixel, new Rectangle(barX, y, maxW, h), BarBg);
         if (filledW > 0)
-            spriteBatch.Draw(_whitePixel, new Rectangle(barX, y + 2, filledW, h - 4), BarFill);
+            spriteBatch.Draw(_whitePixel, new Rectangle(barX, y + barTopPad, filledW, h - barTopPad - barBotPad), BarFill);
 
         // Border
         spriteBatch.Draw(_whitePixel, new Rectangle(barX - 1, y + 1, 1, h - 2), PanelBorder);
         spriteBatch.Draw(_whitePixel, new Rectangle(barX + maxW, y + 1, 1, h - 2), PanelBorder);
         spriteBatch.Draw(_whitePixel, new Rectangle(barX - 1, y + 1, maxW + 2, 1), PanelBorder);
         spriteBatch.Draw(_whitePixel, new Rectangle(barX - 1, y + h - 2, maxW + 2, 1), PanelBorder);
+    }
+
+    /// <summary>
+    /// Vertical bar: indicator line in center, moves left/right from center based on value (0=left, 1=right).
+    /// Label at top, bar below.
+    /// </summary>
+    private void DrawBarV(
+        SpriteBatch spriteBatch,
+        int x,
+        int y,
+        int labelW,
+        int barH,
+        float normalizedValue,
+        string label,
+        BitmapFont font,
+        bool textRight = false,
+        bool labelOnRight = false)
+    {
+        int gap = LabelBarGap;
+        int barW = RightW - labelW - (LabelBarGap + PanelInnerPad);
+        int labelX = labelOnRight ? x + barW + gap : x;
+        int barX = labelOnRight ? x : x + labelW + gap;
+
+        spriteBatch.Draw(_whitePixel, new Rectangle(labelX, y, labelW, barH), LabelBg);
+        if (!string.IsNullOrEmpty(label))
+        {
+            var lsz = font.MeasureString(label);
+            float textX = textRight ? labelX + labelW - lsz.X - 2 : labelX + 2;
+            DrawThickText(spriteBatch, font, label,
+                new Vector2(textX, y + (barH - lsz.Y) / 2),
+                LabelText, 1.2f);
+        }
+
+        spriteBatch.Draw(_whitePixel, new Rectangle(barX, y, barW, barH), BarBg);
+
+        int centerX = barX + barW / 2;
+        int indicatorHalfW = 6;
+        int indicatorH = barH - 2;
+        int indicatorX = centerX - indicatorHalfW;
+        int indicatorY = y + 1;
+
+        int offset = (int)((normalizedValue - 0.5f) * (barW / 2 - indicatorHalfW - 2));
+        indicatorX += offset;
+
+        spriteBatch.Draw(_whitePixel, new Rectangle(indicatorX, indicatorY, indicatorHalfW * 2, indicatorH), BarFill);
+
+        spriteBatch.Draw(_whitePixel, new Rectangle(barX - 1, y, 1, barH), PanelBorder);
+        spriteBatch.Draw(_whitePixel, new Rectangle(barX + barW, y, 1, barH), PanelBorder);
+        spriteBatch.Draw(_whitePixel, new Rectangle(barX, y, barW, 1), PanelBorder);
+        spriteBatch.Draw(_whitePixel, new Rectangle(barX, y + barH - 1, barW, 1), PanelBorder);
+
+        spriteBatch.Draw(_whitePixel, new Rectangle(centerX - 1, y + 2, 1, barH - 4), AmberDim);
+    }
+
+    private static void DrawThickText(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 pos, Color color, float scale)
+    {
+        // Bitmap font has no bold; emulate thickness with 1px overdraw.
+        font.DrawString(spriteBatch, text, pos, color, scale);
+        font.DrawString(spriteBatch, text, pos + new Vector2(1, 0), color, scale);
+        font.DrawString(spriteBatch, text, pos + new Vector2(0, 1), color, scale);
     }
 
     private void DrawCompass(SpriteBatch spriteBatch, float heading, BitmapFont font)
