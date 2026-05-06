@@ -148,52 +148,6 @@ public static class CollisionSystem
     }
 
     /// <summary>
-    /// Apply collision damage to an NPC ship.
-    /// Small ships (vertex count < 15) lose all shields and are destroyed instantly.
-    /// Larger ships take proportional hull damage.
-    /// Cargo canisters (hull=1) are not destroyed by collision but still deal damage.
-    /// </summary>
-    private static bool ResolveShipCollisionDamage(ShipInstance ship, int damage)
-    {
-        int vertexCount = ship.Blueprint.Model.Vertices.Count;
-
-        // Cargo canisters: not destroyed by collision (hull=1, just debris)
-        // But they still deal collision damage to the player
-        if (ship.Blueprint.Name == "Cargo Canister")
-            return false; // Canister survives, no destruction
-
-        // Small ships: instant destruction on any collision
-        if (vertexCount < 15)
-        {
-            System.Diagnostics.Debug.WriteLine($"[COLLISION] Small ship {ship.Blueprint.Name} (vertices={vertexCount}) instant-destroyed");
-            ship.Energy = 0;
-            ship.Hull = 0;
-            return true;
-        }
-
-        // Larger ships: damage shields first, then hull
-        if (ship.Energy > 0)
-        {
-            int shieldDmg = Math.Min(damage, ship.Energy);
-            ship.Energy = (byte)(ship.Energy - shieldDmg);
-            int hullDmg = damage - shieldDmg;
-            if (hullDmg > 0)
-            {
-                bool destroyed = ship.TakeDamage(hullDmg);
-                if (destroyed)
-                    System.Diagnostics.Debug.WriteLine($"[COLLISION] Large ship {ship.Blueprint.Name} destroyed (hull depleted)");
-                return destroyed;
-            }
-            return false;
-        }
-
-        bool hullDestroyed = ship.TakeDamage(damage);
-        if (hullDestroyed)
-            System.Diagnostics.Debug.WriteLine($"[COLLISION] Ship {ship.Blueprint.Name} hull-destroyed (no shields)");
-        return hullDestroyed;
-    }
-
-    /// <summary>
     /// Called when a ship is destroyed — track kills and spawn cargo drops.
     /// </summary>
     private static void OnShipDestroyed(ShipInstance destroyed, ShipInstance? destroyer, LocalBubbleManager bubbleManager)
@@ -209,7 +163,7 @@ public static class CollisionSystem
     }
 
     /// <summary>
-    /// Apply damage to player ship (shields first, then hull).
+    /// Apply collision damage to player ship (shields first, then hull).
     /// </summary>
     private static void ApplyPlayerDamage(ShipInstance playerShip, int damage, ShipInstance other, LocalBubbleManager bubbleManager)
     {
@@ -293,8 +247,13 @@ public static class CollisionSystem
     {
         if (planet == null) return false;
 
-        float planetRadius = GameConstants.PlanetRadius * 0.0001f; // Scale to local coords
-        float shipRadius = GetCollisionRadius(ship) * 0.0001f;
+        // NE-5: Use consistent coordinate system (Elite internal units).
+        // PlanetRadius is already in Elite internal units (where 24576 = planet radius).
+        // Ship positions are also in these same units.
+        // Remove the ad-hoc 0.0001f scaling factor which made the crash radius too small
+        // (2.45 units vs spawn distance of 100-300 units).
+        float planetRadius = GameConstants.PlanetRadius;
+        float shipRadius = GetCollisionRadius(ship);
 
         float dist = Vector3.Distance(ship.Position, planet.Position);
         return dist < (planetRadius + shipRadius);
@@ -307,11 +266,56 @@ public static class CollisionSystem
     {
         if (sun == null) return false;
 
-        float sunRadius = GameConstants.PlanetRadius * 80 * 0.0001f * 0.9f; // 0.90x planet diameter
-        float shipRadius = GetCollisionRadius(ship) * 0.0001f;
+        // NE-5 fix: Use consistent coordinate system (Elite internal units).
+        // PlanetRadius is 24576, sun is ~80× larger, check 0.9× diameter.
+        float sunRadius = GameConstants.PlanetRadius * 80 * 0.9f;
+        float shipRadius = GetCollisionRadius(ship);
 
         float dist = Vector3.Distance(ship.Position, sun.Position);
         return dist < (sunRadius + shipRadius);
+    }
+
+    /// <summary>
+    /// Resolve collision damage for an NPC ship.
+    /// </summary>
+    private static bool ResolveShipCollisionDamage(ShipInstance ship, int damage)
+    {
+        int vertexCount = ship.Blueprint.Model.Vertices.Count;
+
+        // Cargo canisters: not destroyed by collision (hull=1, just debris)
+        // But they still deal collision damage to the player
+        if (ship.Blueprint.Name == "Cargo Canister")
+            return false; // Canister survives, no destruction
+
+        // Small ships: instant destruction on any collision
+        if (vertexCount < 15)
+        {
+            System.Diagnostics.Debug.WriteLine($"[COLLISION] Small ship {ship.Blueprint.Name} (vertices={vertexCount}) instant-destroyed");
+            ship.Energy = 0;
+            ship.Hull = 0;
+            return true;
+        }
+
+        // Larger ships: damage shields first, then hull
+        if (ship.Energy > 0)
+        {
+            int shieldDmg = Math.Min(damage, ship.Energy);
+            ship.Energy = (byte)(ship.Energy - shieldDmg);
+            int hullDmg = damage - shieldDmg;
+            if (hullDmg > 0)
+            {
+                bool destroyed = ship.TakeDamage(hullDmg);
+                if (destroyed)
+                    System.Diagnostics.Debug.WriteLine($"[COLLISION] Large ship {ship.Blueprint.Name} destroyed (hull depleted)");
+                return destroyed;
+            }
+            return false;
+        }
+
+        bool hullDestroyed = ship.TakeDamage(damage);
+        if (hullDestroyed)
+            System.Diagnostics.Debug.WriteLine($"[COLLISION] Ship {ship.Blueprint.Name} hull-destroyed (no shields)");
+        return hullDestroyed;
     }
 
     /// <summary>

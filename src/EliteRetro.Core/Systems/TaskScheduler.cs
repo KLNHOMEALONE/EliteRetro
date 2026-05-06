@@ -49,7 +49,16 @@ public class TaskScheduler
         {
             if (_mcnt.Matches(task.Mask, task.Offset))
             {
-                task.Action();
+                // NE-4: Wrap each task in try/catch to prevent one failure from stopping all tasks
+                try
+                {
+                    task.Action();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[TaskScheduler] Task failed (mask={task.Mask}, offset={task.Offset}): {ex.Message}");
+                    // Continue processing remaining tasks
+                }
             }
         }
     }
@@ -64,7 +73,16 @@ public class TaskScheduler
         {
             if (task.Mask == mask && _mcnt.Matches(task.Mask, task.Offset))
             {
-                task.Action();
+                // NE-4: Wrap each task in try/catch to prevent one failure from stopping all tasks
+                try
+                {
+                    task.Action();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[TaskScheduler] Task failed (mask={task.Mask}, offset={task.Offset}): {ex.Message}");
+                    // Continue processing remaining tasks
+                }
             }
         }
     }

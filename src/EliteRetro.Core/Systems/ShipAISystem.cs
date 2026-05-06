@@ -100,11 +100,28 @@ namespace EliteRetro.Core.Systems
         }
 
         /// <summary>
+        /// Convert ShipClass byte to appropriate NewbFlags personality.
+        /// ShipClass: 0=Innocent, 1=BountyHunter, 2=Pirate, 3=Cop
+        /// Maps to correct NEWB bit flags for behavior (NE-12).
+        /// </summary>
+        private static NewbFlags GetPersonalityFlags(byte shipClass)
+        {
+            return shipClass switch
+            {
+                0 => NewbFlags.Trader | NewbFlags.Innocent,
+                1 => NewbFlags.BountyHunter | NewbFlags.Innocent,
+                2 => NewbFlags.Pirate,
+                3 => NewbFlags.Cop | NewbFlags.Innocent,
+                _ => NewbFlags.None,
+            };
+        }
+
+        /// <summary>
         /// Find the nearest hostile target for a ship.
         /// </summary>
         private static ShipInstance? FindTarget(ShipInstance ship, ShipInstance? player, LocalBubbleManager bubbleManager)
         {
-            var personality = (NewbFlags)ship.Blueprint.ShipClass;
+            var personality = GetPersonalityFlags(ship.Blueprint.ShipClass);
             ShipInstance? nearest = null;
             float nearestDist = float.MaxValue;
 
@@ -144,7 +161,7 @@ namespace EliteRetro.Core.Systems
         /// </summary>
         private static bool IsHostileToward(ShipInstance ship, ShipInstance target, NewbFlags personality)
         {
-            var targetClass = (NewbFlags)target.Blueprint.ShipClass;
+            var targetClass = GetPersonalityFlags(target.Blueprint.ShipClass);
 
             if (personality.HasFlag(NewbFlags.Hostile))
                 return true;
@@ -260,7 +277,7 @@ namespace EliteRetro.Core.Systems
         /// </summary>
         private static Vector3 CalculateMovementDirection(ShipInstance ship, ShipInstance target, LocalBubbleManager bubbleManager)
         {
-            var personality = (NewbFlags)ship.Blueprint.ShipClass;
+            var personality = GetPersonalityFlags(ship.Blueprint.ShipClass);
 
             if (personality.HasFlag(NewbFlags.Trader) || ship.AIState == (byte)ShipAIState.Bail)
             {

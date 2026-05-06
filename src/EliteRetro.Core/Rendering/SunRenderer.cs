@@ -7,9 +7,9 @@ namespace EliteRetro.Core.Rendering;
 /// Sun rendering with horizontal scan lines and random fringe.
 /// Authentic Elite-style sun: filled with horizontal lines, glowing edge particles.
 /// </summary>
-public class SunRenderer
-{
+public class SunRenderer : IDisposable {
     private readonly Texture2D _whitePixel;
+        private bool _isDisposed;
 
     // Sun color schemes based on temperature (original Elite: yellow/white/blue)
     private static readonly Color[] SunColors =
@@ -24,6 +24,27 @@ public class SunRenderer
         _whitePixel = new Texture2D(graphicsDevice, 1, 1);
         _whitePixel.SetData(new[] { Color.White });
     }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_isDisposed) return;
+            if (disposing)
+            {
+                _whitePixel?.Dispose();
+            }
+            _isDisposed = true;
+        }
+
+        ~SunRenderer()
+        {
+            Dispose(false);
+        }
 
     /// <summary>
     /// Get sun color by type (0=yellow, 1=white, 2=blue).

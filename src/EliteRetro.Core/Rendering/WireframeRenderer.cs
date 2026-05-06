@@ -8,11 +8,12 @@ namespace EliteRetro.Core.Rendering;
 /// Renders 3D ship models as wireframes with back-face culling.
 /// Visible edges are solid; hidden edges are drawn dashed.
 /// </summary>
-public class WireframeRenderer
+public class WireframeRenderer : IDisposable
 {
     private readonly GraphicsDevice _graphicsDevice;
     private readonly Color _primaryColor = Color.Lime;
     private Texture2D _lineTexture = null!;
+    private bool _isDisposed;
 
     // Dash pattern for hidden edges: dash length, gap length (in pixels)
     private const float DashLength = 8f;
@@ -23,6 +24,28 @@ public class WireframeRenderer
         _graphicsDevice = graphicsDevice;
         _lineTexture = new Texture2D(graphicsDevice, 1, 1);
         _lineTexture.SetData(new[] { Color.White });
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_isDisposed) return;
+        if (disposing)
+        {
+            _lineTexture?.Dispose();
+            _lineTexture = null!;
+        }
+        _isDisposed = true;
+    }
+
+    ~WireframeRenderer()
+    {
+        Dispose(false);
     }
 
     /// <summary>
@@ -194,32 +217,10 @@ public class WireframeRenderer
                     edgeVisible[e] = true;
             }
 
-            // Silhouette edges: build edge-to-face adjacency.
-            // A face is adjacent to an edge if both edge vertices are in the face.
-            var edgeFaces = new List<int>[model.Edges.Count];
-            for (int e = 0; e < model.Edges.Count; e++)
-                edgeFaces[e] = new List<int>();
-
-            // Build a set of vertex indices for each face for fast lookup
-            var faceVertexSets = new HashSet<int>[model.Faces.Count];
-            for (int f = 0; f < model.Faces.Count; f++)
-            {
-                faceVertexSets[f] = new HashSet<int>(model.Faces[f].VertexIndices);
-            }
-
-            // For each edge, find all faces that contain both vertices
-            for (int e = 0; e < model.Edges.Count; e++)
-            {
-                int start = model.Edges[e].Start;
-                int end = model.Edges[e].End;
-                for (int f = 0; f < model.Faces.Count; f++)
-                {
-                    if (faceVertexSets[f].Contains(start) && faceVertexSets[f].Contains(end))
-                    {
-                        edgeFaces[e].Add(f);
-                    }
-                }
-            }
+            // Silhouette edges: use pre-computed edge-to-face adjacency.
+            // This avoids O(E×V×F) allocations per frame by caching static model topology.
+            var edgeFaces = model.GetEdgeFaces();
+            var faceVertexSets = model.GetFaceVertexSets();
 
             // Edge is silhouette if it has both visible and hidden adjacent faces
             for (int e = 0; e < model.Edges.Count; e++)
@@ -227,8 +228,17 @@ public class WireframeRenderer
                 if (edgeVisible[e]) continue;
                 if (edgeFaces[e].Count == 0) continue;
 
-                int visibleCount = edgeFaces[e].Count(v => faceVisible[v]);
-                int hiddenCount = edgeFaces[e].Count - visibleCount;
+                // Count visible vs hidden faces adjacent to this edge (no LINQ allocation)
+                int visibleCount = 0;
+                int hiddenCount = 0;
+                var efList = edgeFaces[e];
+                for (int ei = 0; ei < efList.Count; ei++)
+                {
+                    if (faceVisible[efList[ei]])
+                        visibleCount++;
+                    else
+                        hiddenCount++;
+                }
 
                 if (visibleCount > 0 && hiddenCount > 0)
                 {
@@ -255,7 +265,18 @@ public class WireframeRenderer
             {
                 if (edgeVisible[e]) continue;
                 if (edgeFaces[e].Count == 0) continue;
-                if (edgeFaces[e].Any(f => faceVisible[f])) continue;
+                // Avoid LINQ Any() allocation
+                var efListCheck = edgeFaces[e];
+                bool hasVisibleFace = false;
+                for (int ei = 0; ei < efListCheck.Count; ei++)
+                {
+                    if (faceVisible[efListCheck[ei]])
+                    {
+                        hasVisibleFace = true;
+                        break;
+                    }
+                }
+                if (hasVisibleFace) continue;
 
                 int a = model.Edges[e].Start;
                 int b = model.Edges[e].End;
@@ -302,7 +323,9 @@ public class WireframeRenderer
         {
             // No culling — all edges visible
             for (int e = 0; e < model.Edges.Count; e++)
+            {
                 edgeVisible[e] = true;
+            }
         }
 
         // Draw edges: visible solid, hidden dashed (if drawHiddenEdges), highlighted in red

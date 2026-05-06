@@ -9,9 +9,10 @@ namespace EliteRetro.Core.Rendering;
 /// with perspective-driven X/Y expansion. Roll and pitch affect star positions.
 /// Stars wrap around on overflow.
 /// </summary>
-public class StardustRenderer
+public class StardustRenderer : IDisposable
 {
     private readonly Texture2D _whitePixel;
+    private bool _isDisposed;
     private readonly StarData[] _stars;
     private const int StarCount = 400;
     private float _currentSpeed;
@@ -32,6 +33,27 @@ public class StardustRenderer
         _whitePixel = new Texture2D(graphicsDevice, 1, 1);
         _whitePixel.SetData(new[] { Color.White });
         _stars = new StarData[StarCount];
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_isDisposed) return;
+        if (disposing)
+        {
+            _whitePixel?.Dispose();
+        }
+        _isDisposed = true;
+    }
+
+    ~StardustRenderer()
+    {
+        Dispose(false);
     }
 
     /// <summary>
@@ -155,8 +177,10 @@ public class StardustRenderer
             float screenY = center.Y + viewPos.Y * factor;
 
             // Skip if off-screen
-            if (screenX < -10 || screenX > center.X + 1024 + 10) continue;
-            if (screenY < -10 || screenY > center.Y + 768 + 10) continue;
+            // NE-20 fix: Use correct screen bounds (center is at 512,384 for 1024x768)
+            // Right edge = center.X + 512, bottom = center.Y + 384
+            if (screenX < -10 || screenX > center.X + 512 + 10) continue;
+            if (screenY < -10 || screenY > center.Y + 384 + 10) continue;
 
             // Star size: closer stars are larger
             int size = z < 200 ? 3 : z < 1000 ? 2 : 1;
@@ -201,24 +225,23 @@ public class StardustRenderer
     }
 
     /// <summary>
-    /// Convert 16-bit sign-magnitude to signed int.
-    /// Bit 15 = sign (1=negative), bits 0-14 = magnitude.
+    /// Convert from signed magnitude to int.
+    /// In Elite's sign-magnitude format: bit 15 is sign (1=negative), bits 0-14 are magnitude.
     /// </summary>
     private static int SignMagToSigned(short value)
     {
         int magnitude = value & 0x7FFF;
-        int sign = (value & 0x8000) != 0 ? -1 : 1;
-        return magnitude * sign;
+        bool isNegative = (value & 0x8000) != 0;
+        return isNegative ? -magnitude : magnitude;
     }
 
     /// <summary>
-    /// Convert signed int to 16-bit sign-magnitude.
+    /// Convert from int to signed magnitude.
     /// </summary>
     private static short SignedToSignMag(int value)
     {
-        int magnitude = Math.Abs(value) & 0x7FFF;
         if (value < 0)
-            magnitude |= 0x8000;
-        return (short)magnitude;
+            return (short)(0x8000 | (-value & 0x7FFF));
+        return (short)(value & 0x7FFF);
     }
 }

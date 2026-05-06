@@ -23,7 +23,7 @@ public static class DockingSystem
 {
     // Fixed-point thresholds (original Elite uses 8-bit fixed-point where 255 = 1.0)
 
-    /// <summary>nosev_z ≤ 214 — within 26° of head-on approach.</summary>
+    /// <summary>nosev_z ≥ 214 — within 26° of head-on approach (fixed-point, ~0.84 = cos(33°)).</summary>
     public const int ApproachAngleThreshold = 214;
 
     /// <summary>z ≥ 89 — within 22° cone from station center.</summary>
@@ -44,7 +44,7 @@ public static class DockingSystem
         if (!CheckFriendliness(station))
             return false;
 
-        // 2. Approach angle — nosev_z ≤ 214 (within 26° of head-on)
+        // 2. Approach angle — nosev_z ≥ 214 (within 26° of head-on)
         if (!CheckApproachAngle(ship, station))
             return false;
 
@@ -68,13 +68,30 @@ public static class DockingSystem
     /// </summary>
     public static bool CheckFriendliness(ShipInstance station)
     {
-        // Station hostile if bit 7 of ShipClass is set (using NewbFlags.Hostile)
-        return (station.Blueprint.ShipClass & (byte)NewbFlags.Hostile) == 0;
+        var personality = GetPersonalityFlags(station.Blueprint.ShipClass);
+        return !personality.HasFlag(NewbFlags.Hostile);
+    }
+
+    /// <summary>
+    /// Convert ShipClass byte to appropriate NewbFlags personality.
+    /// ShipClass: 0=Innocent, 1=BountyHunter, 2=Pirate, 3=Cop
+    /// Maps to proper NEWB bit flags for behavior.
+    /// </summary>
+    private static NewbFlags GetPersonalityFlags(byte shipClass)
+    {
+        return shipClass switch
+        {
+            0 => NewbFlags.Trader | NewbFlags.Innocent,
+            1 => NewbFlags.BountyHunter | NewbFlags.Innocent,
+            2 => NewbFlags.Pirate,
+            3 => NewbFlags.Cop | NewbFlags.Innocent,
+            _ => NewbFlags.None,
+        };
     }
 
     /// <summary>
     /// Check 2: Ship within 26° of head-on approach.
-    /// nosev_z of ship relative to station ≤ 214 (fixed-point).
+    /// nosev_z of ship relative to station ≥ 214 (fixed-point).
     /// </summary>
     public static bool CheckApproachAngle(ShipInstance ship, ShipInstance station)
     {
@@ -83,7 +100,9 @@ public static class DockingSystem
 
         // Convert to fixed-point (255 = 1.0) and check threshold
         int fixedDot = (int)(dot * 255);
-        return fixedDot <= ApproachAngleThreshold;
+        // NE-10 fix: was inverted (<=). Should be >= to require facing the station.
+        // Approach angle threshold 214/255 ≈ 0.84 → ~33° cone.
+        return fixedDot >= ApproachAngleThreshold;
     }
 
     /// <summary>

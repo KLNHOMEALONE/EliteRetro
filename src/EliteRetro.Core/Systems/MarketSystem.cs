@@ -127,7 +127,9 @@ public static class MarketSystem
             var c = Commodities[i];
 
             // Price = (base + (rand & mask) + economy × factor) × 4
+            // Clamp to minimum 1 to prevent negative price exploit (NE-1)
             int price = c.BasePrice + (rng.Next(c.PriceRandomMask + 1)) + ecoIndex * c.EconomyPriceFactor;
+            price = Math.Max(1, price);
             prices[i] = price * 4; // ×4 Cr
 
             // Tech level adjustment: commodities outside tech range are scarce/expensive
@@ -142,8 +144,9 @@ public static class MarketSystem
             }
 
             // Availability = (base_qty + (rand & mask) - economy × factor) mod 64
+            // Use proper unsigned modulo (NE-2)
             int qty = c.BaseQuantity + rng.Next(c.QuantityRandomMask + 1) - ecoIndex * c.EconomyQuantityFactor;
-            availability[i] = Math.Clamp(qty & 63, 0, 63);
+            availability[i] = Math.Clamp((qty % 64 + 64) % 64, 0, 63);
         }
 
         return new MarketState(prices, availability);
@@ -158,7 +161,9 @@ public static class MarketSystem
         if (market.Availability[idx] < amount)
             return -1;
 
-        int cost = market.Prices[idx] * amount;
+        int price = market.Prices[idx];
+        if (price <= 0) return -1;  // NE-3: guard against negative/zero price exploit
+        int cost = price * amount;
         if (commander.Credits < cost)
             return -1;
 
@@ -178,7 +183,9 @@ public static class MarketSystem
         if (!commander.CargoHold.TryGetValue(idx, out int held) || held < amount)
             return -1;
 
-        int revenue = market.Prices[idx] * amount;
+        int price = market.Prices[idx];
+        if (price <= 0) return -1;  // NE-3: guard against negative/zero price exploit
+        int revenue = price * amount;
         commander.Credits += revenue;
 
         commander.CargoHold[idx] = held - amount;
