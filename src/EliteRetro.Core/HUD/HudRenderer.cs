@@ -13,19 +13,6 @@ public class HudRenderer
 {
     private readonly Texture2D _whitePixel;
 
-    private const int SW = 1024;
-    private const int SH = 768;
-    private const int DashY = 480;
-    private const int DashH = 288;
-    private const int BarSlotH = DashH / 7;
-
-    private const int LeftX = 0;
-    private const int LeftW = 256;
-    private const int CenterX = 256;
-    private const int CenterW = 512;
-    private const int RightX = 768;
-    private const int RightW = 256;
-
     private static readonly Color Amber = new Color(255, 180, 50);
     private static readonly Color AmberDim = new Color(100, 70, 20);
     private static readonly Color PanelBg = new Color(8, 8, 12);
@@ -36,8 +23,8 @@ public class HudRenderer
     private static readonly Color BarBg = new Color(160, 20, 20); // deep red background
 
     // Visual tuning: spacing between label box and bar, plus extra padding inside panels.
-    private const int LabelBarGap = 10;
-    private const int PanelInnerPad = 6;
+    private const int LabelBarGapDefault = 10;
+    private const int PanelInnerPadDefault = 6;
 
     public HudRenderer(GraphicsDevice graphicsDevice)
     {
@@ -45,16 +32,27 @@ public class HudRenderer
         _whitePixel.SetData(new[] { Color.White });
     }
 
-    public void Draw(SpriteBatch spriteBatch, HUDState state, BitmapFont font)
+    public void Draw(SpriteBatch spriteBatch, HUDState state, BitmapFont font, Rectangle hudRect, Rectangle screenRect)
     {
-        spriteBatch.Draw(_whitePixel, new Rectangle(0, DashY, SW, DashH), PanelBg);
-        spriteBatch.Draw(_whitePixel, new Rectangle(0, DashY, SW, 2), PanelBorder);
-        spriteBatch.Draw(_whitePixel, new Rectangle(LeftW - 1, DashY, 2, DashH), PanelBorder);
-        spriteBatch.Draw(_whitePixel, new Rectangle(RightX - 1, DashY, 2, DashH), PanelBorder);
+        // Panel layout: left 1/4, center 1/2, right 1/4 (like original Elite)
+        int leftW = (int)MathF.Round(hudRect.Width * 0.25f);
+        int rightW = leftW;
+        int centerW = hudRect.Width - leftW - rightW;
+        int leftX = hudRect.X;
+        int centerX = leftX + leftW;
+        int rightX = centerX + centerW;
 
-        DrawLeftBars(spriteBatch, state, font);
-        DrawCompass(spriteBatch, state.CompassHeading, font);
-        DrawRightBars(spriteBatch, state, font);
+        int barSlotH = Math.Max(1, hudRect.Height / 7);
+
+        spriteBatch.Draw(_whitePixel, hudRect, PanelBg);
+        // Thin internal dividers (keeps the panel structured regardless of resolution)
+        spriteBatch.Draw(_whitePixel, new Rectangle(hudRect.X, hudRect.Y, hudRect.Width, 2), PanelBorder);
+        spriteBatch.Draw(_whitePixel, new Rectangle(centerX - 1, hudRect.Y, 2, hudRect.Height), PanelBorder);
+        spriteBatch.Draw(_whitePixel, new Rectangle(rightX - 1, hudRect.Y, 2, hudRect.Height), PanelBorder);
+
+        DrawLeftBars(spriteBatch, state, font, new Rectangle(leftX, hudRect.Y, leftW, hudRect.Height), barSlotH);
+        DrawCompass(spriteBatch, state.CompassHeading, font, new Rectangle(centerX, hudRect.Y, centerW, hudRect.Height));
+        DrawRightBars(spriteBatch, state, font, new Rectangle(rightX, hudRect.Y, rightW, hudRect.Height), barSlotH);
 
         if (!string.IsNullOrEmpty(state.ViewMode))
             font.DrawString(spriteBatch, state.ViewMode, new Vector2(10, 10), Amber, 1.5f);
@@ -63,7 +61,7 @@ public class HudRenderer
         {
             var size = font.MeasureString(state.StatusMessage);
             font.DrawString(spriteBatch, state.StatusMessage,
-                new Vector2((SW - size.X) / 2, 15), state.StatusColor, 1.2f);
+                new Vector2((screenRect.Width - size.X) / 2, 15), state.StatusColor, 1.2f);
         }
 
         // Combat rank and legal status in top-right corner
@@ -75,84 +73,88 @@ public class HudRenderer
         };
         var legalSz = font.MeasureString(legalText);
         font.DrawString(spriteBatch, legalText,
-            new Vector2(SW - legalSz.X - 10, 10),
+            new Vector2(screenRect.Width - legalSz.X - 10, 10),
             state.LegalStatus >= 50 ? Color.OrangeRed : Color.Lime, 1.0f);
 
         if (!string.IsNullOrEmpty(state.CombatRank))
         {
             var rankSz = font.MeasureString(state.CombatRank);
             font.DrawString(spriteBatch, state.CombatRank,
-                new Vector2(SW - rankSz.X - 10, 32),
+                new Vector2(screenRect.Width - rankSz.X - 10, 32),
                 Color.Gold, 1.0f);
         }
     }
 
-    private void DrawLeftBars(SpriteBatch spriteBatch, HUDState state, BitmapFont font)
+    private void DrawLeftBars(SpriteBatch spriteBatch, HUDState state, BitmapFont font, Rectangle leftRect, int barSlotH)
     {
-        int barY = DashY + 2;
-        int barH = BarSlotH - 4;
-        int labelW = 36;
-        int barMaxW = LeftW - labelW - (LabelBarGap + PanelInnerPad);
+        int barY = leftRect.Y + 2;
+        int barH = Math.Max(6, barSlotH - 4);
+        int labelW = Math.Clamp((int)MathF.Round(leftRect.Width * 0.14f), 24, 64);
+        int gap = Math.Clamp((int)MathF.Round(leftRect.Width * 0.04f), 6, 18);
+        int innerPad = Math.Clamp((int)MathF.Round(leftRect.Width * 0.02f), 4, 14);
+        int barMaxW = Math.Max(10, leftRect.Width - labelW - (gap + innerPad));
 
         float fwdRatio = MathHelper.Clamp(state.ShieldForward / 255f, 0, 1);
-        DrawBarH(spriteBatch, LeftX + 2, barY, labelW, barH, (int)(fwdRatio * barMaxW), barMaxW, "FS", font);
-        barY += BarSlotH;
+        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(fwdRatio * barMaxW), barMaxW, "FS", font, gap);
+        barY += barSlotH;
 
         float aftRatio = MathHelper.Clamp(state.ShieldAft / 255f, 0, 1);
-        DrawBarH(spriteBatch, LeftX + 2, barY, labelW, barH, (int)(aftRatio * barMaxW), barMaxW, "AS", font);
-        barY += BarSlotH;
+        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(aftRatio * barMaxW), barMaxW, "RS", font, gap);
+        barY += barSlotH;
 
         float fuelRatio = MathHelper.Clamp(state.Fuel / 70f, 0, 1);
-        DrawBarH(spriteBatch, LeftX + 2, barY, labelW, barH, (int)(fuelRatio * barMaxW), barMaxW, "FU", font);
-        barY += BarSlotH;
+        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(fuelRatio * barMaxW), barMaxW, "FU", font, gap);
+        barY += barSlotH;
 
         float cabinRatio = MathHelper.Clamp(state.CabinTemp / 255f, 0, 1);
-        DrawBarH(spriteBatch, LeftX + 2, barY, labelW, barH, (int)(cabinRatio * barMaxW), barMaxW, "CT", font);
-        barY += BarSlotH;
+        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(cabinRatio * barMaxW), barMaxW, "CT", font, gap);
+        barY += barSlotH;
 
         float laserRatio = MathHelper.Clamp(state.LaserTemp / 255f, 0, 1);
-        DrawBarH(spriteBatch, LeftX + 2, barY, labelW, barH, (int)(laserRatio * barMaxW), barMaxW, "LT", font);
-        barY += BarSlotH;
+        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(laserRatio * barMaxW), barMaxW, "LT", font, gap);
+        barY += barSlotH;
 
         float altRatio = MathHelper.Clamp(state.Altitude / 255f, 0, 1);
-        DrawBarH(spriteBatch, LeftX + 2, barY, labelW, barH, (int)(altRatio * barMaxW), barMaxW, "AL", font);
-        barY += BarSlotH;
+        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(altRatio * barMaxW), barMaxW, "AL", font, gap);
+        barY += barSlotH;
 
         float bankRatio = MathHelper.Clamp(state.EnergyBanks / 16f, 0, 1);
-        DrawBarH(spriteBatch, LeftX + 2, barY, labelW, barH, (int)(bankRatio * barMaxW), barMaxW, "EB", font);
+        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(bankRatio * barMaxW), barMaxW, "EB", font, gap);
 
     }
 
-    private void DrawRightBars(SpriteBatch spriteBatch, HUDState state, BitmapFont font)
+    private void DrawRightBars(SpriteBatch spriteBatch, HUDState state, BitmapFont font, Rectangle rightRect, int barSlotH)
     {
-        int barY = DashY + 2;
-        int barH = BarSlotH - 4;
-        int labelW = 36;
-        int barMaxW = RightW - labelW - (LabelBarGap + PanelInnerPad);
+        int barY = rightRect.Y + 2;
+        int barH = Math.Max(6, barSlotH - 4);
+        int labelW = Math.Clamp((int)MathF.Round(rightRect.Width * 0.14f), 24, 64);
+        int gap = Math.Clamp((int)MathF.Round(rightRect.Width * 0.04f), 6, 18);
+        int innerPad = Math.Clamp((int)MathF.Round(rightRect.Width * 0.02f), 4, 14);
+        int barMaxW = Math.Max(10, rightRect.Width - labelW - (gap + innerPad));
 
         float speedRatio = MathHelper.Clamp(state.Speed / 40f, 0, 1);
-        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, (int)(speedRatio * barMaxW), barMaxW, "SP", font, textRight: true, labelOnRight: true);
-        barY += BarSlotH;
+        DrawBarH(spriteBatch, rightRect.X + 2, barY, labelW, barH, (int)(speedRatio * barMaxW), barMaxW, "SP", font, gap, textRight: true, labelOnRight: true);
+        barY += barSlotH;
 
         float rollNorm = (state.Roll + 1) / 2;
-        DrawBarV(spriteBatch, RightX + 2, barY, labelW, barH, rollNorm, "RL", font, textRight: true, labelOnRight: true);
-        barY += BarSlotH;
+        DrawBarV(spriteBatch, rightRect.X + 2, barY, labelW, barH, rollNorm, "RL", font, barMaxW, gap, textRight: true, labelOnRight: true);
+        barY += barSlotH;
 
         float pitchNorm = (state.Pitch + 1) / 2;
-        DrawBarV(spriteBatch, RightX + 2, barY, labelW, barH, pitchNorm, "DC", font, textRight: true, labelOnRight: true);
-        barY += BarSlotH;
+        DrawBarV(spriteBatch, rightRect.X + 2, barY, labelW, barH, pitchNorm, "DC", font, barMaxW, gap, textRight: true, labelOnRight: true);
+        barY += barSlotH;
 
         float msRatio = state.MaxMissiles > 0 ? MathHelper.Clamp((float)state.Missiles / state.MaxMissiles, 0, 1) : 0;
-        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, (int)(msRatio * barMaxW), barMaxW, "1", font, textRight: true, labelOnRight: true);
-        barY += BarSlotH;
+        DrawBarH(spriteBatch, rightRect.X + 2, barY, labelW, barH, (int)(msRatio * barMaxW), barMaxW, "1", font, gap, textCenter: true, labelOnRight: true);
+        barY += barSlotH;
 
-        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, barMaxW, barMaxW, "2", font, textRight: true, labelOnRight: true);
-        barY += BarSlotH;
+        DrawBarH(spriteBatch, rightRect.X + 2, barY, labelW, barH, barMaxW, barMaxW, "2", font, gap, textCenter: true, labelOnRight: true);
+        barY += barSlotH;
 
-        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, barMaxW, barMaxW, "3", font, textRight: true, labelOnRight: true);
-        barY += BarSlotH;
+        DrawBarH(spriteBatch, rightRect.X + 2, barY, labelW, barH, barMaxW, barMaxW, "3", font, gap, textCenter: true, labelOnRight: true);
+        barY += barSlotH;
 
-        DrawBarH(spriteBatch, RightX + 2, barY, labelW, barH, barMaxW, barMaxW, "4", font, textRight: true, labelOnRight: true);
+        DrawBarH(spriteBatch, rightRect.X + 2, barY, labelW, barH, barMaxW, barMaxW, "4", font, gap, textCenter: true, labelOnRight: true);
     }
 
     /// <summary>
@@ -169,11 +171,12 @@ public class HudRenderer
         int maxW,
         string label,
         BitmapFont font,
+        int gap,
         bool textRight = false,
+        bool textCenter = false,
         bool labelOnRight = false)
     {
         // Layout: either [label][gap][bar] (default) or [bar][gap][label] (labelOnRight)
-        int gap = LabelBarGap;
         int labelX = labelOnRight ? x + maxW + gap : x;
         int barX = labelOnRight ? x : x + labelW + gap;
 
@@ -182,15 +185,19 @@ public class HudRenderer
         if (!string.IsNullOrEmpty(label))
         {
             var lsz = font.MeasureString(label);
-            float textX = textRight ? labelX + labelW - lsz.X - 2 : labelX + 2;
+            float textX =
+                textCenter ? labelX + (labelW - lsz.X) / 2f :
+                textRight ? labelX + labelW - lsz.X - 2 :
+                labelX + 2;
             DrawThickText(spriteBatch, font, label,
                 new Vector2(textX, y + (h - lsz.Y) / 2),
                 LabelText, 1.2f);
         }
 
         // Bar area: red background full height, white fill with visible padding
-        int barTopPad = 4;
-        int barBotPad = 4;
+        int barPad = Math.Clamp(h / 6, 1, 6);
+        int barTopPad = barPad;
+        int barBotPad = barPad;
         spriteBatch.Draw(_whitePixel, new Rectangle(barX, y, maxW, h), BarBg);
         if (filledW > 0)
             spriteBatch.Draw(_whitePixel, new Rectangle(barX, y + barTopPad, filledW, h - barTopPad - barBotPad), BarFill);
@@ -215,11 +222,11 @@ public class HudRenderer
         float normalizedValue,
         string label,
         BitmapFont font,
+        int barW,
+        int gap,
         bool textRight = false,
         bool labelOnRight = false)
     {
-        int gap = LabelBarGap;
-        int barW = RightW - labelW - (LabelBarGap + PanelInnerPad);
         int labelX = labelOnRight ? x + barW + gap : x;
         int barX = labelOnRight ? x : x + labelW + gap;
 
@@ -262,23 +269,23 @@ public class HudRenderer
         font.DrawString(spriteBatch, text, pos + new Vector2(0, 1), color, scale);
     }
 
-    private void DrawCompass(SpriteBatch spriteBatch, float heading, BitmapFont font)
+    private void DrawCompass(SpriteBatch spriteBatch, float heading, BitmapFont font, Rectangle centerRect)
     {
-        spriteBatch.Draw(_whitePixel, new Rectangle(CenterX + 1, DashY + 1, CenterW - 2, DashH - 2), new Color(12, 10, 8));
+        spriteBatch.Draw(_whitePixel, new Rectangle(centerRect.X + 1, centerRect.Y + 1, centerRect.Width - 2, centerRect.Height - 2), new Color(12, 10, 8));
 
         float twoPi = MathHelper.TwoPi;
         heading = (heading % twoPi + twoPi) % twoPi;
 
         string[] dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
-        int segW = CenterW / 8;
-        int segH = DashH / 8;
+        int segW = Math.Max(1, centerRect.Width / 8);
+        int segH = Math.Max(1, centerRect.Height / 8);
 
         for (int row = 0; row < 8; row++)
         {
             for (int col = 0; col < 8; col++)
             {
-                int sx = CenterX + 5 + col * segW;
-                int sy = DashY + 5 + row * segH;
+                int sx = centerRect.X + 5 + col * segW;
+                int sy = centerRect.Y + 5 + row * segH;
                 Color c = (row + col) % 2 == 0 ? new Color(18, 16, 10) : new Color(22, 20, 12);
                 spriteBatch.Draw(_whitePixel, new Rectangle(sx, sy, segW - 1, segH - 1), c);
             }
@@ -286,30 +293,30 @@ public class HudRenderer
 
         for (int i = 0; i < 8; i++)
         {
-            int segCx = CenterX + i * segW + segW / 2;
-            int segCy = DashY + segH / 2;
+            int segCx = centerRect.X + i * segW + segW / 2;
+            int segCy = centerRect.Y + segH / 2;
             var dsz = font.MeasureString(dirs[i]);
             font.DrawString(spriteBatch, dirs[i],
                 new Vector2(segCx - dsz.X / 2, segCy - dsz.Y / 2), AmberDim, 0.7f);
         }
 
-        int midX = CenterX + CenterW / 2;
-        int midY = DashY + DashH / 2;
-        spriteBatch.Draw(_whitePixel, new Rectangle(midX - 1, DashY + 5, 2, DashH - 10), AmberDim);
-        spriteBatch.Draw(_whitePixel, new Rectangle(CenterX + 5, midY - 1, CenterW - 10, 2), AmberDim);
+        int midX = centerRect.X + centerRect.Width / 2;
+        int midY = centerRect.Y + centerRect.Height / 2;
+        spriteBatch.Draw(_whitePixel, new Rectangle(midX - 1, centerRect.Y + 5, 2, centerRect.Height - 10), AmberDim);
+        spriteBatch.Draw(_whitePixel, new Rectangle(centerRect.X + 5, midY - 1, centerRect.Width - 10, 2), AmberDim);
 
-        spriteBatch.Draw(_whitePixel, new Rectangle(midX - 3, DashY + 7, 1, 8), Amber);
-        spriteBatch.Draw(_whitePixel, new Rectangle(midX + 2, DashY + 7, 1, 8), Amber);
+        spriteBatch.Draw(_whitePixel, new Rectangle(midX - 3, centerRect.Y + 7, 1, 8), Amber);
+        spriteBatch.Draw(_whitePixel, new Rectangle(midX + 2, centerRect.Y + 7, 1, 8), Amber);
 
         int seg = (int)((heading / twoPi) * 8 + 0.5f) % 8;
-        int hlX = CenterX + seg * segW;
-        spriteBatch.Draw(_whitePixel, new Rectangle(hlX + 5, DashY + 5, segW - 1, DashH - 10), new Color(30, 25, 10));
+        int hlX = centerRect.X + seg * segW;
+        spriteBatch.Draw(_whitePixel, new Rectangle(hlX + 5, centerRect.Y + 5, segW - 1, centerRect.Height - 10), new Color(30, 25, 10));
 
         var hlDsz = font.MeasureString(dirs[seg]);
         font.DrawString(spriteBatch, dirs[seg],
-            new Vector2(hlX + segW / 2 - hlDsz.X / 2, DashY + DashH / 2 - hlDsz.Y / 2), Amber, 0.8f);
+            new Vector2(hlX + segW / 2 - hlDsz.X / 2, centerRect.Y + centerRect.Height / 2 - hlDsz.Y / 2), Amber, 0.8f);
 
         font.DrawString(spriteBatch, "COMPASS",
-            new Vector2(midX - 25, DashY + DashH - 25), AmberDim, 0.6f);
+            new Vector2(midX - 25, centerRect.Y + centerRect.Height - 25), AmberDim, 0.6f);
     }
 }

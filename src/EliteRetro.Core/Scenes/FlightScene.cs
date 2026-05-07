@@ -17,10 +17,6 @@ namespace EliteRetro.Core.Scenes;
 public class FlightScene : GameScene
 {
     private const float RenderScale = 0.001f; // Elite internal units -> MonoGame world units
-    private const int ScreenWidth = 1024;
-    private const int ScreenHeight = 768;
-    private const int HudViewportHeight = 480; // HUD area is 1024x480 within 1024x768 screen
-    private static readonly Vector2 ScreenCenter = new(ScreenWidth / 2f, HudViewportHeight / 2f);
     private const int EventMsgX = 300;
     private const int EventMsgY = 350;
     private const int MilestoneMsgY = 200;
@@ -71,6 +67,11 @@ public class FlightScene : GameScene
     private int _laserFlashTimer; // frames remaining to show laser beam
     private bool _targetPracticeMode; // when true, spawn stationary target ship ahead
     private FlightControlState _lastControl; // store last input state for HUD
+    private int _lastBackBufferW;
+    private int _lastBackBufferH;
+    private int _lastViewH;
+    private const float HudHeightFraction = 0.375f; // 288/768: matches current layout but scales by percentage
+    private readonly RasterizerState _scissorRasterizer = new RasterizerState { ScissorTestEnable = true };
 
     public FlightScene(Game? game = null)
     {
@@ -108,10 +109,26 @@ public class FlightScene : GameScene
         // Create 1x1 white texture for damage flash overlay
         _whitePixel = new Texture2D(graphicsDevice, 1, 1);
         _whitePixel.SetData(new[] { Color.White });
+    }
+
+    private void EnsureProjectionMatchesViewport()
+    {
+        if (_graphicsDevice == null) return;
+        int w = _graphicsDevice.Viewport.Width;
+        int h = _graphicsDevice.Viewport.Height;
+        int hudH = (int)MathF.Round(h * HudHeightFraction);
+        int viewH = Math.Max(1, h - hudH);
+
+        if (w == _lastBackBufferW && h == _lastBackBufferH && viewH == _lastViewH)
+            return;
+
+        _lastBackBufferW = w;
+        _lastBackBufferH = h;
+        _lastViewH = viewH;
 
         _projection = Matrix.CreatePerspectiveFieldOfView(
             MathHelper.ToRadians(75f),
-            1024f / 480f, // Space view aspect ratio (1024x480)
+            w / (float)viewH,
             0.1f, 1000f);
     }
 
@@ -382,10 +399,28 @@ public class FlightScene : GameScene
         if (!_initialized)
             return;
 
-        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+        EnsureProjectionMatchesViewport();
+
+        int screenW = _graphicsDevice?.Viewport.Width ?? 1024;
+        int screenH = _graphicsDevice?.Viewport.Height ?? 768;
+        int hudH = (int)MathF.Round(screenH * HudHeightFraction);
+        int viewH = Math.Max(1, screenH - hudH);
+
+        var screenRect = new Rectangle(0, 0, screenW, screenH);
+        var viewRect = new Rectangle(0, 0, screenW, viewH);
+        var hudRect = new Rectangle(0, viewH, screenW, hudH);
+        var screenCenter = new Vector2(viewRect.X + viewRect.Width / 2f, viewRect.Y + viewRect.Height / 2f);
+
+        int outerMargin = GetOuterMarginPixels(screenW, screenH);
+        var viewContentRect = InsetRect(viewRect, outerMargin);
+        var hudContentRect = InsetRect(hudRect, outerMargin);
+
+        // --- Main 3D view pass (clipped to view content rect) ---
+        BeginScissored(spriteBatch, viewContentRect);
+        _graphicsDevice!.ScissorRectangle = viewContentRect;
 
         // Draw stardust (starfield)
-        _stardustRenderer.Draw(spriteBatch, ScreenCenter, 500f, _view, _gameInstance?.DrawWhite ?? false);
+        _stardustRenderer.Draw(spriteBatch, screenCenter, 500f, _view, _gameInstance?.DrawWhite ?? false);
 
         // Draw explosions
         foreach (var cloud in _explosions)
@@ -408,10 +443,10 @@ public class FlightScene : GameScene
                     entity.Orientation.Roofv.X, entity.Orientation.Roofv.Y, entity.Orientation.Roofv.Z, 0,
                     entity.Orientation.Nosev.X, entity.Orientation.Nosev.Y, entity.Orientation.Nosev.Z, 0,
                     0, 0, 0, 1);
-                
+
                 // Map Elite (X, Y, Z_depth) to MonoGame (X, Y, -Z_depth)
                 Vector3 entityPosMG = new Vector3(entity.Position.X, entity.Position.Y, -entity.Position.Z) * RenderScale;
-                
+
                 Matrix entityWorld =
                     Matrix.CreateScale(RenderScale) *
                     entityOrientation *
@@ -437,18 +472,18 @@ public class FlightScene : GameScene
             DrawCelestialSun(spriteBatch, _bubbleManager.SunOrStation.Position, GameConstants.PlanetRadius * 6, SunRenderer.GetSunColor(0));
         }
 
-        // Damage flash overlay (red vignette when hit)
+        // Damage flash overlay (only inside view frame)
         if (_damageFlashTimer > 0)
         {
             float intensity = _damageFlashTimer / 15f;
             byte alpha = (byte)(intensity * 128);
             Color flashColor = new Color(255, 0, 0) { A = alpha };
-            spriteBatch.Draw(_whitePixel, new Rectangle(0, 0, ScreenWidth, ScreenHeight), flashColor);
+            spriteBatch.Draw(_whitePixel, viewContentRect, flashColor);
         }
 
         // Crosshair at center of space view (BBC Elite targeting reticle)
-        int cx = (int)ScreenCenter.X;
-        int cy = (int)ScreenCenter.Y;
+        int cx = (int)screenCenter.X;
+        int cy = (int)screenCenter.Y;
         const int inner = 16;
         const int outer = 48;
         var crossColor = Color.White;
@@ -462,33 +497,46 @@ public class FlightScene : GameScene
         spriteBatch.Draw(_whitePixel, new Rectangle(cx - outer, cy - 1, outer - inner, 2), crossColor); // Left
         spriteBatch.Draw(_whitePixel, new Rectangle(cx + inner, cy - 1, outer - inner, 2), crossColor); // Right
 
-        // Target practice mode indicator and health status
+        // Draw lasers when firing
+        if (_laserFlashTimer > 0)
+        {
+            DrawLine(spriteBatch, new Vector2(viewRect.Left, viewRect.Bottom), new Vector2(cx, cy), Color.Yellow, 2);
+            DrawLine(spriteBatch, new Vector2(viewRect.Right, viewRect.Bottom), new Vector2(cx, cy), Color.Yellow, 2);
+        }
+
+        spriteBatch.End();
+
+        // --- HUD pass (clipped to HUD content rect) ---
+        BeginScissored(spriteBatch, hudContentRect);
+        _graphicsDevice!.ScissorRectangle = hudContentRect;
+
+        DrawHUD(spriteBatch, viewRect, hudContentRect, screenRect);
+
+        spriteBatch.End();
+
+        // --- Frames pass (unclipped) ---
+        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+
+        // Target practice mode indicator and health status (kept in the view area, above the frame)
         if (_targetPracticeMode)
         {
             var sz = _font.MeasureString("TARGET PRACTICE");
             _font.DrawString(spriteBatch, "TARGET PRACTICE",
-                new Vector2(ScreenWidth / 2f - sz.X / 2, 10), new Color(255, 200, 50), 1.0f);
+                new Vector2(screenRect.Width / 2f - sz.X / 2, 10), new Color(255, 200, 50), 1.0f);
 
-            // Find the target ship to show its health
             var targetShip = _bubbleManager.GetAllActive().FirstOrDefault(e => e.IsTargetPractice);
             if (targetShip != null)
             {
                 string status = $"S: {targetShip.Energy} H: {targetShip.Hull}";
                 var statSz = _font.MeasureString(status);
                 _font.DrawString(spriteBatch, status,
-                    new Vector2(ScreenWidth / 2f - statSz.X / 2, 40), Color.White, 0.8f);
+                    new Vector2(screenRect.Width / 2f - statSz.X / 2, 40), Color.White, 0.8f);
             }
         }
 
-        // Draw lasers when firing
-        if (_laserFlashTimer > 0)
-        {
-            DrawLine(spriteBatch, new Vector2(0, HudViewportHeight), new Vector2(cx, cy), Color.Yellow, 2);
-            DrawLine(spriteBatch, new Vector2(ScreenWidth, HudViewportHeight), new Vector2(cx, cy), Color.Yellow, 2);
-        }
-
-        // HUD overlay
-        DrawHUD(spriteBatch);
+        // ZX-style white frames around view + HUD (true bounds for content)
+        DrawFrame(spriteBatch, viewContentRect, Color.White, 1);
+        DrawFrame(spriteBatch, hudContentRect, Color.White, 1);
 
         spriteBatch.End();
     }
@@ -669,7 +717,7 @@ public class FlightScene : GameScene
         }
     }
 
-    private void DrawHUD(SpriteBatch spriteBatch)
+    private void DrawHUD(SpriteBatch spriteBatch, Rectangle viewRect, Rectangle hudRect, Rectangle screenRect)
     {
         // Build HUD state from current game data
         var sunEffect = _bubbleManager.CheckSunProximity();
@@ -732,10 +780,14 @@ public class FlightScene : GameScene
         };
 
         // Draw dashboard
-        _hudRenderer.Draw(spriteBatch, hudState, _font);
+        _hudRenderer.Draw(spriteBatch, hudState, _font, hudRect, screenRect);
 
         // Scanner display
-        _scannerRenderer.Draw(spriteBatch, _bubbleManager, GameConstants.PlayerSlot, _universeOrientation);
+        int leftW = (int)MathF.Round(hudRect.Width * 0.25f);
+        int rightW = leftW;
+        int centerW = hudRect.Width - leftW - rightW;
+        var centerPanelRect = new Rectangle(hudRect.X + leftW, hudRect.Y, centerW, hudRect.Height);
+        _scannerRenderer.Draw(spriteBatch, _bubbleManager, GameConstants.PlayerSlot, _universeOrientation, centerPanelRect);
 
         // Flight data text (left side, original positions)
         float planetDist = _bubbleManager.Planet?.Position.Length() ?? 0;
@@ -773,7 +825,7 @@ public class FlightScene : GameScene
             float scale = isMilestone ? 2.0f : 1.2f;
             Color msgColor = isMilestone ? Color.Gold : Color.Yellow;
             var msgSize = _font.MeasureString(_lastEventMessage);
-            float msgX = isMilestone ? (ScreenWidth - msgSize.X) / 2 : EventMsgX;
+            float msgX = isMilestone ? (screenRect.Width - msgSize.X) / 2 : EventMsgX;
             float msgY = isMilestone ? MilestoneMsgY : EventMsgY;
             _font.DrawString(spriteBatch, $">> {_lastEventMessage}", new Vector2(msgX, msgY), msgColor, scale);
             _eventMessageTimer--;
@@ -788,6 +840,40 @@ public class FlightScene : GameScene
 
         if (_paused)
             _font.DrawString(spriteBatch, "PAUSED", new Vector2(400, 350), Color.Red, 2f);
+    }
+
+    private static int GetOuterMarginPixels(int w, int h)
+        => Math.Max(2, (int)MathF.Round(MathF.Min(w, h) * 0.008f));
+
+    private static Rectangle InsetRect(Rectangle r, int inset)
+    {
+        int x = r.X + inset;
+        int y = r.Y + inset;
+        int w = Math.Max(1, r.Width - inset * 2);
+        int h = Math.Max(1, r.Height - inset * 2);
+        return new Rectangle(x, y, w, h);
+    }
+
+    private void BeginScissored(SpriteBatch spriteBatch, Rectangle scissorRect)
+    {
+        if (_graphicsDevice == null) return;
+        _graphicsDevice.ScissorRectangle = scissorRect;
+        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, _scissorRasterizer);
+    }
+
+    private void DrawFrame(SpriteBatch spriteBatch, Rectangle rect, Color color, int thickness)
+    {
+        if (rect.Width <= 0 || rect.Height <= 0) return;
+        thickness = Math.Max(1, thickness);
+
+        // Top
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Y, rect.Width, thickness), color);
+        // Bottom
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Bottom - thickness, rect.Width, thickness), color);
+        // Left
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Y, thickness, rect.Height), color);
+        // Right
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.Right - thickness, rect.Y, thickness, rect.Height), color);
     }
 
     private void DrawLine(SpriteBatch spriteBatch, Vector2 start, Vector2 end, Color color, int thickness)
@@ -883,13 +969,24 @@ public class FlightScene : GameScene
         Vector4 projected = Vector4.Transform(new Vector4(viewPos, 1f), _projection);
 
         // Perspective divide — guard against near-zero W to avoid huge values
-        if (MathF.Abs(projected.W) < 0.001f) return ScreenCenter;
+        if (MathF.Abs(projected.W) < 0.001f)
+        {
+            int w0 = _graphicsDevice?.Viewport.Width ?? 1024;
+            int h0 = _graphicsDevice?.Viewport.Height ?? 768;
+            int hudH0 = (int)MathF.Round(h0 * HudHeightFraction);
+            int viewH0 = Math.Max(1, h0 - hudH0);
+            return new Vector2(w0 / 2f, viewH0 / 2f);
+        }
         float ndcX = projected.X / projected.W;
         float ndcY = projected.Y / projected.W;
 
-        // NDC to screen space: [-1,1] → [0,1024] × [0,480]
-        float screenX = (ndcX + 1f) * 0.5f * ScreenWidth;
-        float screenY = (1 - ndcY) * 0.5f * HudViewportHeight;
+        // NDC to screen space: [-1,1] → [0,W] × [0,viewH]
+        int w = _graphicsDevice?.Viewport.Width ?? 1024;
+        int h = _graphicsDevice?.Viewport.Height ?? 768;
+        int hudH = (int)MathF.Round(h * HudHeightFraction);
+        int viewH = Math.Max(1, h - hudH);
+        float screenX = (ndcX + 1f) * 0.5f * w;
+        float screenY = (1 - ndcY) * 0.5f * viewH;
 
         return new Vector2(screenX, screenY);
     }
@@ -903,7 +1000,11 @@ public class FlightScene : GameScene
         if (dist < 0.001f) return;
 
         // FOV is 75 deg. tan(75/2) ≈ 0.767
-        float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (HudViewportHeight / 2f);
+        int w = _graphicsDevice?.Viewport.Width ?? 1024;
+        int h = _graphicsDevice?.Viewport.Height ?? 768;
+        int hudH = (int)MathF.Round(h * HudHeightFraction);
+        int viewH = Math.Max(1, h - hudH);
+        float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (viewH / 2f);
         if (screenRadius > 0 && screenRadius < 2000)
             _ringRenderer.DrawAxisAlignedRings(spriteBatch, screenPos, screenRadius, 1.4f, 2.2f, color, tiltAngle, layer, _gameInstance?.DrawWhite ?? false);
     }
@@ -916,7 +1017,11 @@ public class FlightScene : GameScene
         float dist = ToMonoGameWorld(worldPosElite).Length();
         if (dist < 0.001f) return;
 
-        float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (HudViewportHeight / 2f);
+        int w = _graphicsDevice?.Viewport.Width ?? 1024;
+        int h = _graphicsDevice?.Viewport.Height ?? 768;
+        int hudH = (int)MathF.Round(h * HudHeightFraction);
+        int viewH = Math.Max(1, h - hudH);
+        float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (viewH / 2f);
         if (screenRadius > 0 && screenRadius < 4000)
             _sunRenderer.DrawSun(spriteBatch, screenPos, screenRadius, color, _gameInstance?.DrawWhite ?? false);
     }

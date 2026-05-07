@@ -11,13 +11,6 @@ namespace EliteRetro.Core.Rendering;
 /// </summary>
 public class ScannerRenderer
 {
-    // Scanner geometry — fits full center dashboard panel between left/right bars
-    // Dashboard center: X=256 to 768 (512 wide), Y=480 to 768 (288 tall)
-    public const int CenterX = 512;   // 256 + 256
-    public const int CenterY = 624;   // 480 + 144
-    public const int RadiusX = 240;   // nearly full 512 width with margins
-    public const int RadiusY = 120;   // nearly full 288 height with margins
-
     public const int MaxRange = 63;
 
     private readonly Texture2D _whitePixel;
@@ -28,59 +21,72 @@ public class ScannerRenderer
         _whitePixel.SetData(new[] { Color.White });
     }
 
-    public void Draw(SpriteBatch spriteBatch, LocalBubbleManager bubbleManager, int playerSlot, OrientationMatrix universeOrientation)
+    public void Draw(SpriteBatch spriteBatch, LocalBubbleManager bubbleManager, int playerSlot, OrientationMatrix universeOrientation, Rectangle centerPanelRect)
     {
+        // Derive scanner geometry from available center panel area.
+        // Keep a wide ellipse like the original, but responsive to panel size.
+        int centerX = centerPanelRect.X + centerPanelRect.Width / 2;
+        int centerY = centerPanelRect.Y + centerPanelRect.Height / 2;
+        int pad = Math.Clamp((int)MathF.Round(MathF.Min(centerPanelRect.Width, centerPanelRect.Height) * 0.06f), 6, 18);
+        int maxRx = Math.Max(10, centerPanelRect.Width / 2 - pad);
+        int maxRy = Math.Max(8, centerPanelRect.Height / 2 - pad);
+        int radiusX = Math.Clamp((int)MathF.Round(centerPanelRect.Width * 0.47f), 10, maxRx);
+        int radiusY = Math.Clamp((int)MathF.Round(centerPanelRect.Height * 0.42f), 8, maxRy);
+
         // Black background for scanner area
-        spriteBatch.Draw(_whitePixel, new Rectangle(CenterX - RadiusX - 10, CenterY - RadiusY - 10, RadiusX * 2 + 20, RadiusY * 2 + 20), Color.Black);
+        var bg = new Rectangle(centerX - radiusX - 10, centerY - radiusY - 10, radiusX * 2 + 20, radiusY * 2 + 20);
+        bg = Rectangle.Intersect(bg, centerPanelRect);
+        if (bg.Width > 0 && bg.Height > 0)
+            spriteBatch.Draw(_whitePixel, bg, Color.Black);
 
         // Dashed grey grid lines
         Color gridColor = new Color(80, 80, 80);
         // 3 horizontal lines
-        int topWidth = (int)(RadiusX * MathF.Sqrt(Math.Max(0, 1 - (RadiusY * RadiusY / 4f) / (RadiusY * RadiusY))));
-        DrawDashedLine(spriteBatch, CenterX - topWidth, CenterY - RadiusY / 2, CenterX + topWidth, CenterY - RadiusY / 2, gridColor);
-        DrawDashedLine(spriteBatch, CenterX - RadiusX, CenterY, CenterX + RadiusX, CenterY, gridColor);
-        DrawDashedLine(spriteBatch, CenterX - topWidth, CenterY + RadiusY / 2, CenterX + topWidth, CenterY + RadiusY / 2, gridColor);
+        int topWidth = (int)(radiusX * MathF.Sqrt(Math.Max(0, 1 - (radiusY * radiusY / 4f) / (radiusY * radiusY))));
+        DrawDashedLine(spriteBatch, centerX - topWidth, centerY - radiusY / 2, centerX + topWidth, centerY - radiusY / 2, gridColor);
+        DrawDashedLine(spriteBatch, centerX - radiusX, centerY, centerX + radiusX, centerY, gridColor);
+        DrawDashedLine(spriteBatch, centerX - topWidth, centerY + radiusY / 2, centerX + topWidth, centerY + radiusY / 2, gridColor);
         // Vertical line from bottom to center
-        DrawDashedLine(spriteBatch, CenterX, CenterY + RadiusY, CenterX, CenterY, gridColor);
+        DrawDashedLine(spriteBatch, centerX, centerY + radiusY, centerX, centerY, gridColor);
 
         // W shape inscribed in ellipse
-        float wPeakY = CenterY - RadiusY * 0.85f;
-        float wBottom = CenterY + RadiusY / 2;
+        float wPeakY = centerY - radiusY * 0.85f;
+        float wBottom = centerY + radiusY / 2;
         int bottomLineHalfWidth = topWidth;
-        float peakYFrac = (wPeakY - CenterY) / RadiusY;
-        float wXPeak = RadiusX * MathF.Sqrt(Math.Max(0, 1 - peakYFrac * peakYFrac));
+        float peakYFrac = (wPeakY - centerY) / radiusY;
+        float wXPeak = radiusX * MathF.Sqrt(Math.Max(0, 1 - peakYFrac * peakYFrac));
         float wXInner = wXPeak * 0.4f;
-        DrawDashedLine(spriteBatch, CenterX - bottomLineHalfWidth, (int)wBottom, (int)(CenterX - wXInner), (int)wPeakY, gridColor);
-        DrawDashedLine(spriteBatch, (int)(CenterX - wXInner), (int)wPeakY, CenterX, CenterY, gridColor);
-        DrawDashedLine(spriteBatch, CenterX, CenterY, (int)(CenterX + wXInner), (int)wPeakY, gridColor);
-        DrawDashedLine(spriteBatch, (int)(CenterX + wXInner), (int)wPeakY, CenterX + bottomLineHalfWidth, (int)wBottom, gridColor);
+        DrawDashedLine(spriteBatch, centerX - bottomLineHalfWidth, (int)wBottom, (int)(centerX - wXInner), (int)wPeakY, gridColor);
+        DrawDashedLine(spriteBatch, (int)(centerX - wXInner), (int)wPeakY, centerX, centerY, gridColor);
+        DrawDashedLine(spriteBatch, centerX, centerY, (int)(centerX + wXInner), (int)wPeakY, gridColor);
+        DrawDashedLine(spriteBatch, (int)(centerX + wXInner), (int)wPeakY, centerX + bottomLineHalfWidth, (int)wBottom, gridColor);
 
         // White ellipse outline (solid)
-        DrawEllipse(spriteBatch, CenterX, CenterY, RadiusX, RadiusY, Color.White);
+        DrawEllipse(spriteBatch, centerX, centerY, radiusX, radiusY, Color.White);
 
         // Sun indicator: small circle in upper left area
-        DrawSunIndicator(spriteBatch, bubbleManager);
+        DrawSunIndicator(spriteBatch, bubbleManager, centerX, centerY, radiusX, radiusY);
 
         // Station indicator: circle with square in upper right area
-        DrawStationIndicator(spriteBatch, bubbleManager);
+        DrawStationIndicator(spriteBatch, bubbleManager, centerX, centerY, radiusX, radiusY);
 
         // Ship contacts (transformed by universe orientation)
-        DrawContacts(spriteBatch, bubbleManager, playerSlot, universeOrientation);
+        DrawContacts(spriteBatch, bubbleManager, playerSlot, universeOrientation, centerX, centerY, radiusX, radiusY);
     }
 
     /// <summary>
     /// Draw sun indicator: small circle in upper left.
     /// Shows sun direction when sun is present (not replaced by station).
     /// </summary>
-    private void DrawSunIndicator(SpriteBatch spriteBatch, LocalBubbleManager bubbleManager)
+    private void DrawSunIndicator(SpriteBatch spriteBatch, LocalBubbleManager bubbleManager, int centerX, int centerY, int radiusX, int radiusY)
     {
         var sun = bubbleManager.SunOrStation;
         if (sun == null || sun.Blueprint?.Name != "Sun")
             return;
 
         // Position: upper left area of scanner
-        int indX = CenterX - RadiusX + 35;
-        int indY = CenterY - RadiusY + 30;
+        int indX = centerX - radiusX + 35;
+        int indY = centerY - radiusY + 30;
         int radius = 14;
 
         // Circle outline in orange/yellow
@@ -94,15 +100,15 @@ public class ScannerRenderer
     /// Draw station indicator: circle with square (Coriolis symbol).
     /// Filled square = station ahead (in safe zone), outlined = station behind.
     /// </summary>
-    private void DrawStationIndicator(SpriteBatch spriteBatch, LocalBubbleManager bubbleManager)
+    private void DrawStationIndicator(SpriteBatch spriteBatch, LocalBubbleManager bubbleManager, int centerX, int centerY, int radiusX, int radiusY)
     {
         var station = bubbleManager.SunOrStation;
         if (station == null || station.Blueprint?.Name != "Coriolis Station")
             return;
 
         // Position: upper right area of scanner, inside ellipse
-        int indX = CenterX + RadiusX - 35;
-        int indY = CenterY - RadiusY + 30;
+        int indX = centerX + radiusX - 35;
+        int indY = centerY - radiusY + 30;
         int radius = 16;
         int sqSize = 12;
 
@@ -217,7 +223,7 @@ public class ScannerRenderer
     /// proportionally scaled to fill the ellipse while preserving the BBC Elite
     /// depth-to-lateral ratio (1:4) and altitude-to-lateral ratio (1:2).
     /// </summary>
-    public static (Vector2 dotPos, Vector2 stickBase, bool visible)? ProjectToScanner(Vector3 localPos)
+    public static (Vector2 dotPos, Vector2 stickBase, bool visible)? ProjectToScanner(Vector3 localPos, int centerX, int centerY, int radiusX, int radiusY)
     {
         // Scale world units to scanner range [-MaxRange, MaxRange]
         float scale = MaxRange / 1000f;
@@ -232,13 +238,13 @@ public class ScannerRenderer
 
         // Lateral position: positive X (right of player) → right on scanner
         // Matches BBC Elite: X1 = 123 + x_hi, scaled to our scanner width
-        int screenX = CenterX + (int)(xHi * (RadiusX / (float)MaxRange));
+        int screenX = centerX + (int)(xHi * (radiusX / (float)MaxRange));
 
         // Depth position: positive Z (ahead of player) → top of scanner (smaller Y)
         // BBC Elite: SC = 220 - z_hi/4, where z_hi/4 spans ~88% of the 18-pixel half-height.
         // We scale depth to fill the same proportion of our larger scanner.
-        float depthScale = RadiusY * 0.875f / MaxRange;
-        int stickBaseY = CenterY - (int)(zHi * depthScale);
+        float depthScale = radiusY * 0.875f / MaxRange;
+        int stickBaseY = centerY - (int)(zHi * depthScale);
 
         // Altitude (stick height): positive Y (above player) → negative stick (dot above base)
         // BBC Elite: A = -(y_hi/2). Stick sensitivity is 2x depth sensitivity.
@@ -258,9 +264,9 @@ public class ScannerRenderer
         // BBC Elite checks the stick BASE against the ellipse (the x/z plane position),
         // not the dot (which includes altitude). If the base is outside the ellipse,
         // the ship is too far away on the scanner plane and we skip it entirely.
-        float baseDx = screenX - CenterX;
-        float baseDy = stickBaseY - CenterY;
-        float baseEllipseDist = (baseDx * baseDx) / (RadiusX * RadiusX) + (baseDy * baseDy) / (RadiusY * RadiusY);
+        float baseDx = screenX - centerX;
+        float baseDy = stickBaseY - centerY;
+        float baseEllipseDist = (baseDx * baseDx) / (radiusX * radiusX) + (baseDy * baseDy) / (radiusY * radiusY);
         if (baseEllipseDist > 1.1f)
             return null;
 
@@ -268,8 +274,8 @@ public class ScannerRenderer
         // BBC Elite clamps the dot's screen Y to the dashboard boundaries (194-246)
         // so sticks of distant ships get shortened but still appear. We clamp to
         // our scanner's bounding box (with 1px margin for the dot size).
-        int scannerTop = CenterY - RadiusY + 1;
-        int scannerBot = CenterY + RadiusY - 1;
+        int scannerTop = centerY - radiusY + 1;
+        int scannerBot = centerY + radiusY - 1;
         dotY = Math.Clamp(dotY, scannerTop, scannerBot);
 
         return (new Vector2(screenX, dotY), new Vector2(screenX, stickBaseY), true);
@@ -297,7 +303,7 @@ public class ScannerRenderer
         spriteBatch.Draw(_whitePixel, new Rectangle((int)dotPos.X - 1, (int)dotPos.Y - 1, 3, 3), color);
     }
 
-    private void DrawContacts(SpriteBatch spriteBatch, LocalBubbleManager bubbleManager, int playerSlot, OrientationMatrix universeOrientation)
+    private void DrawContacts(SpriteBatch spriteBatch, LocalBubbleManager bubbleManager, int playerSlot, OrientationMatrix universeOrientation, int centerX, int centerY, int radiusX, int radiusY)
     {
         var player = bubbleManager.PlayerShip;
         if (player == null) return;
@@ -315,7 +321,7 @@ public class ScannerRenderer
             // so flip Z here to match the scanner convention.
             Vector3 scannerLocal = new Vector3(basisCoords.X, basisCoords.Y, -basisCoords.Z);
 
-            var pos = ProjectToScanner(scannerLocal);
+            var pos = ProjectToScanner(scannerLocal, centerX, centerY, radiusX, radiusY);
             if (pos.HasValue)
             {
                 // Station appears as a large dot on the scanner
