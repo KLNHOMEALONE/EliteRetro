@@ -54,35 +54,8 @@ public class HudRenderer
         DrawCompass(spriteBatch, state.CompassHeading, font, new Rectangle(centerX, hudRect.Y, centerW, hudRect.Height));
         DrawRightBars(spriteBatch, state, font, new Rectangle(rightX, hudRect.Y, rightW, hudRect.Height), barSlotH);
 
-        if (!string.IsNullOrEmpty(state.ViewMode))
-            font.DrawString(spriteBatch, state.ViewMode, new Vector2(10, 10), Amber, 1.5f);
-
-        if (!string.IsNullOrEmpty(state.StatusMessage))
-        {
-            var size = font.MeasureString(state.StatusMessage);
-            font.DrawString(spriteBatch, state.StatusMessage,
-                new Vector2((screenRect.Width - size.X) / 2, 15), state.StatusColor, 1.2f);
-        }
-
-        // Combat rank and legal status in top-right corner
-        string legalText = state.LegalStatus switch
-        {
-            0 => "CLEAN",
-            < 50 => "OFFENDER",
-            _ => "FUGITIVE"
-        };
-        var legalSz = font.MeasureString(legalText);
-        font.DrawString(spriteBatch, legalText,
-            new Vector2(screenRect.Width - legalSz.X - 10, 10),
-            state.LegalStatus >= 50 ? Color.OrangeRed : Color.Lime, 1.0f);
-
-        if (!string.IsNullOrEmpty(state.CombatRank))
-        {
-            var rankSz = font.MeasureString(state.CombatRank);
-            font.DrawString(spriteBatch, state.CombatRank,
-                new Vector2(screenRect.Width - rankSz.X - 10, 32),
-                Color.Gold, 1.0f);
-        }
+        // Note: top-of-screen overlay (view mode, status, legal, rank)
+        // is drawn by the scene so it can be clipped to the view frame.
     }
 
     private void DrawLeftBars(SpriteBatch spriteBatch, HUDState state, BitmapFont font, Rectangle leftRect, int barSlotH)

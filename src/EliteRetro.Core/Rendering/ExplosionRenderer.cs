@@ -25,7 +25,13 @@ public class ExplosionRenderer
     /// </summary>
     public class ExplosionCloud
     {
-        /// <summary>Screen-space center of explosion.</summary>
+        /// <summary>
+        /// Explosion origin in Elite-world coordinates (local bubble).
+        /// The renderer projects this each frame so the cloud obeys 3D rules.
+        /// </summary>
+        public Vector3 WorldPosElite { get; set; }
+
+        /// <summary>Screen-space center of explosion (updated each frame).</summary>
         public Vector2 Center { get; set; }
 
         /// <summary>Origin vertices (indices into the ship model) where particles spawn.</summary>
@@ -57,11 +63,11 @@ public class ExplosionRenderer
     }
 
     /// <summary>
-    /// Create a new explosion cloud for a ship at the given screen position.
+    /// Create a new explosion cloud for a ship at the given world position.
     /// </summary>
-    public ExplosionCloud CreateExplosion(ShipModel model, Vector2 screenCenter, float distance)
+    public ExplosionCloud CreateExplosion(ShipModel model, Vector3 worldPosElite)
     {
-        var rng = new Random((int)screenCenter.X * 17 + (int)screenCenter.Y * 31);
+        var rng = new Random(HashCode.Combine((int)worldPosElite.X, (int)worldPosElite.Y, (int)worldPosElite.Z));
 
         // Use first N vertices as explosion origins (from blueprint)
         int explosionCount = Math.Min(model.Vertices.Count, 8);
@@ -75,11 +81,12 @@ public class ExplosionRenderer
 
         return new ExplosionCloud
         {
-            Center = screenCenter,
+            WorldPosElite = worldPosElite,
+            Center = Vector2.Zero,
             OriginVertices = origins,
             Counter = 18,
             Seeds = seeds,
-            Distance = Math.Max(distance, 0.5f),
+            Distance = 1.0f,
             Color = Color.Orange
         };
     }

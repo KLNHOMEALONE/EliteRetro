@@ -22,9 +22,6 @@ public class FlightScene : GameScene
     private const int MilestoneMsgY = 200;
     private WireframeRenderer _wireframeRenderer = null!;
     private CircleRenderer _circleRenderer = null!;
-    private PlanetRenderer _planetRenderer = null!;
-    private SunRenderer _sunRenderer = null!;
-    private RingRenderer _ringRenderer = null!;
     private StardustRenderer _stardustRenderer = null!;
     private ExplosionRenderer _explosionRenderer = null!;
     private readonly List<ExplosionRenderer.ExplosionCloud> _explosions = new();
@@ -67,13 +64,21 @@ public class FlightScene : GameScene
     private int _laserFlashTimer; // frames remaining to show laser beam
     private bool _targetPracticeMode; // when true, spawn stationary target ship ahead
     private FlightControlState _lastControl; // store last input state for HUD
+    private readonly GalaxySeed _systemSeed;
+    private bool _planetHit;
+    private float _lastMoveStep;
+    private float _lastDt;
+    private float _prevPlanetDist;
+    private float _prevPlanetZ;
+    private float _planetDistDelta;
+    private float _planetZDelta;
     private int _lastBackBufferW;
     private int _lastBackBufferH;
     private int _lastViewH;
     private const float HudHeightFraction = 0.375f; // 288/768: matches current layout but scales by percentage
     private readonly RasterizerState _scissorRasterizer = new RasterizerState { ScissorTestEnable = true };
 
-    public FlightScene(Game? game = null)
+    public FlightScene(Game? game = null, GalaxySeed? systemSeed = null)
     {
         if (game is GameInstance gi)
         {
@@ -86,6 +91,8 @@ public class FlightScene : GameScene
             _bubbleManager.EntityEvent += OnEntityEvent;
             _bubbleManager.CollisionEvent += OnCollision;
         }
+
+        _systemSeed = systemSeed ?? GalaxySeed.Galaxy0System0;
     }
 
     public override void LoadContent(ContentManager content, BitmapFont font, GraphicsDevice graphicsDevice)
@@ -94,9 +101,6 @@ public class FlightScene : GameScene
         _graphicsDevice = graphicsDevice;
         _wireframeRenderer = new WireframeRenderer(_graphicsDevice);
         _circleRenderer = new CircleRenderer(_graphicsDevice);
-        _planetRenderer = new PlanetRenderer(_graphicsDevice);
-        _sunRenderer = new SunRenderer(_graphicsDevice);
-        _ringRenderer = new RingRenderer(_graphicsDevice);
         _stardustRenderer = new StardustRenderer(_graphicsDevice);
         _explosionRenderer = new ExplosionRenderer(_graphicsDevice);
         _hudRenderer = new HudRenderer(_graphicsDevice);
@@ -109,6 +113,14 @@ public class FlightScene : GameScene
         // Create 1x1 white texture for damage flash overlay
         _whitePixel = new Texture2D(graphicsDevice, 1, 1);
         _whitePixel.SetData(new[] { Color.White });
+
+        // Apply persisted "draw invisible" setting as initial hidden-edge mode
+        _showHiddenEdges = _gameInstance?.DrawInvisible ?? false;
+
+        // Elite feels wrong if you start at absolute zero speed: you can rotate forever and
+        // distances won't change (looks like "moving in a circle"). Start with a small cruise.
+        if (_playerSpeed <= 0f)
+            _playerSpeed = 12f;
     }
 
     private void EnsureProjectionMatchesViewport()
@@ -156,6 +168,10 @@ public class FlightScene : GameScene
     {
         _bubbleManager.Clear();
 
+        // BBC SOLAR-style derived placement: uses system seed + FIST bit0.
+        int fistBit0 = _bubbleManager.Commander?.LegalStatus is byte ls ? (ls & 1) : 0;
+        var (planetPos, sunPos) = ComputeSolarSpawn(_systemSeed, fistBit0);
+
         // Slot 0: Planet
         var planetModel = PlanetModel.Create(GameConstants.PlanetRadius);
         var planetBlueprint = new ShipBlueprint
@@ -169,14 +185,12 @@ public class FlightScene : GameScene
         };
         var planet = new ShipInstance(planetBlueprint)
         {
-            Position = new Vector3(0, 0, -GameConstants.PlanetRadius * 5),
+            Position = planetPos,
             Speed = 0
         };
         _bubbleManager.SetSlot(GameConstants.PlanetSlot, planet);
 
-        // Slot 1: Sun - placed at 2.67-18.67 planet radii, behind player
-        float sunDistance = GameConstants.PlanetRadius * (2.67f + (float)(new Random().NextDouble() * 16));
-        // Render-scale sanity: keep the sun large, but not orders of magnitude larger than the scene.
+        // Slot 1: Sun (behind player)
         var sunModel = SunModel.Create(GameConstants.PlanetRadius * 6);
         var sunBlueprint = new ShipBlueprint
         {
@@ -189,10 +203,49 @@ public class FlightScene : GameScene
         };
         var sun = new ShipInstance(sunBlueprint)
         {
-            Position = new Vector3(0, 0, sunDistance), // Behind player (positive Z)
+            Position = sunPos,
             Speed = 0
         };
         _bubbleManager.SetSlot(GameConstants.SunStationSlot, sun);
+    }
+
+    /// <summary>
+    /// Compute BBC Elite SOLAR spawn positions for planet (ahead) and sun (behind).
+    /// Positions are returned in Elite-world local-bubble coordinates (player at origin).
+    ///
+    /// Coordinate convention in this project:
+    /// - Positive Z: ahead of player (front view)
+    /// - Negative Z: behind player
+    /// </summary>
+    private static (Vector3 planetPos, Vector3 sunPos) ComputeSolarSpawn(GalaxySeed seed, int fistBit0)
+    {
+        // Planet distance hi-byte (planetZHi): ((s0_hi & 0b111) + 6 + fistBit0) >> 1
+        // BBC example for Lave: z = (5 0 0) (ahead).
+        int planetZHi = ((seed.W0Hi & 0x07) + 6 + (fistBit0 & 1)) >> 1;
+
+        // Planet x/y offsets are small and depend on fistBit0 in the BBC examples.
+        // Example from docs: fistBit0=0 => x=y=-(2 0 0); fistBit0=1 => x=y=(3 0 0)
+        int planetXYHi = (fistBit0 & 1) == 0 ? -2 : 3;
+
+        Vector3 planetPos = new Vector3(
+            planetXYHi << 16,
+            planetXYHi << 16,
+            +(planetZHi << 16));
+
+        // Sun is always behind. In BBC: z_sign = (s1_hi & 0b111) | 0b10000001 -> negative.
+        // That yields a magnitude in [1..7] (as -(1..7) 0 0).
+        int sunZHi = (seed.W1Hi & 0x07) + 1;
+
+        // Sun x/y offset is small (0..2-ish). Derive from low bits of s1_lo.
+        int sunOff = seed.W1Lo & 0x03;
+        if (sunOff > 2) sunOff = 2;
+
+        Vector3 sunPos = new Vector3(
+            sunOff << 16,
+            sunOff << 16,
+            -(sunZHi << 16));
+
+        return (planetPos, sunPos);
     }
 
     public override void Update(GameTime gameTime)
@@ -217,6 +270,15 @@ public class FlightScene : GameScene
         if (!_lastControl.IsPaused)
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _lastDt = dt;
+
+            // If we've hit the planet, freeze motion/rotation for stability.
+            if (_planetHit)
+            {
+                _lastMoveStep = 0f;
+                _prevKb = kb;
+                return;
+            }
 
             // 1. ROTATE UNIVERSE (Minsky algorythm)
             // Roll and Pitch are applied to ALL entities in the universe.
@@ -234,6 +296,7 @@ public class FlightScene : GameScene
             // 2. MOVE UNIVERSE (Forward move = objects move toward player)
             // In this coordinate system, forward motion makes objects move closer along -Z.
             float moveStep = _playerSpeed * dt * 60f;
+            _lastMoveStep = moveStep;
             foreach (var entity in _bubbleManager.GetAllActive())
             {
                 // Skip player - player does not move
@@ -258,6 +321,20 @@ public class FlightScene : GameScene
 
             // Check player collision against nearby entities (every frame, O(n) not O(n²))
             CollisionSystem.CheckPlayerCollisions(_bubbleManager);
+
+            // Planet crash check for player (prevents "flying through" the planet)
+            var player = _bubbleManager.PlayerShip;
+            var planet = _bubbleManager.Planet;
+            if (player != null && planet != null && CollisionSystem.CheckPlanetCrash(player, planet))
+            {
+                _lastEventMessage = "PLANET HIT";
+                _eventMessageTimer = int.MaxValue; // constant message
+                _playerSpeed = 0f;
+                _planetHit = true;
+                _lastMoveStep = 0f;
+                _prevKb = kb;
+                return;
+            }
 
             // Cleanup expired entities (lifetime or out of bounds)
             _bubbleManager.CleanupExpired();
@@ -345,7 +422,14 @@ public class FlightScene : GameScene
 
         // Toggle hidden edges with I
         if (kb.IsKeyDown(Keys.I) && _prevKb.IsKeyUp(Keys.I))
+        {
             _showHiddenEdges = !_showHiddenEdges;
+            if (_gameInstance != null)
+            {
+                _gameInstance.DrawInvisible = _showHiddenEdges;
+                Systems.OptionsManager.Save(_gameInstance.DrawWhite, _gameInstance.DrawInvisible);
+            }
+        }
 
         // FIXED VIEW DIRECTIONS for Rotating Universe model.
         // Camera is fixed at origin looking at these axes.
@@ -422,9 +506,16 @@ public class FlightScene : GameScene
         // Draw stardust (starfield)
         _stardustRenderer.Draw(spriteBatch, screenCenter, 500f, _view, _gameInstance?.DrawWhite ?? false);
 
-        // Draw explosions
+        // Draw explosions (world-anchored, projected each frame)
         foreach (var cloud in _explosions)
+        {
+            if (!IsInFrontOfCamera(cloud.WorldPosElite))
+                continue;
+
+            cloud.Center = ProjectToScreenElite(cloud.WorldPosElite);
+            cloud.Distance = Math.Max(ToMonoGameWorld(cloud.WorldPosElite).Length(), 0.5f);
             _explosionRenderer.UpdateAndDraw(spriteBatch, cloud, _lastGameTime, _gameInstance?.DrawWhite ?? false);
+        }
 
         // Render bubble entities (skip planet and sun - rendered separately)
         foreach (var entity in _bubbleManager.GetAllActive())
@@ -455,21 +546,58 @@ public class FlightScene : GameScene
             }
         }
 
-        // Draw planet/sun/rings using the original 2D style renderers,
-        // but projected from true 3D world positions (Elite -> MonoGame conversion applied).
-        if (_bubbleManager.Planet != null)
-        {
-            int rollAngle64 = ((int)(_cumulativeRoll * 64 / MathHelper.TwoPi) % 64 + 64) % 64;
-            int totalPlanetRotation = (_planetRotation + rollAngle64) % 64;
+        // Draw planet/sun using simple 2D discs, but projected from true 3D positions
+        // (so they still obey 3D rules: culling + distance scaling + screen shift).
+        // Fix: use view-space depth and explicit eclipse check so the sun cannot appear
+        // "inside" the planet disc when it is physically behind it.
+        var planetEntity = _bubbleManager.Planet;
+        var sunEntity = (_bubbleManager.SunOrStation?.Blueprint?.Name == "Sun") ? _bubbleManager.SunOrStation : null;
 
-            DrawCelestialRings(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(180, 160, 120), "back", rollAngle64);
-            DrawCelestialPlanet(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(50, 100, 180), totalPlanetRotation);
-            DrawCelestialRings(spriteBatch, _bubbleManager.Planet.Position, GameConstants.PlanetRadius, new Color(180, 160, 120), "front", rollAngle64);
-        }
+        CelestialDisc? planetDisc = planetEntity != null ? ComputeCelestialDisc(planetEntity.Position, GameConstants.PlanetRadius) : null;
+        CelestialDisc? sunDisc = sunEntity != null ? ComputeCelestialDisc(sunEntity.Position, GameConstants.PlanetRadius * 6) : null;
 
-        if (_bubbleManager.SunOrStation != null && _bubbleManager.SunOrStation.Blueprint?.Name == "Sun")
+        if (planetDisc.HasValue || sunDisc.HasValue)
         {
-            DrawCelestialSun(spriteBatch, _bubbleManager.SunOrStation.Position, GameConstants.PlanetRadius * 6, SunRenderer.GetSunColor(0));
+            // Eclipse: if sun is farther than planet and projects inside the planet disc, it's occluded.
+            // Note: in view space (MonoGame RH), objects in front have Z < 0.
+            // More negative Z => farther away. Less negative Z => closer.
+            if (planetDisc.HasValue && sunDisc.HasValue)
+            {
+                var p = planetDisc.Value;
+                var s = sunDisc.Value;
+                if (s.ViewZ < p.ViewZ) // sun farther than planet
+                {
+                    float d = Vector2.Distance(p.ScreenCenter, s.ScreenCenter);
+                    if (d < p.ScreenRadius - 0.5f)
+                        sunDisc = null;
+                }
+            }
+
+            // Painter's algorithm using view-space Z (more negative = farther; less negative = closer)
+            if (sunDisc.HasValue && planetDisc.HasValue)
+            {
+                var p = planetDisc.Value;
+                var s = sunDisc.Value;
+                if (s.ViewZ < p.ViewZ)
+                {
+                    // sun farther than planet: draw sun first, then planet on top
+                    DrawCelestialSun(spriteBatch, s.WorldPosElite, GameConstants.PlanetRadius * 6, Color.White);
+                    DrawCelestialPlanet(spriteBatch, p.WorldPosElite, GameConstants.PlanetRadius, Color.White);
+                }
+                else
+                {
+                    // planet farther than sun: draw planet first, then sun on top
+                    DrawCelestialPlanet(spriteBatch, p.WorldPosElite, GameConstants.PlanetRadius, Color.White);
+                    DrawCelestialSun(spriteBatch, s.WorldPosElite, GameConstants.PlanetRadius * 6, Color.White);
+                }
+            }
+            else
+            {
+                if (sunDisc.HasValue)
+                    DrawCelestialSun(spriteBatch, sunDisc.Value.WorldPosElite, GameConstants.PlanetRadius * 6, Color.White);
+                if (planetDisc.HasValue)
+                    DrawCelestialPlanet(spriteBatch, planetDisc.Value.WorldPosElite, GameConstants.PlanetRadius, Color.White);
+            }
         }
 
         // Damage flash overlay (only inside view frame)
@@ -503,6 +631,9 @@ public class FlightScene : GameScene
             DrawLine(spriteBatch, new Vector2(viewRect.Left, viewRect.Bottom), new Vector2(cx, cy), Color.Yellow, 2);
             DrawLine(spriteBatch, new Vector2(viewRect.Right, viewRect.Bottom), new Vector2(cx, cy), Color.Yellow, 2);
         }
+
+        // Overlay messages (kept inside view frame)
+        DrawViewOverlay(spriteBatch, viewContentRect);
 
         spriteBatch.End();
 
@@ -789,35 +920,6 @@ public class FlightScene : GameScene
         var centerPanelRect = new Rectangle(hudRect.X + leftW, hudRect.Y, centerW, hudRect.Height);
         _scannerRenderer.Draw(spriteBatch, _bubbleManager, GameConstants.PlayerSlot, _universeOrientation, centerPanelRect);
 
-        // Flight data text (left side, original positions)
-        float planetDist = _bubbleManager.Planet?.Position.Length() ?? 0;
-        float sunDist = _bubbleManager.SunOrStation?.Position.Length() ?? 0;
-        _font.DrawString(spriteBatch, $"PLANET DIST: {planetDist:F0}", new Vector2(10, 60), Color.Cyan, 1.2f);
-        _font.DrawString(spriteBatch, $"SUN DIST: {sunDist:F0}", new Vector2(10, 82), Color.Orange, 1.2f);
-
-        // Hidden edges indicator
-        _font.DrawString(spriteBatch, _showHiddenEdges ? "HIDDEN: ON" : "HIDDEN: OFF", new Vector2(10, 160), Color.White, 0.8f);
-
-        // Ram mode indicator
-        Color ramColor = _ramMode ? Color.Red : Color.DarkGray;
-        _font.DrawString(spriteBatch, _ramMode ? "RAM MODE: ON (press R to toggle)" : "RAM MODE: OFF (press R to toggle)", new Vector2(10, 182), ramColor, 0.8f);
-
-        // Debug: show distances to nearby entities
-        int debugY = 205;
-        foreach (var entity in _bubbleManager.GetActiveShips())
-        {
-            float dist = entity.Position.Length();
-            if (dist < 500)
-            {
-                Color distColor = dist < 50 ? Color.Red : dist < 200 ? Color.Orange : Color.Yellow;
-                _font.DrawString(spriteBatch, $"{entity.Blueprint.Name}: {dist:F0}", new Vector2(10, debugY), distColor, 0.8f);
-                debugY += 22;
-            }
-        }
-
-        // Controls
-        _font.DrawString(spriteBatch, "ARROWS: PITCH/ROLL  W/S: SPEED  V: VIEW  SPACE: FIRE  P: PAUSE  +/-: ZOOM  I: EDGES  F5: SAVE  ESC: MENU", new Vector2(10, 740), Color.Gray, 0.8f);
-
         // Entity event messages (spawn/despawn)
         if (_eventMessageTimer > 0 && !string.IsNullOrEmpty(_lastEventMessage))
         {
@@ -840,6 +942,123 @@ public class FlightScene : GameScene
 
         if (_paused)
             _font.DrawString(spriteBatch, "PAUSED", new Vector2(400, 350), Color.Red, 2f);
+    }
+
+    private void DrawViewOverlay(SpriteBatch spriteBatch, Rectangle viewContentRect)
+    {
+        float x = viewContentRect.X + 10;
+        float y = viewContentRect.Y + 10;
+
+        // View mode (top-left)
+        string viewMode = _viewMode switch
+        {
+            0 => "FRONT",
+            1 => "REAR",
+            2 => "LEFT",
+            3 => "RIGHT",
+            _ => "FRONT"
+        };
+        _font.DrawString(spriteBatch, viewMode, new Vector2(x, y), new Color(255, 180, 50), 1.5f);
+
+        // Status message (top-center)
+        var sunEffect = _bubbleManager.CheckSunProximity();
+        string statusMsg = "";
+        Color statusColor = Color.Gray;
+
+        if (sunEffect == LocalBubbleManager.SunProximityEffect.Fatal)
+        {
+            statusMsg = "DANGER - FATAL PROXIMITY";
+            statusColor = Color.Red;
+        }
+        else if (sunEffect == LocalBubbleManager.SunProximityEffect.FuelScoop)
+        {
+            statusMsg = "FUEL SCOOP ACTIVE";
+            statusColor = Color.Green;
+        }
+        else if (sunEffect == LocalBubbleManager.SunProximityEffect.HeatWarning)
+        {
+            statusMsg = "HEAT WARNING";
+            statusColor = Color.Orange;
+        }
+        if (_bubbleManager.SunOrStation?.Blueprint?.Name == "Coriolis Station")
+        {
+            statusMsg = "STATION IN VIEW";
+            statusColor = Color.Yellow;
+        }
+        if (!string.IsNullOrEmpty(statusMsg))
+        {
+            var size = _font.MeasureString(statusMsg);
+            _font.DrawString(spriteBatch, statusMsg,
+                new Vector2(viewContentRect.X + (viewContentRect.Width - size.X) / 2f, y + 5),
+                statusColor, 1.2f);
+        }
+
+        // Legal + rank (top-right)
+        string legalText = _bubbleManager.Commander.LegalStatus switch
+        {
+            0 => "CLEAN",
+            < 50 => "OFFENDER",
+            _ => "FUGITIVE"
+        };
+        var legalSz = _font.MeasureString(legalText);
+        _font.DrawString(spriteBatch, legalText,
+            new Vector2(viewContentRect.Right - legalSz.X - 10, y),
+            _bubbleManager.Commander.LegalStatus >= 50 ? Color.OrangeRed : Color.Lime, 1.0f);
+
+        string rankText = _bubbleManager.Commander.RankName;
+        if (!string.IsNullOrEmpty(rankText))
+        {
+            var rankSz = _font.MeasureString(rankText);
+            _font.DrawString(spriteBatch, rankText,
+                new Vector2(viewContentRect.Right - rankSz.X - 10, y + 22),
+                Color.Gold, 1.0f);
+        }
+
+        // Distances (left)
+        float planetDist = _bubbleManager.Planet?.Position.Length() ?? 0;
+        float sunDist = _bubbleManager.SunOrStation?.Position.Length() ?? 0;
+        if (_bubbleManager.Planet != null)
+        {
+            _planetDistDelta = planetDist - _prevPlanetDist;
+            _planetZDelta = _bubbleManager.Planet.Position.Z - _prevPlanetZ;
+            _prevPlanetDist = planetDist;
+            _prevPlanetZ = _bubbleManager.Planet.Position.Z;
+        }
+
+        _font.DrawString(spriteBatch, $"PLANET DIST: {planetDist:F4}  (Δ { _planetDistDelta:+0.0000;-0.0000;0.0000})", new Vector2(x, y + 50), Color.Cyan, 1.2f);
+        _font.DrawString(spriteBatch, $"SUN DIST: {sunDist:F4}", new Vector2(x, y + 72), Color.Orange, 1.2f);
+        if (_bubbleManager.Planet != null)
+            _font.DrawString(spriteBatch, $"PLANET Z: {_bubbleManager.Planet.Position.Z:F4}  (Δ { _planetZDelta:+0.0000;-0.0000;0.0000})", new Vector2(x, y + 94), Color.Cyan, 0.9f);
+        if (_bubbleManager.SunOrStation != null)
+            _font.DrawString(spriteBatch, $"SUN Z: {_bubbleManager.SunOrStation.Position.Z:F0}", new Vector2(x, y + 112), Color.Orange, 0.9f);
+        _font.DrawString(spriteBatch, $"SPEED: {_playerSpeed:F4}", new Vector2(x, y + 130), Color.Gray, 0.9f);
+        if (_planetHit)
+            _font.DrawString(spriteBatch, "PLANET HIT: TRUE", new Vector2(x, y + 148), Color.Red, 0.9f);
+        _font.DrawString(spriteBatch, $"PAUSED: {_paused}  CTRL-PAUSE: {_lastControl.IsPaused}", new Vector2(x, y + 154), Color.Gray, 0.8f);
+        _font.DrawString(spriteBatch, $"DT: {_lastDt * 1000f:F3}ms  STEP: {_lastMoveStep:F4}", new Vector2(x, y + 172), Color.Gray, 0.8f);
+
+        // Modes (left)
+        _font.DrawString(spriteBatch, _showHiddenEdges ? "HIDDEN: ON" : "HIDDEN: OFF", new Vector2(x, y + 190), Color.White, 0.8f);
+        Color ramColor = _ramMode ? Color.Red : Color.DarkGray;
+        _font.DrawString(spriteBatch, _ramMode ? "RAM MODE: ON (press R to toggle)" : "RAM MODE: OFF (press R to toggle)", new Vector2(x, y + 212), ramColor, 0.8f);
+
+        // Nearby entity distances (left)
+        int debugY = (int)(y + 235);
+        foreach (var entity in _bubbleManager.GetActiveShips())
+        {
+            float dist = entity.Position.Length();
+            if (dist < 500)
+            {
+                Color distColor = dist < 50 ? Color.Red : dist < 200 ? Color.Orange : Color.Yellow;
+                _font.DrawString(spriteBatch, $"{entity.Blueprint.Name}: {dist:F0}", new Vector2(x, debugY), distColor, 0.8f);
+                debugY += 22;
+                if (debugY > viewContentRect.Bottom - 24) break;
+            }
+        }
+
+        // Controls (bottom of view frame)
+        string controls = "ARROWS: PITCH/ROLL  W/S: SPEED  V: VIEW  SPACE: FIRE  P: PAUSE  +/-: ZOOM  I: EDGES  F5: SAVE  ESC: MENU";
+        _font.DrawString(spriteBatch, controls, new Vector2(viewContentRect.X + 10, viewContentRect.Bottom - 24), Color.Gray, 0.8f);
     }
 
     private static int GetOuterMarginPixels(int w, int h)
@@ -874,6 +1093,36 @@ public class FlightScene : GameScene
         spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Y, thickness, rect.Height), color);
         // Right
         spriteBatch.Draw(_whitePixel, new Rectangle(rect.Right - thickness, rect.Y, thickness, rect.Height), color);
+    }
+
+    private readonly record struct CelestialDisc(Vector3 WorldPosElite, Vector2 ScreenCenter, float ScreenRadius, float ViewZ);
+
+    private CelestialDisc? ComputeCelestialDisc(Vector3 worldPosElite, float radiusElite)
+    {
+        if (_graphicsDevice == null) return null;
+
+        // View-space depth (for correct front/back ordering)
+        Vector3 worldMg = ToMonoGameWorld(worldPosElite);
+        Vector3 viewPos = Vector3.Transform(worldMg, _view);
+
+        // In a standard RH camera, objects in front have negative Z in view space.
+        if (viewPos.Z >= -0.001f)
+            return null;
+
+        Vector2 screenPos = ProjectToScreenElite(worldPosElite);
+        float dist = worldMg.Length();
+        if (dist < 0.001f) return null;
+
+        int w = _graphicsDevice.Viewport.Width;
+        int h = _graphicsDevice.Viewport.Height;
+        int hudH = (int)MathF.Round(h * HudHeightFraction);
+        int viewH = Math.Max(1, h - hudH);
+
+        // FOV is 75 deg. tan(75/2) ≈ 0.767
+        float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (viewH / 2f);
+        if (screenRadius <= 0 || screenRadius > 4000) return null;
+
+        return new CelestialDisc(worldPosElite, screenPos, screenRadius, viewPos.Z);
     }
 
     private void DrawLine(SpriteBatch spriteBatch, Vector2 start, Vector2 end, Color color, int thickness)
@@ -921,9 +1170,7 @@ public class FlightScene : GameScene
                 _gameInstance?.Audio.PlayExplosion();
 
                 // Create explosion at entity position
-                Vector2 screenPos = ProjectToScreenElite(entity.Position);
-                float distance = ToMonoGameWorld(entity.Position).Length();
-                var cloud = _explosionRenderer.CreateExplosion(entity.Blueprint.Model, screenPos, distance);
+                var cloud = _explosionRenderer.CreateExplosion(entity.Blueprint.Model, entity.Position);
                 cloud.Tag = entity;
                 _explosions.Add(cloud);
             }
@@ -933,7 +1180,7 @@ public class FlightScene : GameScene
         _explosions.RemoveAll(cloud =>
         {
             // Hard TTL: prevent any lingering artifacts from sticking around indefinitely.
-            if (cloud.AgeSeconds >= 5f)
+            if (cloud.AgeSeconds >= 3f)
             {
                 if (cloud.Tag is ShipInstance taggedTtl)
                     _bubbleManager.Despawn(taggedTtl.SlotIndex, "explosion ttl");
@@ -991,24 +1238,6 @@ public class FlightScene : GameScene
         return new Vector2(screenX, screenY);
     }
 
-    private void DrawCelestialRings(SpriteBatch spriteBatch, Vector3 worldPosElite, float radiusElite, Color color, string layer = "all", int tiltAngle = 16)
-    {
-        if (!IsInFrontOfCamera(worldPosElite)) return;
-
-        Vector2 screenPos = ProjectToScreenElite(worldPosElite);
-        float dist = ToMonoGameWorld(worldPosElite).Length();
-        if (dist < 0.001f) return;
-
-        // FOV is 75 deg. tan(75/2) ≈ 0.767
-        int w = _graphicsDevice?.Viewport.Width ?? 1024;
-        int h = _graphicsDevice?.Viewport.Height ?? 768;
-        int hudH = (int)MathF.Round(h * HudHeightFraction);
-        int viewH = Math.Max(1, h - hudH);
-        float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (viewH / 2f);
-        if (screenRadius > 0 && screenRadius < 2000)
-            _ringRenderer.DrawAxisAlignedRings(spriteBatch, screenPos, screenRadius, 1.4f, 2.2f, color, tiltAngle, layer, _gameInstance?.DrawWhite ?? false);
-    }
-
     private void DrawCelestialSun(SpriteBatch spriteBatch, Vector3 worldPosElite, float radiusElite, Color color)
     {
         if (!IsInFrontOfCamera(worldPosElite)) return;
@@ -1023,24 +1252,24 @@ public class FlightScene : GameScene
         int viewH = Math.Max(1, h - hudH);
         float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (viewH / 2f);
         if (screenRadius > 0 && screenRadius < 4000)
-            _sunRenderer.DrawSun(spriteBatch, screenPos, screenRadius, color, _gameInstance?.DrawWhite ?? false);
+            _circleRenderer.DrawFilledCircle(spriteBatch, screenPos, screenRadius, color, _gameInstance?.DrawWhite ?? false);
     }
 
-    private void DrawCelestialPlanet(SpriteBatch spriteBatch, Vector3 worldPosElite, float radiusElite, Color color, int rotationAngle = 0)
+    private void DrawCelestialPlanet(SpriteBatch spriteBatch, Vector3 worldPosElite, float radiusElite, Color color)
     {
         if (!IsInFrontOfCamera(worldPosElite)) return;
 
         Vector2 screenPos = ProjectToScreenElite(worldPosElite);
-        var planet = _bubbleManager.Planet;
-        if (planet?.Orientation.Nosev == null) return;
+        float dist = ToMonoGameWorld(worldPosElite).Length();
+        if (dist < 0.001f) return;
 
-        // Project two world axes from the planet's orientation to get a view-dependent ellipse basis.
-        Vector3 pSide = worldPosElite + planet.Orientation.Sidev * radiusElite;
-        Vector3 pRoof = worldPosElite + planet.Orientation.Roofv * radiusElite;
-        Vector2 u = ProjectToScreenElite(pSide) - screenPos;
-        Vector2 v = ProjectToScreenElite(pRoof) - screenPos;
-
-        _planetRenderer.DrawPlanet(spriteBatch, screenPos, u, v, color, rotationAngle, _gameInstance?.DrawWhite ?? false);
+        int w = _graphicsDevice?.Viewport.Width ?? 1024;
+        int h = _graphicsDevice?.Viewport.Height ?? 768;
+        int hudH = (int)MathF.Round(h * HudHeightFraction);
+        int viewH = Math.Max(1, h - hudH);
+        float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (viewH / 2f);
+        if (screenRadius > 0 && screenRadius < 4000)
+            _circleRenderer.DrawCircle(spriteBatch, screenPos, screenRadius, color, 48, _gameInstance?.DrawWhite ?? false);
     }
 
     /// <summary>

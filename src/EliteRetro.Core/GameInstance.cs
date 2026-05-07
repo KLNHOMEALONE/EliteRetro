@@ -44,6 +44,11 @@ public class GameInstance : Game
     /// </summary>
     public bool DrawWhite { get; set; }
 
+    /// <summary>
+    /// When true, hidden/invisible edges are drawn.
+    /// </summary>
+    public bool DrawInvisible { get; set; }
+
     public GameInstance()
     {
         _graphics = new GraphicsDeviceManager(this);
@@ -185,8 +190,11 @@ public class GameInstance : Game
         _font = new BitmapFont(GraphicsDevice);
 
         // Load persistent options
-        if (Systems.OptionsManager.TryLoad(out bool drawWhite))
+        if (Systems.OptionsManager.TryLoad(out bool drawWhite, out bool drawInvisible))
+        {
             DrawWhite = drawWhite;
+            DrawInvisible = drawInvisible;
+        }
 
         _sceneManager.ChangeScene(new MainMenuScene(this), Content, GraphicsDevice, this, _font);
     }

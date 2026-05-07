@@ -32,6 +32,9 @@ public class OptionsScene : GameScene
             ("DRAW WHITE",
                 () => _gameInstance?.DrawWhite ?? false,
                 v => { if (_gameInstance != null) _gameInstance.DrawWhite = v; }),
+            ("DRAW INVISIBLE",
+                () => _gameInstance?.DrawInvisible ?? false,
+                v => { if (_gameInstance != null) _gameInstance.DrawInvisible = v; }),
         };
     }
 
@@ -67,8 +70,9 @@ public class OptionsScene : GameScene
             var (name, getter, setter) = _options[_selectedItem];
             setter(!getter());
             // Save immediately on toggle
-            bool val = _gameInstance?.DrawWhite ?? false;
-            Systems.OptionsManager.Save(val);
+            bool drawWhite = _gameInstance?.DrawWhite ?? false;
+            bool drawInvisible = _gameInstance?.DrawInvisible ?? false;
+            Systems.OptionsManager.Save(drawWhite, drawInvisible);
         }
 
         _prevKb = kb;

@@ -18,9 +18,10 @@ public static class OptionsManager
         return Path.Combine(appData, FileName);
     }
 
-    public static bool TryLoad(out bool drawWhite)
+    public static bool TryLoad(out bool drawWhite, out bool drawInvisible)
     {
         drawWhite = false;
+        drawInvisible = false;
         try
         {
             var path = GetSavePath();
@@ -32,6 +33,8 @@ public static class OptionsManager
 
             if (root.TryGetProperty("drawWhite", out var dw))
                 drawWhite = dw.GetBoolean();
+            if (root.TryGetProperty("drawInvisible", out var di))
+                drawInvisible = di.GetBoolean();
 
             return true;
         }
@@ -41,14 +44,15 @@ public static class OptionsManager
         }
     }
 
-    public static void Save(bool drawWhite)
+    public static void Save(bool drawWhite, bool drawInvisible)
     {
         try
         {
             var path = GetSavePath();
             var json = JsonSerializer.Serialize(new
             {
-                drawWhite
+                drawWhite,
+                drawInvisible
             }, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(path, json);
         }

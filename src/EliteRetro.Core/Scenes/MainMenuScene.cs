@@ -105,6 +105,9 @@ public class MainMenuScene : GameScene
         // Initialize audio for menu sounds
         if (_game is GameInstance giAudio)
             giAudio.Audio.Initialize();
+
+        // Apply persisted "draw invisible" setting as initial hidden-edge mode
+        _showHiddenEdges = _gameInstance?.DrawInvisible ?? _showHiddenEdges;
     }
 
     public override void Update(GameTime gameTime)
@@ -170,6 +173,11 @@ public class MainMenuScene : GameScene
         if (kb.IsKeyDown(Keys.I) && _prevKb.IsKeyUp(Keys.I))
         {
             _showHiddenEdges = !_showHiddenEdges;
+            if (_gameInstance != null)
+            {
+                _gameInstance.DrawInvisible = _showHiddenEdges;
+                Systems.OptionsManager.Save(_gameInstance.DrawWhite, _gameInstance.DrawInvisible);
+            }
         }
 
         _prevKb = kb;
@@ -194,7 +202,7 @@ public class MainMenuScene : GameScene
                     if (SaveGameManager.TryLoad(savePath, gi2.BubbleManager, out int galaxy, out int system, out var seed))
                     {
                         // TODO: pass galaxy/system context to FlightScene for proper initialization
-                        gi2.ChangeScene(new FlightScene(gi2));
+                        gi2.ChangeScene(new FlightScene(gi2, seed));
                     }
                 }
                 break;

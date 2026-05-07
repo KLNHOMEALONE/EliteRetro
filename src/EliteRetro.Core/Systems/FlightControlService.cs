@@ -35,7 +35,6 @@ public class FlightControlService
     private int _currentViewIndex; // persistent view index across frames
     private float _rollRatePerSec;  // signed, radians/sec
     private float _pitchRatePerSec; // signed, radians/sec
-    private float _speedRatePerSec; // signed, units/sec (positive=accel, negative=decel)
 
     /// <summary>
     /// Process keyboard input and return flight control state.
@@ -93,19 +92,14 @@ public class FlightControlService
             control.RollAngle = _rollRatePerSec / 60f;
             control.PitchAngle = _pitchRatePerSec / 60f;
 
-            // Speed: W (increase) and S (decrease) with smooth acceleration/inertia.
-            float targetSpeedRate = 0f;
+            // Speed: treat W/S as throttle changes (no auto-braking when released).
+            // This keeps forward motion stable unless the player actively slows down.
             if (state.IsKeyDown(Keys.W))
-                targetSpeedRate = GameConstants.SpeedMax;
+                control.SpeedDelta = GameConstants.SpeedAccel;
             else if (state.IsKeyDown(Keys.S))
-                targetSpeedRate = -GameConstants.SpeedMax;
-
-            float speedAccel = GameConstants.SpeedAccel;
-            float speedDecel = GameConstants.SpeedDecel;
-            _speedRatePerSec = MoveTowards(_speedRatePerSec, targetSpeedRate,
-                (MathF.Abs(targetSpeedRate) > MathF.Abs(_speedRatePerSec) ? speedAccel : speedDecel) * dt);
-
-            control.SpeedDelta = _speedRatePerSec;
+                control.SpeedDelta = -GameConstants.SpeedAccel;
+            else
+                control.SpeedDelta = 0f;
 
             // View switching: V key cycles through views
             if (state.IsKeyDown(Keys.V) && !_previousState.IsKeyDown(Keys.V))
