@@ -34,8 +34,10 @@ public static class CollisionSystem
 
                 if (!a.IsActive || !b.IsActive) continue;
 
-                // Skip reserved slots vs each other
-                if (a.SlotIndex < 2 && b.SlotIndex < 2) continue;
+                // Skip planet and sun — they have dedicated collision checks
+                // (CheckPlanetCrash / CheckSunProximity) with correct radii.
+                if (a.SlotIndex == GameConstants.PlanetSlot || a.SlotIndex == GameConstants.SunStationSlot) continue;
+                if (b.SlotIndex == GameConstants.PlanetSlot || b.SlotIndex == GameConstants.SunStationSlot) continue;
 
                 // Skip target practice ships
                 if (a.IsTargetPractice || b.IsTargetPractice) continue;
@@ -331,6 +333,10 @@ public static class CollisionSystem
         foreach (var entity in bubbleManager.GetAllActive())
         {
             if (entity.SlotIndex == GameConstants.PlayerSlot) continue;
+            // Skip planet and sun — they have dedicated collision checks
+            // (CheckPlanetCrash / CheckSunProximity) with correct radii.
+            if (entity.SlotIndex == GameConstants.PlanetSlot) continue;
+            if (entity.SlotIndex == GameConstants.SunStationSlot) continue;
             if (!entity.IsActive) continue;
             if (entity.IsTargetPractice) continue; // Skip target practice ships
 

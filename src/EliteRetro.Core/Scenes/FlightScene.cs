@@ -272,10 +272,19 @@ public class FlightScene : GameScene
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             _lastDt = dt;
 
-            // If we've hit the planet, freeze motion/rotation for stability.
+            // If we've hit the planet, freeze motion/rotation but still allow Escape.
             if (_planetHit)
             {
                 _lastMoveStep = 0f;
+                if (kb.IsKeyDown(Keys.Escape) && _prevKb.IsKeyUp(Keys.Escape))
+                {
+                    if (_gameInstance != null)
+                    {
+                        _gameInstance.ChangeScene(new MainMenuScene(_gameInstance));
+                        _prevKb = kb;
+                        return;
+                    }
+                }
                 _prevKb = kb;
                 return;
             }
