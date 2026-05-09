@@ -14,7 +14,7 @@ public class StardustRenderer : IDisposable
     private readonly Texture2D _whitePixel;
     private bool _isDisposed;
     private readonly StarData[] _stars;
-    private const int StarCount = 400;
+    private const int StarCount = 16;
     private float _currentSpeed;
 
     /// <summary>
@@ -182,8 +182,8 @@ public class StardustRenderer : IDisposable
             if (screenX < -10 || screenX > center.X + 512 + 10) continue;
             if (screenY < -10 || screenY > center.Y + 384 + 10) continue;
 
-            // Star size: closer stars are larger
-            int size = z < 200 ? 3 : z < 1000 ? 2 : 1;
+            // Star size: uniform for all distances
+            int size = 7;
 
             // At high speed, stars stretch into dashes (motion blur effect)
             float speedFactor = Math.Max(0, _currentSpeed - 7f) / 33f; // 0 at speed 7, 1 at speed 40
@@ -213,7 +213,7 @@ public class StardustRenderer : IDisposable
                 float angle = (float)Math.Atan2(end.Y - start.Y, end.X - start.X);
                 float length = dashLength;
                 spriteBatch.Draw(_whitePixel, start, null, starColor, angle, Vector2.Zero,
-                    new Vector2(length, 1), SpriteEffects.None, 0);
+                    new Vector2(length, 3), SpriteEffects.None, 0);
             }
             else
             {

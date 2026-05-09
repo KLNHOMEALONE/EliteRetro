@@ -14,6 +14,7 @@ public class ScannerRenderer
     public const int MaxRange = 63;
 
     private readonly Texture2D _whitePixel;
+    private int _currentRadiusX;
 
     public ScannerRenderer(GraphicsDevice graphicsDevice)
     {
@@ -25,13 +26,16 @@ public class ScannerRenderer
     {
         // Derive scanner geometry from available center panel area.
         // Keep a wide ellipse like the original, but responsive to panel size.
+        // Scale down by 1.2 for a more compact display
+        float scaleDown = 1f / 1.2f;
         int centerX = centerPanelRect.X + centerPanelRect.Width / 2;
         int centerY = centerPanelRect.Y + centerPanelRect.Height / 2;
         int pad = Math.Clamp((int)MathF.Round(MathF.Min(centerPanelRect.Width, centerPanelRect.Height) * 0.06f), 6, 18);
         int maxRx = Math.Max(10, centerPanelRect.Width / 2 - pad);
         int maxRy = Math.Max(8, centerPanelRect.Height / 2 - pad);
-        int radiusX = Math.Clamp((int)MathF.Round(centerPanelRect.Width * 0.47f), 10, maxRx);
-        int radiusY = Math.Clamp((int)MathF.Round(centerPanelRect.Height * 0.42f), 8, maxRy);
+        int radiusX = (int)(Math.Clamp((int)MathF.Round(centerPanelRect.Width * 0.47f), 10, maxRx) * scaleDown);
+        int radiusY = (int)(Math.Clamp((int)MathF.Round(centerPanelRect.Height * 0.42f), 8, maxRy) * scaleDown);
+        _currentRadiusX = radiusX;
 
         // Black background for scanner area
         var bg = new Rectangle(centerX - radiusX - 10, centerY - radiusY - 10, radiusX * 2 + 20, radiusY * 2 + 20);
@@ -84,16 +88,17 @@ public class ScannerRenderer
         if (sun == null || sun.Blueprint?.Name != "Sun")
             return;
 
-        // Position: upper left area of scanner
-        int indX = centerX - radiusX + 35;
-        int indY = centerY - radiusY + 30;
-        int radius = 14;
+        // Position: upper left area of scanner, proportional to ellipse size
+        int indX = centerX - radiusX + (int)(radiusX * 0.25f);
+        int indY = centerY - radiusY + (int)(radiusY * 0.35f);
+        int radius = (int)(MathF.Min(radiusX, radiusY) * 0.18f);
 
         // Circle outline in orange/yellow
         DrawCircleOutline(spriteBatch, indX, indY, radius, Color.Orange);
 
         // Larger dot in center
-        spriteBatch.Draw(_whitePixel, new Rectangle(indX - 2, indY - 2, 4, 4), Color.Yellow);
+        int dotSize = Math.Max(2, radius / 4);
+        spriteBatch.Draw(_whitePixel, new Rectangle(indX - dotSize, indY - dotSize, dotSize * 2, dotSize * 2), Color.Yellow);
     }
 
     /// <summary>
@@ -106,11 +111,11 @@ public class ScannerRenderer
         if (station == null || station.Blueprint?.Name != "Coriolis Station")
             return;
 
-        // Position: upper right area of scanner, inside ellipse
-        int indX = centerX + radiusX - 35;
-        int indY = centerY - radiusY + 30;
-        int radius = 16;
-        int sqSize = 12;
+        // Position: upper right area of scanner, inside ellipse, proportional to size
+        int indX = centerX + radiusX - (int)(radiusX * 0.25f);
+        int indY = centerY - radiusY + (int)(radiusY * 0.35f);
+        int radius = (int)(MathF.Min(radiusX, radiusY) * 0.20f);
+        int sqSize = (int)(radius * 1.2f);
 
         // Circle outline
         DrawCircleOutline(spriteBatch, indX, indY, radius, Color.Cyan);
@@ -189,8 +194,11 @@ public class ScannerRenderer
         dir /= len;
         float angle = MathF.Atan2(dir.Y, dir.X);
 
-        float dashLen = 6f;
-        float gapLen = 4f;
+        float refRadiusX = 180f;
+        float scale = MathF.Max(0.5f, MathF.Min(2f, _currentRadiusX / refRadiusX));
+
+        float dashLen = 6f * scale;
+        float gapLen = 4f * scale;
         float pos = 0f;
         bool dash = true;
 
@@ -285,22 +293,32 @@ public class ScannerRenderer
     /// Draw a ship contact — dot with vertical stick connecting to scanner plane.
     /// The stick runs from stickBase (on the Z-depth line) to the dot (Y-offset position).
     /// Horizontal tick at dot shows lateral movement direction.
+    /// All sizes proportional to scanner dimensions.
     /// </summary>
     private void DrawContact(SpriteBatch spriteBatch, Vector2 dotPos, Vector2 stickBase, Color color)
     {
-        // Vertical stick from base (scanner plane) to dot (3px wide)
+        // Scale contact elements proportionally to scanner size (based on 1024x768 reference)
+        float refRadiusX = 180f; // reference scanner radiusX at 1024x768
+        float scale = MathF.Max(0.5f, MathF.Min(2f, _currentRadiusX / refRadiusX)); // clamp scale factor
+
+        int stickWidth = Math.Max(1, (int)(3 * scale));
+        int tickWidth = Math.Max(4, (int)(8 * scale));
+        int tickHeight = Math.Max(2, (int)(3 * scale));
+        int dotSize = Math.Max(2, (int)(3 * scale));
+
+        // Vertical stick from base (scanner plane) to dot
         int stickX = (int)stickBase.X;
         int stickTop = Math.Min((int)stickBase.Y, (int)dotPos.Y);
         int stickBot = Math.Max((int)stickBase.Y, (int)dotPos.Y);
         int stickW = Math.Max(1, stickBot - stickTop);
         if (stickW > 1)
-            spriteBatch.Draw(_whitePixel, new Rectangle(stickX - 1, stickTop, 3, stickW), color);
+            spriteBatch.Draw(_whitePixel, new Rectangle(stickX - stickWidth / 2, stickTop, stickWidth, stickW), color);
 
-        // Horizontal tick at dot position (8px wide, 2px tall)
-        spriteBatch.Draw(_whitePixel, new Rectangle((int)dotPos.X - 4, (int)dotPos.Y - 1, 8, 3), color);
+        // Horizontal tick at dot position
+        spriteBatch.Draw(_whitePixel, new Rectangle((int)dotPos.X - tickWidth / 2, (int)dotPos.Y - tickHeight / 2, tickWidth, tickHeight), color);
 
-        // 3-pixel dot at the end
-        spriteBatch.Draw(_whitePixel, new Rectangle((int)dotPos.X - 1, (int)dotPos.Y - 1, 3, 3), color);
+        // Dot at the end
+        spriteBatch.Draw(_whitePixel, new Rectangle((int)dotPos.X - dotSize / 2, (int)dotPos.Y - dotSize / 2, dotSize, dotSize), color);
     }
 
     private void DrawContacts(SpriteBatch spriteBatch, LocalBubbleManager bubbleManager, int playerSlot, OrientationMatrix universeOrientation, int centerX, int centerY, int radiusX, int radiusY)
@@ -347,10 +365,20 @@ public class ScannerRenderer
 
     /// <summary>
     /// Draw station as a large dot on the scanner (bigger than ship contacts).
+    /// All sizes proportional to scanner dimensions.
     /// </summary>
     private void DrawStationContact(SpriteBatch spriteBatch, Vector2 dotPos, Vector2 stickBase)
     {
         Color color = Color.White;
+
+        // Scale proportional to scanner size (based on 1024x768 reference)
+        float refRadiusX = 180f;
+        float scale = MathF.Max(0.5f, MathF.Min(2f, _currentRadiusX / refRadiusX));
+
+        int stickWidth = Math.Max(1, (int)(3 * scale));
+        int tickWidth = Math.Max(4, (int)(8 * scale));
+        int tickHeight = Math.Max(2, (int)(3 * scale));
+        int dotSize = Math.Max(3, (int)(5 * scale));
 
         // Vertical stick from base to dot
         int stickX = (int)stickBase.X;
@@ -358,12 +386,12 @@ public class ScannerRenderer
         int stickBot = Math.Max((int)stickBase.Y, (int)dotPos.Y);
         int stickH = Math.Max(1, stickBot - stickTop);
         if (stickH > 1)
-            spriteBatch.Draw(_whitePixel, new Rectangle(stickX - 1, stickTop, 3, stickH), color);
+            spriteBatch.Draw(_whitePixel, new Rectangle(stickX - stickWidth / 2, stickTop, stickWidth, stickH), color);
 
-        // Horizontal tick at dot position (8px wide, 2px tall)
-        spriteBatch.Draw(_whitePixel, new Rectangle((int)dotPos.X - 4, (int)dotPos.Y - 1, 8, 3), color);
+        // Horizontal tick at dot position
+        spriteBatch.Draw(_whitePixel, new Rectangle((int)dotPos.X - tickWidth / 2, (int)dotPos.Y - tickHeight / 2, tickWidth, tickHeight), color);
 
-        // Large dot (5×5) for station
-        spriteBatch.Draw(_whitePixel, new Rectangle((int)dotPos.X - 2, (int)dotPos.Y - 2, 5, 5), color);
+        // Large dot for station
+        spriteBatch.Draw(_whitePixel, new Rectangle((int)dotPos.X - dotSize / 2, (int)dotPos.Y - dotSize / 2, dotSize, dotSize), color);
     }
 }
