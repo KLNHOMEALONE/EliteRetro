@@ -731,9 +731,9 @@ public class FlightScene : GameScene
 
         if (towardPlayer)
         {
-            // Spawn ahead (negative Z), fly toward player (positive Z direction)
-            position = new Vector3(lateralX, lateralY, -distance);
-            entitySpeed = speed;
+            // Spawn ahead (positive Z), fly toward player (negative Z direction)
+            position = new Vector3(lateralX, lateralY, distance);
+            entitySpeed = -speed;
 
             // In ram mode, aim directly at player position
             if (_ramMode)
@@ -764,9 +764,16 @@ public class FlightScene : GameScene
         }
         else
         {
-            // Spawn between player and planet, fly away from player toward planet
-            position = new Vector3(lateralX, lateralY, -distance * 0.3f);
+            // Spawn between player and planet, fly away from player toward planet (positive Z)
+            position = new Vector3(lateralX, lateralY, distance * 0.3f);
             entitySpeed = speed;
+            // Nose points toward +Z (toward planet)
+            orientation = new OrientationMatrix
+            {
+                Nosev = new Vector3(0, 0, 1),
+                Roofv = new Vector3(0, 1, 0),
+                Sidev = new Vector3(1, 0, 0)
+            };
         }
 
         var entity = new ShipInstance(blueprint)
@@ -827,7 +834,7 @@ public class FlightScene : GameScene
 
         var target = new ShipInstance(blueprint)
         {
-            Position = new Vector3(0, 0, -400), // 400 units ahead along -Z (Nosev direction at identity)
+            Position = new Vector3(0, 0, 400), // 400 units ahead along +Z
             Speed = 0,
             Orientation = OrientationMatrix.Identity,
             IsTargetPractice = true
