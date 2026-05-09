@@ -32,6 +32,19 @@ public record struct Edge(int Start, int End, Color? Color = null);
         /// <summary>True for non-ship entities: asteroids, boulders, rock hermits.</summary>
         public bool IsRock { get; init; }
 
+        private float? _radius;
+        /// <summary>Bounding sphere radius for collision detection.</summary>
+        public float Radius
+        {
+            get
+            {
+                if (_radius.HasValue) return _radius.Value;
+                if (Vertices.Count == 0) return 0f;
+                _radius = Vertices.Max(v => (float)Math.Sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z));
+                return _radius.Value;
+            }
+        }
+
         // NE-12 optimization: Cached edge-to-face adjacency for fast silhouette computation.
         // Precomputed once per model (static geometry) to avoid O(E×V×F) allocations per frame.
         // Each entry lists face indices that reference this edge.

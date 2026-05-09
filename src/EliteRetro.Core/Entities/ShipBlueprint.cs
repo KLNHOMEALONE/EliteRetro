@@ -41,6 +41,9 @@ public class ShipBlueprint
 
     /// <summary>True for non-ship entities: asteroids, boulders, rock hermits.</summary>
     public bool IsRock { get; init; }
+
+    /// <summary>True for cargo canisters.</summary>
+    public bool IsCargo { get; init; }
 }
 
 /// <summary>

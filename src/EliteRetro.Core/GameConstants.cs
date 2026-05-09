@@ -7,10 +7,11 @@ namespace EliteRetro.Core;
 public static class GameConstants
 {
     // --- World Scale ---
-    public const int PlanetRadius = 9375;
-    public const int StationOrbitalDistance = 11718; // 1.25 * PlanetRadius
+    // 2.5x increase from original calculation to match 'Large Planet' retro feel.
+    public const int PlanetRadius = 23437; 
+    public const int StationOrbitalDistance = 29296; // 1.25 * PlanetRadius
     public const int BubbleRadius = 57344;
-    public const int JumpOffset = 100000; // Match starting distance scale
+    public const int JumpOffset = 100000; // Consistent 100k arrival distance
 
     // --- Sun distances (multipliers of planet radius) ---
     public const float SunHeatDistanceMultiplier = 2.67f;      // heat begins

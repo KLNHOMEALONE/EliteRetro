@@ -77,7 +77,7 @@ public class SpaceScene : GameScene
             };
             var planet = new ShipInstance(planetBlueprint)
             {
-                Position = new Vector3(0, 0, 100000), // ~100k units ahead
+                Position = new Vector3(0, 0, GameConstants.JumpOffset), // Use global JumpOffset for debug spawn
                 Speed = 0
             };
             _bubbleManager.SetSlot(GameConstants.PlanetSlot, planet);

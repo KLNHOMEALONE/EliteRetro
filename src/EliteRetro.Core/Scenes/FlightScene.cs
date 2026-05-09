@@ -1,3 +1,5 @@
+using System.Linq;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -7,6 +9,7 @@ using EliteRetro.Core.Rendering;
 using EliteRetro.Core.Managers;
 using EliteRetro.Core.Systems;
 using EliteRetro.Core.HUD;
+using EliteRetro.Core.Utilities;
 
 namespace EliteRetro.Core.Scenes;
 
@@ -120,7 +123,7 @@ public class FlightScene : GameScene
         // Elite feels wrong if you start at absolute zero speed: you can rotate forever and
         // distances won't change (looks like "moving in a circle"). Start with a small cruise.
         if (_playerSpeed <= 0f)
-            _playerSpeed = 12f;
+            _playerSpeed = GameConstants.SpeedMax;
     }
 
     private void EnsureProjectionMatchesViewport()
@@ -295,8 +298,8 @@ public class FlightScene : GameScene
             // Signs are set for aircraft-style control (UP = Dive, planet goes UP):
             // Positive Roll (Right) -> rotate universe LEFT (negative rollDelta).
             // Positive Pitch (Up/Climb) -> rotate universe DOWN (negative pitchDelta).
-            float rollDelta = Math.Clamp(_lastControl.RollAngle * dt * 60f, -0.1f, 0.1f);
-            float pitchDelta = Math.Clamp(_lastControl.PitchAngle * dt * 60f, -0.1f, 0.1f);
+            float rollDelta = MathHelper.Clamp(_lastControl.RollAngle * dt * 60f, -0.1f, 0.1f);
+            float pitchDelta = MathHelper.Clamp(_lastControl.PitchAngle * dt * 60f, -0.1f, 0.1f);
             _bubbleManager.ApplyUniverseRotation(-rollDelta, -pitchDelta);
 
             // Track cumulative roll for planet/ring counter-rotation
@@ -331,18 +334,34 @@ public class FlightScene : GameScene
             // Check player collision against nearby entities (every frame, O(n) not O(n²))
             CollisionSystem.CheckPlayerCollisions(_bubbleManager);
 
-            // Planet crash check for player (prevents "flying through" the planet)
+            // Planet collision check (prevents "flying through" the planet)
             var player = _bubbleManager.PlayerShip;
             var planet = _bubbleManager.Planet;
-            if (player != null && planet != null && CollisionSystem.CheckPlanetCrash(player, planet))
+            if (player != null && planet != null)
             {
-                _lastEventMessage = "PLANET HIT";
-                _eventMessageTimer = int.MaxValue; // constant message
-                _playerSpeed = 0f;
-                _planetHit = true;
-                _lastMoveStep = 0f;
-                _prevKb = kb;
-                return;
+                var col = CollisionSystem.CheckPlanetCollision(player, planet);
+                if (col.Type == CollisionSystem.PlanetCollisionType.Crash)
+                {
+                    _lastEventMessage = "PLANET HIT";
+                    _eventMessageTimer = int.MaxValue; // constant message
+                    _playerSpeed = 0f;
+                    _planetHit = true;
+                    _lastMoveStep = 0f;
+                    _prevKb = kb;
+                    return;
+                }
+                else if (col.Type == CollisionSystem.PlanetCollisionType.Glancing)
+                {
+                    // Scrape! Take damage but keep flying.
+                    _lastEventMessage = "ALTITUDE CRITICAL - SCRAPE!";
+                    _eventMessageTimer = 60;
+                    
+                    player.TakeDamage(15); // significant hull damage
+                    _damageFlashTimer = 20;
+                    
+                    // Push planet away to maintain surface altitude
+                    planet.Position -= col.PushBack;
+                }
             }
 
             // Cleanup expired entities (lifetime or out of bounds)
@@ -372,7 +391,13 @@ public class FlightScene : GameScene
 
             // Speed control via W/S keys (SpeedDelta is in units/sec)
             if (_lastControl.SpeedDelta != 0)
-                _playerSpeed = Math.Clamp(_playerSpeed + _lastControl.SpeedDelta * (float)gameTime.ElapsedGameTime.TotalSeconds, 0f, GameConstants.SpeedMax);
+                _playerSpeed = MathHelper.Clamp(_playerSpeed + _lastControl.SpeedDelta * (float)gameTime.ElapsedGameTime.TotalSeconds, 0f, GameConstants.SpeedMax);
+
+            // Sync player ship instance speed for collision logs and AI
+            if (_bubbleManager.PlayerShip != null)
+            {
+                _bubbleManager.PlayerShip.Speed = _playerSpeed;
+            }
 
             // Check for player damage (shield or hull decrease)
             if (_bubbleManager.PlayerShip != null)
@@ -897,9 +922,38 @@ public class FlightScene : GameScene
         int altitude = 255;
         if (_bubbleManager.Planet != null)
         {
-            // Altitude is distance to surface. Scale: 1.0 planet diameter = max bar (255)
-            float surfaceDist = Math.Max(0, planetDist - GameConstants.PlanetRadius);
-            altitude = Math.Clamp((int)(surfaceDist / (GameConstants.PlanetRadius * 2) * 255), 0, 255);
+            // 1. Radial Height (actual physical distance to surface)
+            float height = Math.Max(0, planetDist - GameConstants.PlanetRadius);
+
+            // 2. Angular Clearance (Angle from nose to planet horizon)
+            Vector3 planetPos = _bubbleManager.Planet.Position;
+            float distToCenter = planetPos.Length();
+            
+            // Angle between our nose and the planet's center
+            float noseDot = Vector3.Dot(Vector3.Normalize(planetPos), new Vector3(0, 0, 1));
+            float angleToCenter = MathF.Acos(MathHelper.Clamp(noseDot, -1, 1));
+            
+            // Angular radius of the planet
+            float angularRadius = MathF.Asin(MathHelper.Clamp(GameConstants.PlanetRadius / distToCenter, 0, 1));
+            float clearanceAngle = angleToCenter - angularRadius;
+            
+            // 3. Adaptive altitude formula (Atmospheric Buffer)
+            // We give you a 'safety window' where the bar starts rising sooner.
+            // Even if you are very low, pulling up adds a significant boost.
+            float clearanceBoost = Math.Max(0, clearanceAngle) * (GameConstants.PlanetRadius * 4.0f);
+            
+            // Low-altitude scaling: the bar only hits zero if you are physically ON the surface
+            // AND pointing your nose directly into it.
+            float effectiveAlt = height + clearanceBoost;
+
+            // Scale: 0.4 planet radii = max bar.
+            altitude = MathHelper.Clamp((int)(effectiveAlt / (GameConstants.PlanetRadius * 0.4f) * 255), 0, 255);
+            
+            // LOGGING: include angular data for verification
+            if (planetDist < GameConstants.PlanetRadius + 5000)
+            {
+                Logger.Log($"[ALT ANG] h={height:F0}, deg={MathHelper.ToDegrees(clearanceAngle):F1}, AL={altitude}");
+            }
         }
 
         var hudState = new HUDState

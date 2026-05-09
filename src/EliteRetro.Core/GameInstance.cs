@@ -145,7 +145,7 @@ public class GameInstance : Game
         _taskScheduler.RegisterEvery(32, 10, () =>
         {
             // Check entity collisions
-            CollisionSystem.CheckCollisions(_bubbleManager);
+            CollisionSystem.CheckPlayerCollisions(_bubbleManager);
 
             // Check planet crash for player-adjacent ships
             var planet = _bubbleManager.Planet;

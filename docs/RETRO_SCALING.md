@@ -19,20 +19,20 @@ To match the original game's pacing (approx. 2.5 to 3 minutes of flight to reach
 - **Math:** 100,000 units / (10 units/frame * 60 FPS) = **166.6 seconds** (~2.77 minutes).
 - **Acceleration:** Tuned to **8 units/sec²** (Accel) and **12 units/sec²** (Decel) for a smooth but weighty inertia feel.
 
-### 3. Visual Proportions
-A critical aspect of the retro feel is the size of the planet on the screen.
+### 3. Visual Proportions (Large Planet Feel)
+To match the "large planet" feel of the original game, where the planet occupies a significant portion of the view during approach:
 - **Original Visual Ratio:** 6,144 (Radius) / 65,536 (Distance) ≈ **0.09375**.
-- **EliteRetro Implementation:** With a distance of 100,000, we set `PlanetRadius` to **9,375**.
-- **Result:** The planet appears at the exact same screen-size ratio as the 1984 original at the start of a flight.
+- **EliteRetro Implementation:** We increased the `PlanetRadius` by **2.5x** to **23,437**.
+- **Result:** At the 100,000-unit arrival distance, the planet appears significantly more imposing and authentic to the retro memory.
 
 ## Summary of Constants (`GameConstants.cs`)
 
 | Constant | Value | Description |
 | :--- | :--- | :--- |
-| `PlanetRadius` | 9,375 | Preserves 0.09375 visual ratio at 100k distance. |
+| `PlanetRadius` | 23,437 | 2.5x increase for "Large Planet" retro feel. |
 | `SpeedMax` | 10f | ~2.7 min travel time to 100k planet at 60 FPS. |
-| `StationOrbitalDistance` | 11,718 | 1.25 × PlanetRadius (standard Elite orbit). |
-| `JumpOffset` | 100,000 | Matches starting distance scale for hyperspace arrival. |
+| `StationOrbitalDistance` | 29,296 | 1.25 × PlanetRadius (standard Elite orbit). |
+| `JumpOffset` | 100,000 | Matches arrival distance scale for hyperspace. |
 
 ## Implementation Details
 
@@ -56,7 +56,24 @@ All hardcoded references to the previous `40f` speed cap were replaced with `Gam
 
 ## Planet Proximity and Altitude Scaling
 
-To provide authentic feedback during atmospheric descent, the **Altitude (AL)** indicator has been re-calibrated:
-- **Surface-Relative:** Altitude is now measured as `distance - PlanetRadius`, ensuring the bar hits zero exactly at the surface.
-- **Dynamic Range:** The bar is scaled such that a distance of **2.0 × PlanetRadius** (one full diameter above the surface) represents a full bar (255). This provides high-resolution feedback for the final approach.
-- **Immediate Stop:** Upon surface impact, `PlayerSpeed` is immediately set to **0** and all movement/rotation is frozen to prevent "glitchy" jitter or planet-piercing, matching the definitive "thud" of a crash or landing.
+To provide authentic and intuitive feedback during atmospheric maneuvers, the **Altitude (AL)** indicator and collision logic have been re-engineered:
+
+### 1. High-Resolution Approach Scaling
+Standard linear scaling makes the altitude bar feel static for too long. We implemented **Atmospheric Resolution Scaling**:
+- **Behavior:** The altitude bar only begins to drop significantly when you are within **0.4 × PlanetRadius** (~9,300 units) of the surface.
+- **Context:** At this distance, the planet's diameter is roughly **equal to the 3D viewport width**.
+- **Pilot Feedback:** As you enter this "low altitude" phase, the planet will begin to exceed the screen edges, and the **AL bar** will simultaneously start its dramatic drop to zero, reinforcing the sensation of landing or high-speed overflight.
+
+### 2. Visual Clearance Factor
+Standard radial altitude (`distance - Radius`) can feel static during overflight maneuvers. We implemented a **Visual Clearance Factor** that artificially increases the altitude bar as the planet moves away from the ship's center-line (nose).
+- **Formula:** `EffectiveAltitude = SurfaceDist + (1.0 - dot(Forward, ToPlanet)) * (PlanetRadius * 0.5)`
+- **Behavior:** Pulling up (nose away from planet) visibly raises the altitude bar, matching the pilot's intuition of "climbing away" from the obstacle.
+
+### 3. Glancing Collisions (Scrapes)
+To prevent frustrating instant-crashes during low-altitude passes, collisions are now categorized based on approach angle:
+- **Crash (Steep):** If the approach angle is > 60° (heading directly into the surface), the ship stops immediately (`Speed = 0`).
+- **Scrape (Glancing):** If the approach angle is shallow, the ship takes significant hull damage (15 units) but is pushed back to the surface threshold, allowing the pilot to continue the maneuver.
+
+### 4. Scaling & Feedback
+- **Impact feel:** Immediate speed stops and "ALTITUDE CRITICAL" messages provide definitive feedback on surface interaction.
+- **Synchronized Thresholds:** The physical collision boundary has been matched exactly to the planet radius (`PlanetRadius`), ensuring that as long as the **AL bar** is above zero, no collision will trigger, regardless of visual clearance or radial distance.

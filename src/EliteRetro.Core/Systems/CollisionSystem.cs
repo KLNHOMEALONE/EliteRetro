@@ -1,264 +1,147 @@
 using EliteRetro.Core.Entities;
 using EliteRetro.Core.Managers;
+using EliteRetro.Core.Utilities;
 using Microsoft.Xna.Framework;
 
 namespace EliteRetro.Core.Systems;
 
 /// <summary>
 /// Collision detection and resolution for local bubble entities.
-/// Uses simple sphere-based collision with configurable radii.
+/// Uses simple bounding-sphere logic for speed and simplicity.
 /// </summary>
 public static class CollisionSystem
 {
-    /// <summary>
-    /// Collision radius multiplier applied to a model's bounding radius.
-    /// Kept slightly > 1 to reduce tunneling while staying proportional to model size.
-    /// </summary>
-    private const float BoundingRadiusMultiplier = 1.15f;
+    private static readonly Random _rng = new Random();
 
     /// <summary>
-    /// Check all active entities for collisions.
-    /// Called periodically via MCNT scheduler.
+    /// Checks for a collision between two ships.
     /// </summary>
-    public static void CheckCollisions(LocalBubbleManager bubbleManager)
+    public static bool CheckCollision(ShipInstance shipA, ShipInstance shipB)
     {
-        var active = bubbleManager.GetAllActive();
-        var list = active.ToList();
+        float combinedRadius = GetCollisionRadius(shipA) + GetCollisionRadius(shipB);
+        float distSq = Vector3.DistanceSquared(shipA.Position, shipB.Position);
 
-        for (int i = 0; i < list.Count; i++)
-        {
-            for (int j = i + 1; j < list.Count; j++)
-            {
-                var a = list[i];
-                var b = list[j];
-
-                if (!a.IsActive || !b.IsActive) continue;
-
-                // Skip planet and sun — they have dedicated collision checks
-                // (CheckPlanetCrash / CheckSunProximity) with correct radii.
-                if (a.SlotIndex == GameConstants.PlanetSlot || a.SlotIndex == GameConstants.SunStationSlot) continue;
-                if (b.SlotIndex == GameConstants.PlanetSlot || b.SlotIndex == GameConstants.SunStationSlot) continue;
-
-                // Skip target practice ships
-                if (a.IsTargetPractice || b.IsTargetPractice) continue;
-
-                if (CheckCollision(a, b))
-                {
-                    ResolveCollision(a, b, bubbleManager);
-                }
-            }
-        }
+        return distSq < (combinedRadius * combinedRadius);
     }
 
     /// <summary>
-    /// Check if two ships are colliding.
-    /// Uses sphere-based collision with size-scaled radii.
+    /// Resolves a collision between two ships, applying damage and effects.
     /// </summary>
-    public static bool CheckCollision(ShipInstance a, ShipInstance b)
+    public static void ResolveCollision(ShipInstance shipA, ShipInstance shipB, LocalBubbleManager bubbleManager)
     {
-        float radiusA = GetCollisionRadius(a);
-        float radiusB = GetCollisionRadius(b);
-        float combinedRadius = radiusA + radiusB;
+        // Simple resolution: both ships take significant damage.
+        // For Elite "feel", collisions are usually fatal for small ships.
+        int damageA = 100;
+        int damageB = 100;
 
-        float distSq = a.DistanceSquaredTo(b);
-        float dist = MathF.Sqrt(distSq);
+        shipA.TakeDamage(damageA);
+        shipB.TakeDamage(damageB);
 
-        // Debug: log close approaches
-        if (dist < combinedRadius * 3)
+        // Feedback for player
+        if (shipA.SlotIndex == GameConstants.PlayerSlot || shipB.SlotIndex == GameConstants.PlayerSlot)
         {
-            System.Diagnostics.Debug.WriteLine($"Close approach: {a.Blueprint.Name} vs {b.Blueprint.Name}, dist={dist:F1}, combinedRadius={combinedRadius:F1}");
+            var other = shipA.SlotIndex == GameConstants.PlayerSlot ? shipB : shipA;
+            bubbleManager.RaiseCollision(other.Blueprint.Name);
         }
 
-        return distSq < combinedRadius * combinedRadius;
+        System.Diagnostics.Debug.WriteLine($"[COLLISION] {shipA.Blueprint.Name} vs {shipB.Blueprint.Name}");
     }
 
     /// <summary>
-    /// Get collision radius for a ship based on its model size.
+    /// Spawns cargo canisters when a ship is destroyed.
     /// </summary>
-    private static float GetCollisionRadius(ShipInstance ship)
+    public static void SpawnCargoDrops(ShipInstance ship, LocalBubbleManager bubbleManager)
     {
-        var model = ship.Blueprint.Model;
-        if (model.Vertices == null || model.Vertices.Count == 0)
-            return 1f;
+        if (ship.Cargo.Count == 0) return;
 
-        float maxSq = 0f;
-        for (int i = 0; i < model.Vertices.Count; i++)
-        {
-            var v = model.Vertices[i];
-            float d2 = v.X * v.X + v.Y * v.Y + v.Z * v.Z;
-            if (d2 > maxSq) maxSq = d2;
-        }
-
-        float radius = MathF.Sqrt(maxSq);
-        return MathF.Max(1f, radius * BoundingRadiusMultiplier);
-    }
-
-    /// <summary>
-    /// Resolve a collision between two ships.
-    /// Both take hull damage proportional to relative speed.
-    /// Player collisions reduce shield/hull via LocalBubbleManager.
-    /// Small ships (low vertex count) are destroyed instantly on collision.
-    /// </summary>
-    private static void ResolveCollision(ShipInstance a, ShipInstance b, LocalBubbleManager bubbleManager)
-    {
-        // Use speed scalars for impact force (velocity vectors not yet wired)
-        float impactForce = Math.Abs(a.Speed) + Math.Abs(b.Speed);
-
-        // Damage proportional to impact (higher multiplier for visible feedback)
-        int damageA = (int)(impactForce * 5);
-        int damageB = (int)(impactForce * 5);
-
-        // Handle player collision specially
-        if (a.SlotIndex == GameConstants.PlayerSlot)
-        {
-            ApplyPlayerDamage(a, damageA, b, bubbleManager);
-            bubbleManager.RaiseCollision(b.Blueprint?.Name ?? "Unknown");
-        }
-        else if (b.SlotIndex == GameConstants.PlayerSlot)
-        {
-            ApplyPlayerDamage(b, damageB, a, bubbleManager);
-            bubbleManager.RaiseCollision(a.Blueprint?.Name ?? "Unknown");
-        }
-
-        // Damage NPC ships normally
-        if (a.SlotIndex != GameConstants.PlayerSlot)
-        {
-            bool destroyed = ResolveShipCollisionDamage(a, damageA);
-            if (destroyed)
-            {
-                OnShipDestroyed(a, b, bubbleManager);
-                a.IsActive = false;
-            }
-        }
-        if (b.SlotIndex != GameConstants.PlayerSlot)
-        {
-            bool destroyed = ResolveShipCollisionDamage(b, damageB);
-            if (destroyed)
-            {
-                OnShipDestroyed(b, a, bubbleManager);
-                b.IsActive = false;
-            }
-        }
-
-        // Separate ships to prevent repeated collisions
-        if (a.IsActive && b.IsActive)
-        {
-            Vector3 separation = Vector3.Normalize(b.Position - a.Position) * 20f;
-            a.Position -= separation * 0.5f;
-            b.Position += separation * 0.5f;
-        }
-    }
-
-    /// <summary>
-    /// Called when a ship is destroyed — track kills and spawn cargo drops.
-    /// </summary>
-    private static void OnShipDestroyed(ShipInstance destroyed, ShipInstance? destroyer, LocalBubbleManager bubbleManager)
-    {
-        // Track kill if player was involved
-        if (destroyer?.SlotIndex == GameConstants.PlayerSlot)
-        {
-            bubbleManager.Commander.AddKill();
-        }
-
-        // Spawn cargo canisters from destroyed ship's cargo
-        SpawnCargoDrops(destroyed, bubbleManager);
-    }
-
-    /// <summary>
-    /// Apply collision damage to player ship (shields first, then hull).
-    /// </summary>
-    private static void ApplyPlayerDamage(ShipInstance playerShip, int damage, ShipInstance other, LocalBubbleManager bubbleManager)
-    {
-        // Determine if hit is from front or rear
-        Vector3 toOther = Vector3.Normalize(other.Position - playerShip.Position);
-        float dot = Vector3.Dot(playerShip.Orientation.Nosev, toOther);
-        bool hitFront = dot > 0;
-
-        // Apply to shields first, then hull
-        if (hitFront)
-        {
-            // Front shields absorb first
-            // TODO: wire to LocalBubbleManager shield fields when shield system is implemented
-            int shieldDmg = Math.Min(damage, playerShip.Energy);
-            playerShip.Energy = (byte)(playerShip.Energy - shieldDmg);
-            int hullDmg = damage - shieldDmg;
-            if (hullDmg > 0)
-            {
-                bool destroyed = playerShip.TakeDamage(hullDmg);
-                if (destroyed)
-                {
-                    // Player destroyed — launch escape pod
-                    bubbleManager.Commander.ResetAfterEscape();
-                    playerShip.IsActive = false;
-                }
-            }
-        }
-        else
-        {
-            // Rear hit - damage hull directly (no aft shields in simple mode)
-            bool destroyed = playerShip.TakeDamage(damage);
-            if (destroyed)
-            {
-                // Player destroyed — launch escape pod
-                bubbleManager.Commander.ResetAfterEscape();
-                playerShip.IsActive = false;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Spawn cargo canisters from a destroyed ship.
-    /// Each cargo item becomes a drifting canister entity.
-    /// </summary>
-    public static void SpawnCargoDrops(ShipInstance destroyed, LocalBubbleManager bubbleManager)
-    {
-        if (destroyed.Cargo.Count == 0) return;
-
-        var rng = new Random((int)destroyed.Position.X * 17 + (int)destroyed.Position.Y * 31);
-        var canisterBlueprint = new ShipBlueprint
-        {
-            Name = "Cargo Canister",
-            Model = CanisterModel.Create(8),
-            MaxSpeed = 0,
-            MaxEnergy = 0,
-            HullStrength = 1,
-            ShieldStrength = 0,
-        };
-
-        foreach (var kvp in destroyed.Cargo)
+        foreach (var kvp in ship.Cargo)
         {
             for (int i = 0; i < kvp.Value; i++)
             {
-                var canister = new ShipInstance(canisterBlueprint)
+                var model = CanisterModel.Create(8f);
+                var blueprint = new ShipBlueprint
                 {
-                    Position = destroyed.Position + new Vector3(
-                        (float)(rng.NextDouble() * 2 - 1) * 20,
-                        (float)(rng.NextDouble() * 2 - 1) * 20,
-                        (float)(rng.NextDouble() * 2 - 1) * 20
-                    ),
-                    Speed = 0,
-                    Energy = 0,
-                    Hull = 1,
+                    Name = "Canister",
+                    Model = model,
+                    MaxSpeed = 0f,
+                    MaxEnergy = 1,
+                    HullStrength = 1,
+                    ShieldStrength = 0,
+                    IsCargo = true
+                };
+
+                var canister = new ShipInstance(blueprint)
+                {
+                    Position = ship.Position + new Vector3(
+                        (float)_rng.NextDouble() * 10 - 5,
+                        (float)_rng.NextDouble() * 10 - 5,
+                        (float)_rng.NextDouble() * 10 - 5),
+                    Speed = 0
                 };
                 canister.AddCargo(kvp.Key, 1);
                 bubbleManager.TrySpawn(canister);
             }
         }
     }
+
+    private static float GetCollisionRadius(ShipInstance ship)
+    {
+        // Approximate radius from model size
+        return ship.Blueprint.Model?.Radius ?? 10f;
+    }
+
+    public enum PlanetCollisionType
+    {
+        None,
+        Glancing, // shallow angle, slide/scrape
+        Crash     // steep angle, immediate stop
+    }
+
+    public record struct PlanetCollisionResult(PlanetCollisionType Type, Vector3 PushBack);
+
+    /// <summary>
+    /// Check for planet collision with steep/glancing distinction.
+    /// Steep hits cause a crash; glancing hits allow "scraping" with damage.
+    /// </summary>
+    public static PlanetCollisionResult CheckPlanetCollision(ShipInstance ship, ShipInstance? planet)
+    {
+        if (planet == null) return new PlanetCollisionResult(PlanetCollisionType.None, Vector3.Zero);
+
+        float planetRadius = GameConstants.PlanetRadius;
+        // ShipRadius removed from physical threshold to match visual AL bar zero-point
+        float threshold = planetRadius; 
+
+        Vector3 toShip = ship.Position - planet.Position;
+        float dist = toShip.Length();
+
+        if (dist >= threshold)
+            return new PlanetCollisionResult(PlanetCollisionType.None, Vector3.Zero);
+
+        // We are colliding. Determine angle of approach.
+        // Forward is (0,0,1) in cockpit space. Direction to planet is -Normalize(toShip).
+        Vector3 forward = new Vector3(0, 0, 1);
+        Vector3 toPlanet = Vector3.Normalize(-ship.Position + planet.Position);
+        float approachDot = Vector3.Dot(forward, toPlanet);
+
+        // Push back vector (to move ship out of planet)
+        Vector3 normal = Vector3.Normalize(toShip);
+        // Strengthen pushback (2.0x depth) to prevent sticking to surface
+        Vector3 pushBack = normal * (threshold - dist) * 2.0f;
+
+        // LOGGING: include speed to verify if ship is stopped
+        Logger.LogCollision(dist, planetRadius, approachDot, ship.Speed);
+
+        // If approach angle > ~25 degrees (dot > 0.9), it's a direct crash.
+        // Shallow angles are glancing scrapes.
+        var type = approachDot > 0.9f ? PlanetCollisionType.Crash : PlanetCollisionType.Glancing;
+        
+        return new PlanetCollisionResult(type, pushBack);
+    }
+
+    [Obsolete("Use CheckPlanetCollision for more nuanced results")]
     public static bool CheckPlanetCrash(ShipInstance ship, ShipInstance? planet)
     {
-        if (planet == null) return false;
-
-        // NE-5: Use consistent coordinate system (Elite internal units).
-        // PlanetRadius is already in Elite internal units (where 24576 = planet radius).
-        // Ship positions are also in these same units.
-        // Remove the ad-hoc 0.0001f scaling factor which made the crash radius too small
-        // (2.45 units vs spawn distance of 100-300 units).
-        float planetRadius = GameConstants.PlanetRadius;
-        float shipRadius = GetCollisionRadius(ship);
-
-        float dist = Vector3.Distance(ship.Position, planet.Position);
-        return dist < (planetRadius + shipRadius);
+        return CheckPlanetCollision(ship, planet).Type == PlanetCollisionType.Crash;
     }
 
     /// <summary>
@@ -267,74 +150,23 @@ public static class CollisionSystem
     public static bool CheckSunFatal(ShipInstance ship, ShipInstance? sun)
     {
         if (sun == null) return false;
-
-        // NE-5 fix: Use consistent coordinate system (Elite internal units).
-        // PlanetRadius is 24576, sun is ~80× larger, check 0.9× diameter.
-        float sunRadius = GameConstants.PlanetRadius * 80 * 0.9f;
-        float shipRadius = GetCollisionRadius(ship);
-
-        float dist = Vector3.Distance(ship.Position, sun.Position);
-        return dist < (sunRadius + shipRadius);
+        float fatalDist = GameConstants.PlanetRadius * 6 * GameConstants.SunFatalDistanceMultiplier;
+        return Vector3.Distance(ship.Position, sun.Position) < fatalDist;
     }
 
     /// <summary>
-    /// Resolve collision damage for an NPC ship.
-    /// </summary>
-    private static bool ResolveShipCollisionDamage(ShipInstance ship, int damage)
-    {
-        int vertexCount = ship.Blueprint.Model.Vertices.Count;
-
-        // Cargo canisters: not destroyed by collision (hull=1, just debris)
-        // But they still deal collision damage to the player
-        if (ship.Blueprint.Name == "Cargo Canister")
-            return false; // Canister survives, no destruction
-
-        // Small ships: instant destruction on any collision
-        if (vertexCount < 15)
-        {
-            System.Diagnostics.Debug.WriteLine($"[COLLISION] Small ship {ship.Blueprint.Name} (vertices={vertexCount}) instant-destroyed");
-            ship.Energy = 0;
-            ship.Hull = 0;
-            return true;
-        }
-
-        // Larger ships: damage shields first, then hull
-        if (ship.Energy > 0)
-        {
-            int shieldDmg = Math.Min(damage, ship.Energy);
-            ship.Energy = (byte)(ship.Energy - shieldDmg);
-            int hullDmg = damage - shieldDmg;
-            if (hullDmg > 0)
-            {
-                bool destroyed = ship.TakeDamage(hullDmg);
-                if (destroyed)
-                    System.Diagnostics.Debug.WriteLine($"[COLLISION] Large ship {ship.Blueprint.Name} destroyed (hull depleted)");
-                return destroyed;
-            }
-            return false;
-        }
-
-        bool hullDestroyed = ship.TakeDamage(damage);
-        if (hullDestroyed)
-            System.Diagnostics.Debug.WriteLine($"[COLLISION] Ship {ship.Blueprint.Name} hull-destroyed (no shields)");
-        return hullDestroyed;
-    }
-
-    /// <summary>
-    /// Check player ship collision against all nearby entities.
-    /// O(n) per frame — matches BBC Elite's approach of checking
-    /// only the player against the local bubble, not all pairs.
+    /// Main check for player collisions against all bubble entities.
     /// </summary>
     public static void CheckPlayerCollisions(LocalBubbleManager bubbleManager)
     {
         var player = bubbleManager.PlayerShip;
-        if (player == null || !player.IsActive) return;
+        if (player == null) return;
 
         foreach (var entity in bubbleManager.GetAllActive())
         {
-            if (entity.SlotIndex == GameConstants.PlayerSlot) continue;
-            // Skip planet and sun — they have dedicated collision checks
+            // Skip player and solar bodies - handled separately in FlightScene.cs 
             // (CheckPlanetCrash / CheckSunProximity) with correct radii.
+            if (entity.SlotIndex == GameConstants.PlayerSlot) continue;
             if (entity.SlotIndex == GameConstants.PlanetSlot) continue;
             if (entity.SlotIndex == GameConstants.SunStationSlot) continue;
             if (!entity.IsActive) continue;
