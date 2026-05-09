@@ -221,29 +221,29 @@ public class FlightScene : GameScene
     {
         // Planet distance hi-byte (planetZHi): ((s0_hi & 0b111) + 6 + fistBit0) >> 1
         // BBC example for Lave: z = (5 0 0) (ahead).
+        // Scaling: << 15 instead of << 16 yields ~100,000 units (98,304 to 229,376 range).
         int planetZHi = ((seed.W0Hi & 0x07) + 6 + (fistBit0 & 1)) >> 1;
 
-        // Planet x/y offsets are small and depend on fistBit0 in the BBC examples.
-        // Example from docs: fistBit0=0 => x=y=-(2 0 0); fistBit0=1 => x=y=(3 0 0)
+        // Planet x/y offsets are small.
         int planetXYHi = (fistBit0 & 1) == 0 ? -2 : 3;
 
         Vector3 planetPos = new Vector3(
-            planetXYHi << 16,
-            planetXYHi << 16,
-            +(planetZHi << 16));
+            planetXYHi << 15,
+            planetXYHi << 15,
+            +(planetZHi << 15));
 
         // Sun is always behind. In BBC: z_sign = (s1_hi & 0b111) | 0b10000001 -> negative.
-        // That yields a magnitude in [1..7] (as -(1..7) 0 0).
-        int sunZHi = (seed.W1Hi & 0x07) + 1;
+        // Magnitude in range [4..7] shifted by 15 bits yields ~130k to 230k units behind.
+        int sunZHi = (seed.W1Hi & 0x03) + 4;
 
-        // Sun x/y offset is small (0..2-ish). Derive from low bits of s1_lo.
+        // Sun x/y offset is small.
         int sunOff = seed.W1Lo & 0x03;
         if (sunOff > 2) sunOff = 2;
 
         Vector3 sunPos = new Vector3(
-            sunOff << 16,
-            sunOff << 16,
-            -(sunZHi << 16));
+            sunOff << 15,
+            sunOff << 15,
+            -(sunZHi << 15));
 
         return (planetPos, sunPos);
     }
@@ -893,6 +893,15 @@ public class FlightScene : GameScene
             statusColor = Color.Yellow;
         }
 
+        float planetDist = _bubbleManager.Planet?.Position.Length() ?? 0;
+        int altitude = 255;
+        if (_bubbleManager.Planet != null)
+        {
+            // Altitude is distance to surface. Scale: 1.0 planet diameter = max bar (255)
+            float surfaceDist = Math.Max(0, planetDist - GameConstants.PlanetRadius);
+            altitude = Math.Clamp((int)(surfaceDist / (GameConstants.PlanetRadius * 2) * 255), 0, 255);
+        }
+
         var hudState = new HUDState
         {
             Speed = _playerSpeed,
@@ -901,7 +910,7 @@ public class FlightScene : GameScene
             Fuel = _bubbleManager.Commander.Fuel,
             CabinTemp = 0,
             LaserTemp = 0,
-            Altitude = (int)(_bubbleManager.Planet?.Position.Length() ?? 0),
+            Altitude = altitude,
             EnergyBanks = 0,
             Missiles = _bubbleManager.PlayerMissiles,
             MaxMissiles = 4,

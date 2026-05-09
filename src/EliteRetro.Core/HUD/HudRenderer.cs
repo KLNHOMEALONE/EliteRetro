@@ -105,7 +105,7 @@ public class HudRenderer
         int innerPad = Math.Clamp((int)MathF.Round(rightRect.Width * 0.02f), 4, 14);
         int barMaxW = Math.Max(10, rightRect.Width - labelW - (gap + innerPad));
 
-        float speedRatio = MathHelper.Clamp(state.Speed / 40f, 0, 1);
+        float speedRatio = MathHelper.Clamp(state.Speed / GameConstants.SpeedMax, 0, 1);
         DrawBarH(spriteBatch, rightRect.X + 2, barY, labelW, barH, (int)(speedRatio * barMaxW), barMaxW, "SP", font, gap, textRight: true, labelOnRight: true);
         barY += barSlotH;
 

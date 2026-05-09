@@ -81,6 +81,19 @@ This document summarizes all critical bugs fixed in the EliteRetro codebase base
 - Each now has proper dispose pattern with `_isDisposed` flag, `Dispose()` method, and finalizer
 - Texture disposal in `Dispose(bool disposing)` method
 
+### 9. Retro Experience Scaling (Pacing & Distance)
+**Files:** `src/EliteRetro.Core/GameConstants.cs`, `src/EliteRetro.Core/Scenes/FlightScene.cs`, `src/EliteRetro.Core/Rendering/StardustRenderer.cs`, `src/EliteRetro.Core/HUD/HudRenderer.cs`
+
+- The game's scale and pacing were previously ad-hoc, with planets appearing too close and speeds too high for a retro feel.
+- Fix: Re-architected world scale based on BBC Micro Elite (1984) proportions:
+  - **Distance:** Planet starting distance set to ~100,000 units (was ~320k or varying).
+  - **Speed:** Max speed set to 10 units/frame (was 40 units/sec) to ensure a ~2.7-minute travel time at 60 FPS.
+  - **Visuals:** Planet radius adjusted to 9375 to maintain the authentic 0.09375 visual ratio (Radius/Distance).
+  - **Surface Proximity:** Refined **Altitude (AL)** bar to show distance to planet surface (scaled to 1.0 planet diameter range).
+  - **Impact Physics:** Immediate **speed stop (0)** and world freeze upon planet hit, preventing clipping and providing solid impact feel.
+  - **Consistency:** Replaced all hardcoded speed/distance constants with `GameConstants` references in HUD, stardust, and bubble management code.
+- Detailed documentation added in `docs/RETRO_SCALING.md`.
+
 ## Additional Improvements
 
 ### ShipModel Caching

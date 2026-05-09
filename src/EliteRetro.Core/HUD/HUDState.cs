@@ -8,7 +8,7 @@ namespace EliteRetro.Core.HUD;
 public struct HUDState
 {
     // Bar indicators
-    public float Speed;           // 0-40 (maps to 0-16 bar segments)
+    public float Speed;           // 0-GameConstants.SpeedMax (maps to 0-16 bar segments)
     public float Energy;          // 0-max_energy (ship-dependent)
     public float MaxEnergy;       // for scaling energy bar
     public float Fuel;            // 0-70 (maps to 0-16 bar segments)

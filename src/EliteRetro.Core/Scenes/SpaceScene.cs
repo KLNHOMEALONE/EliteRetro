@@ -77,12 +77,12 @@ public class SpaceScene : GameScene
             };
             var planet = new ShipInstance(planetBlueprint)
             {
-                Position = new Vector3(-GameConstants.PlanetRadius * 3, 0, -GameConstants.PlanetRadius * 5),
+                Position = new Vector3(0, 0, 100000), // ~100k units ahead
                 Speed = 0
             };
             _bubbleManager.SetSlot(GameConstants.PlanetSlot, planet);
 
-            // slot 1: Sun - much larger, placed more centrally
+            // slot 1: Sun - much larger, placed behind player
             var sunModel = SunModel.Create(GameConstants.PlanetRadius * 6);
             var sunBlueprint = new ShipBlueprint
             {
@@ -95,7 +95,7 @@ public class SpaceScene : GameScene
             };
             var sun = new ShipInstance(sunBlueprint)
             {
-                Position = new Vector3(0, 0, -GameConstants.PlanetRadius * 20),
+                Position = new Vector3(0, 0, -150000), // ~150k units behind
                 Speed = 0
             };
             _bubbleManager.SetSlot(GameConstants.SunStationSlot, sun);

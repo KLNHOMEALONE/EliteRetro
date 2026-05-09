@@ -7,10 +7,10 @@ namespace EliteRetro.Core;
 public static class GameConstants
 {
     // --- World Scale ---
-    public const int PlanetRadius = 24576;
-    public const int StationOrbitalDistance = 65536; // from planet center
+    public const int PlanetRadius = 9375;
+    public const int StationOrbitalDistance = 11718; // 1.25 * PlanetRadius
     public const int BubbleRadius = 57344;
-    public const int JumpOffset = 65536;
+    public const int JumpOffset = 100000; // Match starting distance scale
 
     // --- Sun distances (multipliers of planet radius) ---
     public const float SunHeatDistanceMultiplier = 2.67f;      // heat begins
@@ -49,10 +49,10 @@ public static class GameConstants
     // 0 = no quantization. Otherwise quantize turn rate into N discrete steps across [-max, +max].
     public static int TurnQuantizationSteps = 0;
 
-    // Speed control: max speed 40 units/sec, accel/decel in units/sec^2.
-    public const float SpeedMax = 40f;
-    public const float SpeedAccel = 30f;   // units/sec^2 when pressing W/S
-    public const float SpeedDecel = 45f;   // units/sec^2 when releasing (stronger braking)
+    // Speed control: max speed 10 units/frame (~600 units/sec) to match ~3min travel to 100k planet.
+    public const float SpeedMax = 10f;
+    public const float SpeedAccel = 8f;   // units/sec^2 when pressing W/S
+    public const float SpeedDecel = 12f;   // units/sec^2 when releasing (stronger braking)
 
     // --- Galaxy ---
     public const int GalaxiesCount = 8;

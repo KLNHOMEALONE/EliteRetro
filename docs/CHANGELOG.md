@@ -7,6 +7,12 @@ All notable changes to this project.
 ## [Unreleased]
 
 ### Added
+- **Retro Experience Scaling** — drastic re-pacing and re-scaling to match BBC Micro Elite (1984)
+  - **Distance Scaling:** Planet starting distance set to ~100,000 units (via 15-bit shift in `ComputeSolarSpawn`).
+  - **Sun Positioning:** Sun placed ~150k-230k units behind player for correct retro depth.
+  - **Flight Pacing:** Max speed reduced to **10 units/frame**. At 60 FPS, this yields a ~2.7-minute travel time to the planet, matching original pacing.
+  - **Visual Proportions:** `PlanetRadius` set to **9,375** to preserve the authentic **0.09375 visual ratio** at the starting distance.
+  - **Global Consistency:** Replaced all hardcoded `40f` speed references with `GameConstants.SpeedMax`. Affects HUD bars, stardust motion blur, and ship initialization.
 - **Smooth speed acceleration** — replaced discrete ±1 speed steps with smooth interpolation
   - `SpeedAccel` (30 u/s²) and `SpeedDecel` (45 u/s²) constants for inertia feel
   - Matches original Elite timing: 0→40 in ~1.3 seconds

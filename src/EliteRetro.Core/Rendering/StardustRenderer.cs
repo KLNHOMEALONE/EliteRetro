@@ -94,8 +94,8 @@ public class StardustRenderer : IDisposable
         _currentSpeed = speed;
 
         // Scale speed for stardust motion
-        float effectiveSpeed = Math.Min(speed * 8f, 40f);
-        float zDelta = effectiveSpeed * 64 / 40f;
+        float effectiveSpeed = Math.Min(speed * 8f, GameConstants.SpeedMax);
+        float zDelta = effectiveSpeed * 64 / GameConstants.SpeedMax;
 
         for (int i = 0; i < StarCount; i++)
         {
@@ -186,8 +186,8 @@ public class StardustRenderer : IDisposable
             int size = 7;
 
             // At high speed, stars stretch into dashes (motion blur effect)
-            float speedFactor = Math.Max(0, _currentSpeed - 7f) / 33f; // 0 at speed 7, 1 at speed 40
-            speedFactor = Math.Min(speedFactor, 1f); // clamp at speed 40+
+            float speedFactor = Math.Max(0, _currentSpeed - (GameConstants.SpeedMax * 0.175f)) / (GameConstants.SpeedMax * 0.825f); 
+            speedFactor = Math.Min(speedFactor, 1f); // clamp at SpeedMax+
             int dashLength = 1 + (int)(speedFactor * 8); // 1 to 9 pixels long
 
             // Brightness: closer stars are brighter, with higher base brightness

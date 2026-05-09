@@ -101,7 +101,7 @@ public class LocalBubbleManager
         {
             Name = "Player",
             Model = CobraMk3Model.Create(24),
-            MaxSpeed = 40f,
+            MaxSpeed = GameConstants.SpeedMax,
             MaxEnergy = 255,
             HullStrength = 255,
             ShieldStrength = 255,
