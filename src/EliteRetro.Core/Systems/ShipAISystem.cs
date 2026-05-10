@@ -278,12 +278,31 @@ namespace EliteRetro.Core.Systems
         private static Vector3 CalculateMovementDirection(ShipInstance ship, ShipInstance target, IBubbleManager bubbleManager)
         {
             var personality = GetPersonalityFlags(ship.Blueprint.ShipClass);
+            bool isTrader = personality.HasFlag(NewbFlags.Trader);
+            bool isDocking = (ship.Flags & (byte)NewbFlags.Docking) != 0;
+            bool isSunBound = (ship.Flags & (byte)NewbFlags.Scooped) != 0;
 
-            if (personality.HasFlag(NewbFlags.Trader) || ship.AIState == (byte)ShipAIState.Bail)
+            if (isTrader || ship.AIState == (byte)ShipAIState.Bail)
             {
                 var planet = bubbleManager.Planet;
-                if (planet != null)
+                var sunOrStation = bubbleManager.SunOrStation;
+
+                if (isSunBound && sunOrStation != null && sunOrStation.Blueprint.Name == "Sun")
+                {
+                    // Head toward the Sun
+                    return Vector3.Normalize(sunOrStation.Position - ship.Position);
+                }
+                else if (isDocking && planet != null)
+                {
+                    // Head toward the orbit point (where the station lives)
+                    Vector3 orbitPoint = planet.Position + planet.Orientation.Nosev * 2 * GameConstants.PlanetRadius;
+                    return Vector3.Normalize(orbitPoint - ship.Position);
+                }
+                else if (planet != null)
+                {
+                    // Head toward the planet surface
                     return Vector3.Normalize(planet.Position - ship.Position);
+                }
             }
 
             if (personality.HasFlag(NewbFlags.Hostile) || personality.HasFlag(NewbFlags.BountyHunter))

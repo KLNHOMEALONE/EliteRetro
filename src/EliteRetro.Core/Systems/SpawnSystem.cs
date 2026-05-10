@@ -222,26 +222,50 @@ public static class SpawnSystem
         return _rng.NextDouble() < probability;
     }
 
-    /// <summary>
-    /// Create a ship instance with random position and orientation.
-    /// </summary>
     private static ShipInstance? CreateInstance(ShipBlueprint blueprint, IBubbleManager bubbleManager, float offset = 0)
     {
         // Random position outside player's immediate vicinity
+        // AUTHENTIC ELITE SCALE: 200-500 distance
         float angle = (float)_rng.NextDouble() * MathF.Tau;
         float distance = 200 + (float)_rng.NextDouble() * 300 + offset;
         float x = MathF.Cos(angle) * distance;
         float y = MathF.Sin(angle) * distance * 0.3f; // Flattened distribution
+        // AUTHENTIC ELITE CONVENTION: negative Z is ahead
         float z = -(float)_rng.NextDouble() * distance;
+
+        Vector3 position = new Vector3(x, y, z);
+        byte flags = 0;
+        bool isTrader = blueprint.ShipClass == (byte)NewbFlags.None || (blueprint.ShipClass == (byte)NewbFlags.Trader);
+
+        if (isTrader && _rng.NextDouble() < 0.7)
+        {
+            // Trader personality - assign routes
+            flags |= (byte)NewbFlags.Trader;
+            var sunOrStation = bubbleManager.SunOrStation;
+            
+            double routeRoll = _rng.NextDouble();
+            if (routeRoll < 0.33 && sunOrStation != null && sunOrStation.Blueprint.Name == "Sun")
+            {
+                // To Sun
+                flags |= (byte)NewbFlags.Scooped;
+            }
+            else if (routeRoll < 0.66)
+            {
+                // To Station
+                flags |= (byte)NewbFlags.Docking;
+            }
+            // else To Planet (default)
+        }
 
         var instance = new ShipInstance(blueprint)
         {
-            Position = new Vector3(x, y, z),
+            Position = position,
             Speed = blueprint.MaxSpeed * (0.3f + (float)_rng.NextDouble() * 0.4f),
             Aggression = (byte)_rng.Next(64),
+            Flags = flags
         };
 
-        // Random orientation facing roughly toward planet/player
+        // Facing roughly toward destination (nose points to origin initially)
         instance.Orientation = new OrientationMatrix
         {
             Nosev = Vector3.Normalize(-instance.Position),

@@ -228,18 +228,14 @@ public class FlightScene : GameScene
 
             float rollDelta = MathHelper.Clamp(_lastControl.RollAngle * dt * 60f, -0.1f, 0.1f);
             float pitchDelta = MathHelper.Clamp(_lastControl.PitchAngle * dt * 60f, -0.1f, 0.1f);
-            _bubbleManager.ApplyUniverseRotation(-rollDelta, -pitchDelta);
-            _cumulativeRoll += rollDelta;
-
+            
             float moveStep = _playerSpeed * dt * 60f;
             _lastMoveStep = moveStep;
-            foreach (var entity in _bubbleManager.GetAllActive())
-            {
-                if (entity.SlotIndex == GameConstants.PlayerSlot) continue;
-                entity.Position.Z -= moveStep;
-                if (entity.Speed != 0) entity.MoveForward();
-            }
 
+            // Delegate core universe simulation to service
+            _gameInstance.Simulation.Update(_bubbleManager, _playerSpeed, rollDelta, pitchDelta, moveStep);
+            
+            _cumulativeRoll += rollDelta;
             _gameInstance.Stardust.Update(_playerSpeed, -rollDelta, -pitchDelta, gameTime);
             _bubbleManager.TidyAllActive();
             _gameInstance.Explosions.Update(gameTime, _bubbleManager, _gameInstance.Audio);

@@ -24,6 +24,7 @@ public class GameInstance : Game, IGameContext
     private Systems.IHudService _hudService = null!;
     private Systems.IStardustService _stardustService = null!;
     private Systems.ICelestialService _celestialService = null!;
+    private Systems.IWorldSimulationService _simulationService = null!;
 
     /// <summary>
     /// Global access to the local bubble manager.
@@ -71,6 +72,11 @@ public class GameInstance : Game, IGameContext
     public Systems.IStardustService Stardust => _stardustService;
 
     /// <summary>
+    /// Rotating universe simulation service.
+    /// </summary>
+    public Systems.IWorldSimulationService Simulation => _simulationService;
+
+    /// <summary>
     /// Celestial body projection and rendering service.
     /// </summary>
     public Systems.ICelestialService Celestial => _celestialService;
@@ -110,6 +116,7 @@ public class GameInstance : Game, IGameContext
         _hudService = new Systems.HudService();
         _stardustService = new Rendering.StardustRenderer(GraphicsDevice);
         _celestialService = new Systems.CelestialService(GraphicsDevice);
+        _simulationService = new Systems.WorldSimulationService();
 
         // Register MCNT-driven scheduled tasks (Phase 1.5)
         RegisterScheduledTasks();
@@ -284,6 +291,7 @@ public class GameInstance : Game, IGameContext
             _explosionService?.Dispose();
             _stardustService?.Dispose();
             _celestialService?.Dispose();
+            _simulationService?.Dispose();
         }
         base.Dispose(disposing);
     }

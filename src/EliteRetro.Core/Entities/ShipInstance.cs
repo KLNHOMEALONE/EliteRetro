@@ -65,6 +65,12 @@ public class ShipInstance
     /// <summary>Ship is a target practice dummy (stationary, directly ahead).</summary>
     public bool IsTargetPractice;
 
+    /// <summary>Custom state flags (e.g., bit 7 = hostile, bit 6 = escaping).</summary>
+    public byte Flags;
+
+    /// <summary>Current shield strength (0-255).</summary>
+    public byte Shields;
+
     public ShipInstance(ShipBlueprint blueprint)
     {
         Blueprint = blueprint;
@@ -72,6 +78,7 @@ public class ShipInstance
         IsActive = true;
         Hull = blueprint.HullStrength;
         Energy = blueprint.MaxEnergy;
+        Shields = blueprint.ShieldStrength;
         Speed = blueprint.MaxSpeed * 0.5f;
         SlotIndex = -1;
         TargetSlot = -1;
