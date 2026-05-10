@@ -19,6 +19,7 @@ public class GameInstance : Game, IGameContext
     private MainLoopCounter _mcnt = null!;
     private Systems.TaskScheduler _taskScheduler = null!;
     private IAudioManager _audioManager = null!;
+    private Systems.ICombatService _combatService = null!;
     private Input.IInputService _input = null!;
     private Systems.IExplosionService _explosionService = null!;
     private Systems.IHudService _hudService = null!;
@@ -56,6 +57,11 @@ public class GameInstance : Game, IGameContext
     /// Audio manager for procedural sound effects.
     /// </summary>
     public IAudioManager Audio => _audioManager;
+
+    /// <summary>
+    /// Combat and laser fire service.
+    /// </summary>
+    public Systems.ICombatService Combat => _combatService;
 
     /// <summary>
     /// Explosion effect service.
@@ -118,6 +124,7 @@ public class GameInstance : Game, IGameContext
         _mcnt = new MainLoopCounter();
         _taskScheduler = new Systems.TaskScheduler(_mcnt);
         _audioManager = new AudioManager();
+        _combatService = new Systems.CombatService();
         _explosionService = new Systems.ExplosionService(GraphicsDevice);
         _hudService = new Systems.HudService();
         _stardustService = new Rendering.StardustRenderer(GraphicsDevice);
@@ -279,6 +286,7 @@ public class GameInstance : Game, IGameContext
         _taskScheduler.Evaluate();
 
         _messageSystem.Update();
+        _combatService.Update();
 
         _sceneManager.Update(gameTime);
         base.Update(gameTime);

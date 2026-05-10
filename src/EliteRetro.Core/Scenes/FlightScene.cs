@@ -54,8 +54,6 @@ public class FlightScene : GameScene
     private bool _ramMode; // when true, spawned entities aim directly at player
     private GameTime _lastGameTime = null!;
     private bool _isFiring; // true when player is firing lasers
-    private int _laserCooldown; // frames until next shot allowed
-    private int _laserFlashTimer; // frames remaining to show laser beam
     private FlightControlState _lastControl; // store last input state for HUD
     private readonly GalaxySeed _systemSeed;
     private bool _planetHit;
@@ -196,17 +194,11 @@ public class FlightScene : GameScene
         var input = _gameInstance.Input;
         _lastControl = _flightControlService.Update(gameTime, input);
 
-        // Handle laser fire
-        if (_laserCooldown > 0) _laserCooldown--;
-        if (_laserFlashTimer > 0) _laserFlashTimer--;
-
         _isFiring = _lastControl.FireLaser;
-        if (_isFiring && _laserCooldown <= 0)
+        if (_isFiring && _gameInstance.Combat.LaserCooldown <= 0)
         {
-            _gameInstance?.Audio.PlayLaser();
-            FireLaserAtTarget();
-            _laserCooldown = 15;
-            _laserFlashTimer = 6;
+            _gameInstance.Audio.PlayLaser();
+            _gameInstance.Combat.FireLaser(_gameInstance, _bubbleManager, _viewMode);
         }
 
         if (!_lastControl.IsPaused)
@@ -380,7 +372,7 @@ public class FlightScene : GameScene
         spriteBatch.Draw(_whitePixel, new Rectangle(cx - outer, cy - 1, outer - inner, 2), crossColor);
         spriteBatch.Draw(_whitePixel, new Rectangle(cx + inner, cy - 1, outer - inner, 2), crossColor);
 
-        if (_laserFlashTimer > 0)
+        if (_gameInstance.Combat.LaserFlashTimer > 0)
         {
             DrawLine(spriteBatch, new Vector2(viewContentRect.Left, viewContentRect.Bottom), new Vector2(cx, cy), Color.Yellow, 2);
             DrawLine(spriteBatch, new Vector2(viewContentRect.Right, viewContentRect.Bottom), new Vector2(cx, cy), Color.Yellow, 2);
@@ -478,44 +470,6 @@ public class FlightScene : GameScene
         int viewH = Math.Max(1, h - (int)MathF.Round(h * HudHeightFraction));
         if (MathF.Abs(projected.W) < 0.001f) return new Vector2(w / 2f, viewH / 2f);
         return new Vector2((projected.X / projected.W + 1f) * 0.5f * w, (1 - projected.Y / projected.W) * 0.5f * viewH);
-    }
-
-    private void FireLaserAtTarget()
-    {
-        var player = _gameInstance.PlayerManager.Ship;
-        if (player == null) return;
-        Vector3 forward = _viewMode switch { 0 => new Vector3(0, 0, 1), 1 => new Vector3(0, 0, -1), 2 => new Vector3(-1, 0, 0), 3 => new Vector3(1, 0, 0), _ => new Vector3(0, 0, 1) };
-        ShipInstance? bestTarget = null; float bestDot = -1f;
-        foreach (var entity in _bubbleManager.GetAllActive()) { if (entity.SlotIndex == GameConstants.PlayerSlot || !entity.IsActive || entity.Blueprint.Name == "Planet" || entity.Blueprint.Name == "Sun") continue; float distSq = entity.Position.LengthSquared(); if (distSq > 600 * 600) continue; float dist = (float)Math.Sqrt(distSq), dot = (dist < 5.0f) ? 1.0f : Vector3.Dot(forward, entity.Position / dist); if (dot >= 0.96f && dot > bestDot) { bestDot = dot; bestTarget = entity; } }
-        if (bestTarget != null) { 
-            _gameInstance?.Audio.PlayLaserHit(); 
-            int laserDamage = 90; 
-            bool destroyed = false; 
-            if (bestTarget.Energy > 0) { 
-                int shieldDmg = Math.Min(laserDamage, (int)bestTarget.Energy); 
-                bestTarget.Energy = (byte)(bestTarget.Energy - shieldDmg); 
-                int hullDmg = laserDamage - shieldDmg; 
-                if (hullDmg > 0) destroyed = bestTarget.TakeDamage(hullDmg); 
-            } else destroyed = bestTarget.TakeDamage(laserDamage); 
-            
-            _gameInstance.Messages.Post("HIT!", MessageType.General, 10);
-            
-            if (destroyed) { 
-                bool milestone = _gameInstance.PlayerManager.Commander.AddKill(); 
-                if (milestone) { 
-                    _gameInstance.Messages.Post("RIGHT ON COMMANDER!", MessageType.Milestone, 180);
-                } else if ((bestTarget.Blueprint.Personality & NewbFlags.Cop) != 0) { 
-                    _gameInstance.PlayerManager.Commander.LegalStatus = Math.Max(_gameInstance.PlayerManager.Commander.LegalStatus, (byte)64); 
-                    _gameInstance.Messages.Post("FUGITIVE! Killed a cop!", MessageType.General, 180);
-                } 
-                CollisionSystem.SpawnCargoDrops(bestTarget, _bubbleManager); 
-                bestTarget.IsActive = false; 
-                
-                if (string.IsNullOrEmpty(_gameInstance.Messages.GeneralMessage) || _gameInstance.Messages.GeneralTimer <= 0) { 
-                    _gameInstance.Messages.Post($"{bestTarget.Blueprint.Name} destroyed!", MessageType.General, 120);
-                } 
-            } 
-        }
     }
 
     private void SaveGame() { 
