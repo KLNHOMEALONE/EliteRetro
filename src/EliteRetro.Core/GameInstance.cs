@@ -226,8 +226,8 @@ public class GameInstance : Game, IGameContext
         // Every 32 frames, offset 20: sun effects (heat, fuel scooping)
         _taskScheduler.RegisterEvery(32, 20, () =>
         {
-            var sunEffect = _bubbleManager.CheckSunProximity();
-            if (sunEffect == LocalBubbleManager.SunProximityEffect.FuelScoop)
+            var sunEffect = _playerManager.CheckSunProximity(_bubbleManager);
+            if (sunEffect == SunProximityEffect.FuelScoop)
             {
                 // Scoop 1 fuel unit per ~32 frames (about 0.5s at 60fps)
                 if (_playerManager.Commander.Fuel < 70)

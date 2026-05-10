@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.Xna.Framework;
 using EliteRetro.Core.Managers;
 using EliteRetro.Core.Entities;
@@ -104,5 +105,25 @@ public class CombatService : ICombatService
 
         LaserCooldown = 15;
         LaserFlashTimer = 6;
+    }
+
+    public int DetonateEnergyBomb(IBubbleManager bubbleManager)
+    {
+        float blastRadius = GameConstants.PlanetRadius * 2 * GameConstants.EnergyBombMultiplier;
+        float blastSq = blastRadius * blastRadius;
+        int destroyedCount = 0;
+
+        // GetActiveShips only returns non-reserved slots (2+)
+        foreach (var entity in bubbleManager.GetActiveShips().ToList())
+        {
+            float distSq = entity.Position.LengthSquared();
+            if (distSq < blastSq)
+            {
+                bubbleManager.Despawn(entity);
+                destroyedCount++;
+            }
+        }
+
+        return destroyedCount;
     }
 }

@@ -39,4 +39,37 @@ public class PlayerManager : IPlayerManager
             IsActive = true,
         };
     }
+
+    public SunProximityEffect CheckSunProximity(IBubbleManager bubbleManager)
+    {
+        var sun = bubbleManager.SunOrStation;
+        if (sun == null || sun.Blueprint?.Name != "Sun")
+            return SunProximityEffect.None;
+
+        float sunRadius = GameConstants.PlanetRadius * 6;
+        // In rotating universe, player is always at origin (Vector3.Zero)
+        float dist = sun.Position.Length();
+
+        // Fatal: closer than 0.90 × sun radius
+        if (dist < sunRadius * GameConstants.SunFatalDistanceMultiplier)
+            return SunProximityEffect.Fatal;
+
+        // Fuel scoop: closer than 1.33 × sun radius
+        if (dist < sunRadius * GameConstants.SunFuelScoopDistanceMultiplier)
+            return SunProximityEffect.FuelScoop;
+
+        // Heat warning: closer than 2.67 × sun radius
+        if (dist < sunRadius * GameConstants.SunHeatDistanceMultiplier)
+            return SunProximityEffect.HeatWarning;
+
+        return SunProximityEffect.None;
+    }
+
+    public float ApplyFuelScoop(IBubbleManager bubbleManager, float fuelPerSecond)
+    {
+        if (CheckSunProximity(bubbleManager) != SunProximityEffect.FuelScoop)
+            return 0f;
+
+        return fuelPerSecond / 60f;
+    }
 }

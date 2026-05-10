@@ -269,7 +269,7 @@ public class FlightScene : GameScene
             }
             if (_damageFlashTimer > 0) _damageFlashTimer--;
 
-            _bubbleManager.CheckSunProximity();
+            _gameInstance.PlayerManager.CheckSunProximity(_bubbleManager);
         }
 
         if (_lastControl.PauseToggled)

@@ -28,4 +28,11 @@ public interface ICombatService
     /// Frames remaining to show laser beam visual.
     /// </summary>
     int LaserFlashTimer { get; }
+
+    /// <summary>
+    /// Energy bomb effect: destroys all non-reserved entities within blast radius.
+    /// Blast radius = 1.17 × planet diameter.
+    /// </summary>
+    /// <returns>Number of entities destroyed.</returns>
+    int DetonateEnergyBomb(IBubbleManager bubbleManager);
 }

@@ -67,12 +67,12 @@ SpeedDelta in `FlightControlService` is now applied as a per-second rate.
 
 ## 5. Refactoring Roadmap (Remaining)
 
-| Priority | Task | Target Class |
-|----------|------|--------------|
-| 1 | Decouple Player State from World Manager | `LocalBubbleManager` |
-| 2 | Extract Input to a dedicated service | `FlightScene` |
-| 3 | Implement formal Dependency Injection | `GameInstance` |
-| 4 | Add Unit Tests for `OrientationMatrix` | `Tests` |
+| Priority | Task | Target Class | Status |
+|----------|------|--------------|--------|
+| 1 | Decouple Player State from World Manager | `LocalBubbleManager` | **DONE** |
+| 2 | Extract Input to a dedicated service | `FlightScene` | PENDING |
+| 3 | Implement formal Dependency Injection | `GameInstance` | PENDING |
+| 4 | Add Unit Tests for `OrientationMatrix` | `Tests` | PENDING |
 
 ---
 

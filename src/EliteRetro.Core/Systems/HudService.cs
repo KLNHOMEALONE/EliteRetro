@@ -26,21 +26,21 @@ public class HudService : IHudService
         var playerManager = game.PlayerManager;
 
         // 1. Status Message & Color
-        var sunEffect = bubbleManager.CheckSunProximity();
+        var sunEffect = playerManager.CheckSunProximity(bubbleManager);
         string statusMsg = "";
         Color statusColor = Color.Gray;
 
-        if (sunEffect == LocalBubbleManager.SunProximityEffect.Fatal)
+        if (sunEffect == SunProximityEffect.Fatal)
         {
             statusMsg = "DANGER - FATAL PROXIMITY";
             statusColor = Color.Red;
         }
-        else if (sunEffect == LocalBubbleManager.SunProximityEffect.FuelScoop)
+        else if (sunEffect == SunProximityEffect.FuelScoop)
         {
             statusMsg = "FUEL SCOOP ACTIVE";
             statusColor = Color.Green;
         }
-        else if (sunEffect == LocalBubbleManager.SunProximityEffect.HeatWarning)
+        else if (sunEffect == SunProximityEffect.HeatWarning)
         {
             statusMsg = "HEAT WARNING";
             statusColor = Color.Orange;

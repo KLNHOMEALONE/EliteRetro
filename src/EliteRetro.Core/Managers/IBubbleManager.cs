@@ -39,7 +39,4 @@ public interface IBubbleManager
     void CleanupExpired();
     void Clear();
     void RaiseCollision(string otherShipName);
-    LocalBubbleManager.SunProximityEffect CheckSunProximity();
-    float ApplyFuelScoop(float fuelPerSecond);
-    int DetonateEnergyBomb();
 }

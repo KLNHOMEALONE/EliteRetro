@@ -164,8 +164,8 @@ public static class CollisionSystem
 
         foreach (var entity in bubbleManager.GetAllActive())
         {
-            // Skip player and solar bodies - handled separately in FlightScene.cs 
-            // (CheckPlanetCrash / CheckSunProximity) with correct radii.
+            // Skip player and solar bodies - handled separately in WorldSimulationService.cs
+            // and PlayerManager.CheckSunProximity() with correct radii.
             if (entity.SlotIndex == GameConstants.PlayerSlot) continue;
             if (entity.SlotIndex == GameConstants.PlanetSlot) continue;
             if (entity.SlotIndex == GameConstants.SunStationSlot) continue;
