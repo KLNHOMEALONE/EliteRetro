@@ -7,14 +7,22 @@ namespace EliteRetro.Core.Rendering;
 /// Parametric circle drawing using SineTable for authentic Elite-style circles.
 /// Draws circles via SpriteBatch for compatibility with the scene rendering pipeline.
 /// </summary>
-public class CircleRenderer
+public class CircleRenderer : IDisposable
 {
     private readonly Texture2D _whitePixel;
+    private bool _disposed;
 
     public CircleRenderer(GraphicsDevice graphicsDevice)
     {
         _whitePixel = new Texture2D(graphicsDevice, 1, 1);
         _whitePixel.SetData(new[] { Color.White });
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _whitePixel?.Dispose();
     }
 
     /// <summary>

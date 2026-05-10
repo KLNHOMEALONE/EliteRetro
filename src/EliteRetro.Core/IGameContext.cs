@@ -46,4 +46,7 @@ public interface IGameContext
 
     /// <summary>Starfield (stardust) effect service.</summary>
     Systems.IStardustService Stardust { get; }
+
+    /// <summary>Celestial body projection and rendering service.</summary>
+    Systems.ICelestialService Celestial { get; }
 }

@@ -373,23 +373,7 @@ public class FlightScene : GameScene
             _wireframeRenderer.Draw(entity.Blueprint.Model, world, _view, _projection, spriteBatch, drawHiddenEdges: _showHiddenEdges, drawWhite: _gameInstance.DrawWhite);
         }
 
-        var planetEntity = _bubbleManager.Planet;
-        var sunEntity = (_bubbleManager.SunOrStation?.Blueprint?.Name == "Sun") ? _bubbleManager.SunOrStation : null;
-        CelestialDisc? planetDisc = planetEntity != null ? ComputeCelestialDisc(planetEntity.Position, GameConstants.PlanetRadius) : null;
-        CelestialDisc? sunDisc = sunEntity != null ? ComputeCelestialDisc(sunEntity.Position, GameConstants.PlanetRadius * 6) : null;
-
-        if (planetDisc.HasValue || sunDisc.HasValue)
-        {
-            if (planetDisc.HasValue && sunDisc.HasValue && sunDisc.Value.ViewZ < planetDisc.Value.ViewZ && Vector2.Distance(planetDisc.Value.ScreenCenter, sunDisc.Value.ScreenCenter) < planetDisc.Value.ScreenRadius - 0.5f)
-                sunDisc = null;
-
-            if (sunDisc.HasValue && planetDisc.HasValue)
-            {
-                if (sunDisc.Value.ViewZ < planetDisc.Value.ViewZ) { DrawCelestialSun(spriteBatch, sunDisc.Value); DrawCelestialPlanet(spriteBatch, planetDisc.Value); }
-                else { DrawCelestialPlanet(spriteBatch, planetDisc.Value); DrawCelestialSun(spriteBatch, sunDisc.Value); }
-            }
-            else { if (sunDisc.HasValue) DrawCelestialSun(spriteBatch, sunDisc.Value); if (planetDisc.HasValue) DrawCelestialPlanet(spriteBatch, planetDisc.Value); }
-        }
+        _gameInstance.Celestial.Draw(spriteBatch, _bubbleManager, _view, _projection, _cameraLookDir, _graphicsDevice!, HudHeightFraction, _gameInstance.DrawWhite);
 
         if (_damageFlashTimer > 0)
         {
@@ -488,8 +472,6 @@ public class FlightScene : GameScene
     private void BeginScissored(SpriteBatch spriteBatch, Rectangle scissorRect) { _graphicsDevice!.ScissorRectangle = scissorRect; spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, _scissorRasterizer); }
     private void DrawFrame(SpriteBatch spriteBatch, Rectangle rect, Color color, int thickness) { thickness = Math.Max(1, thickness); spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Y, rect.Width, thickness), color); spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Bottom - thickness, rect.Width, thickness), color); spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Y, thickness, rect.Height), color); spriteBatch.Draw(_whitePixel, new Rectangle(rect.Right - thickness, rect.Y, thickness, rect.Height), color); }
 
-    private readonly record struct CelestialDisc(Vector3 WorldPosElite, Vector2 ScreenCenter, float ScreenRadius, float ViewZ);
-    private CelestialDisc? ComputeCelestialDisc(Vector3 worldPosElite, float radiusElite) { Vector3 worldMg = ToMonoGameWorld(worldPosElite), viewPos = Vector3.Transform(worldMg, _view); if (viewPos.Z >= -0.001f) return null; Vector2 screenPos = ProjectToScreenElite(worldPosElite); float dist = worldMg.Length(); if (dist < 0.001f) return null; int h = _graphicsDevice!.Viewport.Height; int viewH = Math.Max(1, h - (int)MathF.Round(h * HudHeightFraction)); float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (viewH / 2f); if (screenRadius <= 0 || screenRadius > 4000) return null; return new CelestialDisc(worldPosElite, screenPos, screenRadius, viewPos.Z); }
     private void DrawLine(SpriteBatch spriteBatch, Vector2 start, Vector2 end, Color color, int thickness) { Vector2 edge = end - start; float angle = (float)Math.Atan2(edge.Y, edge.X); spriteBatch.Draw(_whitePixel, start, null, color, angle, new Vector2(0, 0.5f), new Vector2(edge.Length(), thickness), SpriteEffects.None, 0); }
     private bool IsInFrontOfCamera(Vector3 worldPos) { Vector3 mg = ToMonoGameWorld(worldPos); if (mg.LengthSquared() < 0.001f) return true; return Vector3.Dot(Vector3.Normalize(mg), _cameraLookDir) > 0; }
     private static Vector3 ToMonoGameWorld(Vector3 eliteWorldPos) => new Vector3(eliteWorldPos.X, eliteWorldPos.Y, -eliteWorldPos.Z) * RenderScale;
@@ -505,9 +487,6 @@ public class FlightScene : GameScene
         if (MathF.Abs(projected.W) < 0.001f) return new Vector2(w / 2f, viewH / 2f);
         return new Vector2((projected.X / projected.W + 1f) * 0.5f * w, (1 - projected.Y / projected.W) * 0.5f * viewH);
     }
-
-    private void DrawCelestialSun(SpriteBatch spriteBatch, CelestialDisc disc) => _circleRenderer.DrawFilledCircle(spriteBatch, disc.ScreenCenter, disc.ScreenRadius, Color.White, _gameInstance.DrawWhite);
-    private void DrawCelestialPlanet(SpriteBatch spriteBatch, CelestialDisc disc) => _circleRenderer.DrawCircle(spriteBatch, disc.ScreenCenter, disc.ScreenRadius, Color.White, 48, _gameInstance.DrawWhite);
 
     private void FireLaserAtTarget()
     {

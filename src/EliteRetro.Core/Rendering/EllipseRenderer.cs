@@ -9,14 +9,22 @@ namespace EliteRetro.Core.Rendering;
 /// where u and v are conjugate semi-diameter vectors.
 /// Used for planet surface features (equator, meridians, crater rims).
 /// </summary>
-public class EllipseRenderer
+public class EllipseRenderer : IDisposable
 {
     private readonly Texture2D _whitePixel;
+    private bool _disposed;
 
     public EllipseRenderer(GraphicsDevice graphicsDevice)
     {
         _whitePixel = new Texture2D(graphicsDevice, 1, 1);
         _whitePixel.SetData(new[] { Color.White });
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _whitePixel?.Dispose();
     }
 
     /// <summary>

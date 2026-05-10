@@ -23,6 +23,7 @@ public class GameInstance : Game, IGameContext
     private Systems.IExplosionService _explosionService = null!;
     private Systems.IHudService _hudService = null!;
     private Systems.IStardustService _stardustService = null!;
+    private Systems.ICelestialService _celestialService = null!;
 
     /// <summary>
     /// Global access to the local bubble manager.
@@ -70,6 +71,11 @@ public class GameInstance : Game, IGameContext
     public Systems.IStardustService Stardust => _stardustService;
 
     /// <summary>
+    /// Celestial body projection and rendering service.
+    /// </summary>
+    public Systems.ICelestialService Celestial => _celestialService;
+
+    /// <summary>
     /// When true, all rendered objects use white color.
     /// </summary>
     public bool DrawWhite { get; set; }
@@ -103,6 +109,7 @@ public class GameInstance : Game, IGameContext
         _explosionService = new Systems.ExplosionService(GraphicsDevice);
         _hudService = new Systems.HudService();
         _stardustService = new Rendering.StardustRenderer(GraphicsDevice);
+        _celestialService = new Systems.CelestialService(GraphicsDevice);
 
         // Register MCNT-driven scheduled tasks (Phase 1.5)
         RegisterScheduledTasks();
@@ -276,6 +283,7 @@ public class GameInstance : Game, IGameContext
             _audioManager?.Dispose();
             _explosionService?.Dispose();
             _stardustService?.Dispose();
+            _celestialService?.Dispose();
         }
         base.Dispose(disposing);
     }
