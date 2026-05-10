@@ -27,7 +27,7 @@ public static class CollisionSystem
     /// <summary>
     /// Resolves a collision between two ships, applying damage and effects.
     /// </summary>
-    public static void ResolveCollision(ShipInstance shipA, ShipInstance shipB, LocalBubbleManager bubbleManager)
+    public static void ResolveCollision(ShipInstance shipA, ShipInstance shipB, IBubbleManager bubbleManager)
     {
         // Simple resolution: both ships take significant damage.
         // For Elite "feel", collisions are usually fatal for small ships.
@@ -50,7 +50,7 @@ public static class CollisionSystem
     /// <summary>
     /// Spawns cargo canisters when a ship is destroyed.
     /// </summary>
-    public static void SpawnCargoDrops(ShipInstance ship, LocalBubbleManager bubbleManager)
+    public static void SpawnCargoDrops(ShipInstance ship, IBubbleManager bubbleManager)
     {
         if (ship.Cargo.Count == 0) return;
 
@@ -157,7 +157,7 @@ public static class CollisionSystem
     /// <summary>
     /// Main check for player collisions against all bubble entities.
     /// </summary>
-    public static void CheckPlayerCollisions(LocalBubbleManager bubbleManager)
+    public static void CheckPlayerCollisions(IBubbleManager bubbleManager)
     {
         var player = bubbleManager.PlayerShip;
         if (player == null) return;

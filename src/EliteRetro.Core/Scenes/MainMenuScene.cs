@@ -14,7 +14,7 @@ public class MainMenuScene : GameScene
     private ShipModel _cobraModel = null!;
     private BitmapFont _font = null!;
     private Game? _game;
-    private GameInstance? _gameInstance;
+    private IGameContext? _gameInstance;
     private Matrix _world;
     private Matrix _view;
     private Matrix _projection;
@@ -41,11 +41,14 @@ public class MainMenuScene : GameScene
     private bool _showHiddenEdges = true;
     private readonly List<(string Name, Func<float, ShipModel> Create)> _shipModels = new();
 
-    public MainMenuScene(Game? game = null)
+    public MainMenuScene(IGameContext? game = null)
     {
-        _game = game;
-        if (game is GameInstance gi)
-            _gameInstance = gi;
+        if (game != null)
+        {
+            _gameInstance = game;
+            if (game is Game g)
+                _game = g;
+        }
     }
 
     public override void LoadContent(ContentManager content, BitmapFont font, GraphicsDevice graphicsDevice)
@@ -102,8 +105,11 @@ public class MainMenuScene : GameScene
         _whitePixel.SetData(new[] { Color.White });
 
         // Initialize audio for menu sounds
-        if (_game is GameInstance giAudio)
-            giAudio.Audio.Initialize();
+        if (_gameInstance != null)
+        {
+            if (_gameInstance is GameInstance giAudio)
+                giAudio.Audio.Initialize();
+        }
 
         // Apply persisted "draw invisible" setting as initial hidden-edge mode
         _showHiddenEdges = _gameInstance?.DrawInvisible ?? _showHiddenEdges;
@@ -144,12 +150,14 @@ public class MainMenuScene : GameScene
         if (input.IsKeyPressed(Keys.Up))
         {
             _selectedItem = (_selectedItem - 1 + _menuItems.Length) % _menuItems.Length;
-            _gameInstance?.Audio.PlayMenuSelect();
+            if (_gameInstance is GameInstance gi)
+                gi.Audio.PlayMenuSelect();
         }
         if (input.IsKeyPressed(Keys.Down))
         {
             _selectedItem = (_selectedItem + 1) % _menuItems.Length;
-            _gameInstance?.Audio.PlayMenuSelect();
+            if (_gameInstance is GameInstance gi)
+                gi.Audio.PlayMenuSelect();
         }
 
         if (input.IsKeyPressed(Keys.Enter))
@@ -190,34 +198,33 @@ public class MainMenuScene : GameScene
                 _currentRating = _ratings[(idx + 1) % _ratings.Length];
                 break;
             case 1: // Start New Game → FlightScene
-                if (_game is GameInstance gi)
-                    gi.ChangeScene(new FlightScene(gi));
+                _gameInstance?.ChangeScene(new FlightScene(_gameInstance));
                 break;
             case 2: // Load Game
-                if (_game is GameInstance gi2 && _hasSavedGame)
+                if (_gameInstance != null && _hasSavedGame)
                 {
                     var savePath = SaveGameManager.GetDefaultSavePath();
-                    if (SaveGameManager.TryLoad(savePath, gi2, out int galaxy, out int system, out var seed))
+                    if (_gameInstance is GameInstance gi2)
                     {
-                        // TODO: pass galaxy/system context to FlightScene for proper initialization
-                        gi2.ChangeScene(new FlightScene(gi2, seed));
+                        if (SaveGameManager.TryLoad(savePath, gi2, out int galaxy, out int system, out var seed))
+                        {
+                            // TODO: pass galaxy/system context to FlightScene for proper initialization
+                            gi2.ChangeScene(new FlightScene(gi2, seed));
+                        }
                     }
                 }
                 break;
             case 3: // Space View → SpaceScene (visual test)
-                if (_game is GameInstance gi3)
-                    gi3.ChangeScene(new SpaceScene(gi3));
+                _gameInstance?.ChangeScene(new SpaceScene(_gameInstance));
                 break;
             case 4: // Galaxy Map
-                if (_game is GameInstance gi4)
-                    gi4.PushScene(new GalaxyMapScene(gi4));
+                _gameInstance?.PushScene(new GalaxyMapScene(_gameInstance));
                 break;
             case 6: // Options
-                if (_game is GameInstance giOptions)
-                    giOptions.PushScene(new OptionsScene(giOptions));
+                _gameInstance?.PushScene(new OptionsScene(_gameInstance));
                 break;
             case 7: // Quit
-                _game?.Exit();
+                _gameInstance?.Exit();
                 break;
         }
     }

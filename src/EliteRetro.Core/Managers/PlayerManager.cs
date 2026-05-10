@@ -7,7 +7,7 @@ namespace EliteRetro.Core.Managers;
 /// Manages the player's state, including commander data, ship instance,
 /// and runtime vitals (shields, missiles).
 /// </summary>
-public class PlayerManager
+public class PlayerManager : IPlayerManager
 {
     /// <summary>Persistent commander data (credits, rank, cargo, fuel).</summary>
     public CommanderData Commander { get; } = new();

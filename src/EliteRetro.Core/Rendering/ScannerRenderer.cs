@@ -22,7 +22,7 @@ public class ScannerRenderer
         _whitePixel.SetData(new[] { Color.White });
     }
 
-    public void Draw(SpriteBatch spriteBatch, LocalBubbleManager bubbleManager, int playerSlot, OrientationMatrix universeOrientation, Rectangle centerPanelRect)
+    public void Draw(SpriteBatch spriteBatch, IBubbleManager bubbleManager, int playerSlot, OrientationMatrix universeOrientation, Rectangle centerPanelRect)
     {
         // Derive scanner geometry from available center panel area.
         // Keep a wide ellipse like the original, but responsive to panel size.
@@ -82,7 +82,7 @@ public class ScannerRenderer
     /// Draw sun indicator: small circle in upper left.
     /// Shows sun direction when sun is present (not replaced by station).
     /// </summary>
-    private void DrawSunIndicator(SpriteBatch spriteBatch, LocalBubbleManager bubbleManager, int centerX, int centerY, int radiusX, int radiusY)
+    private void DrawSunIndicator(SpriteBatch spriteBatch, IBubbleManager bubbleManager, int centerX, int centerY, int radiusX, int radiusY)
     {
         var sun = bubbleManager.SunOrStation;
         if (sun == null || sun.Blueprint?.Name != "Sun")
@@ -105,7 +105,7 @@ public class ScannerRenderer
     /// Draw station indicator: circle with square (Coriolis symbol).
     /// Filled square = station ahead (in safe zone), outlined = station behind.
     /// </summary>
-    private void DrawStationIndicator(SpriteBatch spriteBatch, LocalBubbleManager bubbleManager, int centerX, int centerY, int radiusX, int radiusY)
+    private void DrawStationIndicator(SpriteBatch spriteBatch, IBubbleManager bubbleManager, int centerX, int centerY, int radiusX, int radiusY)
     {
         var station = bubbleManager.SunOrStation;
         if (station == null || station.Blueprint?.Name != "Coriolis Station")
@@ -321,7 +321,7 @@ public class ScannerRenderer
         spriteBatch.Draw(_whitePixel, new Rectangle((int)dotPos.X - dotSize / 2, (int)dotPos.Y - dotSize / 2, dotSize, dotSize), color);
     }
 
-    private void DrawContacts(SpriteBatch spriteBatch, LocalBubbleManager bubbleManager, int playerSlot, OrientationMatrix universeOrientation, int centerX, int centerY, int radiusX, int radiusY)
+    private void DrawContacts(SpriteBatch spriteBatch, IBubbleManager bubbleManager, int playerSlot, OrientationMatrix universeOrientation, int centerX, int centerY, int radiusX, int radiusY)
     {
         var player = bubbleManager.PlayerShip;
         if (player == null) return;

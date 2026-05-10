@@ -8,28 +8,28 @@ using EliteRetro.Core.Audio;
 
 namespace EliteRetro.Core;
 
-public class GameInstance : Game
+public class GameInstance : Game, IGameContext
 {
     private readonly GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch = null!;
     private SceneManager _sceneManager = null!;
     private BitmapFont _font = null!;
-    private LocalBubbleManager _bubbleManager = null!;
-    private PlayerManager _playerManager = null!;
+    private IBubbleManager _bubbleManager = null!;
+    private IPlayerManager _playerManager = null!;
     private MainLoopCounter _mcnt = null!;
     private Systems.TaskScheduler _taskScheduler = null!;
-    private AudioManager _audioManager = null!;
+    private IAudioManager _audioManager = null!;
     private Input.IInputService _input = null!;
 
     /// <summary>
     /// Global access to the local bubble manager.
     /// </summary>
-    public LocalBubbleManager BubbleManager => _bubbleManager;
+    public IBubbleManager BubbleManager => _bubbleManager;
 
     /// <summary>
     /// Global access to the player state manager.
     /// </summary>
-    public PlayerManager PlayerManager => _playerManager;
+    public IPlayerManager PlayerManager => _playerManager;
 
     /// <summary>
     /// Global access to the centralized input service.
@@ -49,7 +49,7 @@ public class GameInstance : Game
     /// <summary>
     /// Audio manager for procedural sound effects.
     /// </summary>
-    public AudioManager Audio => _audioManager;
+    public IAudioManager Audio => _audioManager;
 
     /// <summary>
     /// When true, all rendered objects use white color.
@@ -242,6 +242,11 @@ public class GameInstance : Game
     public void PushScene(GameScene scene)
     {
         _sceneManager.PushScene(scene);
+    }
+
+    public void PopScene()
+    {
+        _sceneManager.PopScene();
     }
 
     protected override void Dispose(bool disposing)

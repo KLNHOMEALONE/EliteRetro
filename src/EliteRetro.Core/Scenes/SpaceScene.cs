@@ -20,20 +20,21 @@ public class SpaceScene : GameScene
     private Matrix _projection;
     private BitmapFont _font = null!;
     private GraphicsDevice? _graphicsDevice;
-    private GameInstance _gameInstance = null!;
+    private IGameContext _gameInstance = null!;
     private bool _isPaused;
-    private LocalBubbleManager _bubbleManager = null!;
+    private IBubbleManager _bubbleManager = null!;
     private FlightControlService _flightControlService = null!;
     private bool _initialized;
     private float _cumulativeRoll; // accumulated roll angle in radians, for planet/ring counter-rotation
     private int _debugHighlightedEdge = -1;
 
-    public SpaceScene(Game? game = null)
+    public SpaceScene(IGameContext? game = null)
     {
-        if (game is GameInstance gi)
+        if (game != null)
         {
-            _gameInstance = gi;
-            _bubbleManager = gi.BubbleManager;
+            _gameInstance = game;
+            if (game is GameInstance gi)
+                _bubbleManager = gi.BubbleManager;
         }
         _flightControlService = new FlightControlService();
     }

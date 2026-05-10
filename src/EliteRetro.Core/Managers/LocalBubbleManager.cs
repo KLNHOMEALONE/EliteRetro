@@ -26,7 +26,7 @@ public class CollisionEventArgs : EventArgs
 /// slots 2+ = ships, missiles, cargo. Enforces capacity limits and
 /// handles spawn/despawn, culling, and safe zone triggers.
 /// </summary>
-public class LocalBubbleManager
+public class LocalBubbleManager : IBubbleManager
 {
     private readonly ShipInstance?[] _slots;
     private readonly int _capacity;
@@ -48,7 +48,7 @@ public class LocalBubbleManager
     public ShipInstance? PlayerShip => _slots[GameConstants.PlayerSlot];
 
     /// <summary>Access to the player manager.</summary>
-    public PlayerManager PlayerManager { get; }
+    public IPlayerManager PlayerManager { get; }
 
     /// <summary>Player position (at origin in local bubble coordinates).</summary>
     public Vector3 PlayerPosition { get; set; }
@@ -60,7 +60,7 @@ public class LocalBubbleManager
         set => PlayerManager.TargetPracticeMode = value;
     }
 
-    public LocalBubbleManager(PlayerManager playerManager, int capacity = GameConstants.MaxSlots)
+    public LocalBubbleManager(IPlayerManager playerManager, int capacity = GameConstants.MaxSlots)
     {
         _capacity = capacity;
         _slots = new ShipInstance[capacity];

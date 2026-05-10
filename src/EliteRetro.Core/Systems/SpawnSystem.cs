@@ -79,7 +79,7 @@ public static class SpawnSystem
     /// <summary>
     /// Try to spawn a ship in the local bubble.
     /// </summary>
-    public static bool TrySpawnShip(LocalBubbleManager bubbleManager, byte dangerLevel, float altitude)
+    public static bool TrySpawnShip(IBubbleManager bubbleManager, byte dangerLevel, float altitude)
     {
         if (!ShouldSpawn(dangerLevel, altitude))
             return false;
@@ -95,7 +95,7 @@ public static class SpawnSystem
     /// <summary>
     /// Pack spawn — spawn 2-4 ships of the same type together.
     /// </summary>
-    public static int TrySpawnPack(LocalBubbleManager bubbleManager, byte dangerLevel, float altitude)
+    public static int TrySpawnPack(IBubbleManager bubbleManager, byte dangerLevel, float altitude)
     {
         if (!ShouldSpawn(dangerLevel, altitude))
             return 0;
@@ -128,7 +128,7 @@ public static class SpawnSystem
     /// <summary>
     /// Create a ship instance with random position and orientation.
     /// </summary>
-    private static ShipInstance? CreateInstance(ShipBlueprint blueprint, LocalBubbleManager bubbleManager, float offset = 0)
+    private static ShipInstance? CreateInstance(ShipBlueprint blueprint, IBubbleManager bubbleManager, float offset = 0)
     {
         // Random position outside player's immediate vicinity
         float angle = (float)_rng.NextDouble() * MathF.Tau;

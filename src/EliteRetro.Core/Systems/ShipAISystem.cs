@@ -53,7 +53,7 @@ namespace EliteRetro.Core.Systems
         public static void ExecuteTactics(
             ShipInstance ship,
             ShipInstance? player,
-            LocalBubbleManager bubbleManager,
+            IBubbleManager bubbleManager,
             byte mcnt)
         {
             if (!ship.IsActive) return;
@@ -119,7 +119,7 @@ namespace EliteRetro.Core.Systems
         /// <summary>
         /// Find the nearest hostile target for a ship.
         /// </summary>
-        private static ShipInstance? FindTarget(ShipInstance ship, ShipInstance? player, LocalBubbleManager bubbleManager)
+        private static ShipInstance? FindTarget(ShipInstance ship, ShipInstance? player, IBubbleManager bubbleManager)
         {
             var personality = GetPersonalityFlags(ship.Blueprint.ShipClass);
             ShipInstance? nearest = null;
@@ -241,7 +241,7 @@ namespace EliteRetro.Core.Systems
         /// <summary>
         /// Part 6: Fire laser at target.
         /// </summary>
-        private static void FireLaser(ShipInstance ship, ShipInstance target, bool hit, LocalBubbleManager bubbleManager)
+        private static void FireLaser(ShipInstance ship, ShipInstance target, bool hit, IBubbleManager bubbleManager)
         {
             if (hit)
             {
@@ -263,7 +263,7 @@ namespace EliteRetro.Core.Systems
         /// <summary>
         /// Called when AI destroys a ship — track kills and spawn cargo.
         /// </summary>
-        private static void OnAIDestroyedShip(ShipInstance destroyed, ShipInstance destroyer, LocalBubbleManager bubbleManager)
+        private static void OnAIDestroyedShip(ShipInstance destroyed, ShipInstance destroyer, IBubbleManager bubbleManager)
         {
             // Track kill if player was the target (player ship destroyed by AI)
             // For now just spawn cargo — player kills tracked via CollisionSystem
@@ -275,7 +275,7 @@ namespace EliteRetro.Core.Systems
         /// <summary>
         /// Part 7: Calculate movement direction based on personality.
         /// </summary>
-        private static Vector3 CalculateMovementDirection(ShipInstance ship, ShipInstance target, LocalBubbleManager bubbleManager)
+        private static Vector3 CalculateMovementDirection(ShipInstance ship, ShipInstance target, IBubbleManager bubbleManager)
         {
             var personality = GetPersonalityFlags(ship.Blueprint.ShipClass);
 

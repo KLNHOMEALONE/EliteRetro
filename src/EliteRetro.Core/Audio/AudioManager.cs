@@ -12,7 +12,7 @@ namespace EliteRetro.Core.Audio;
 ///   - Laser hit: sharp high-pitched metallic ping
 ///   - Explosion: noise envelope with decay
 /// </summary>
-public class AudioManager : IDisposable
+public class AudioManager : IAudioManager
 {
     private SoundEffect? _menuSelectEffect;
     private SoundEffect? _laserEffect;

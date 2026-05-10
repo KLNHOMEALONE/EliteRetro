@@ -5,6 +5,9 @@ using Microsoft.Xna.Framework.Input;
 
 namespace EliteRetro.Core.Scenes;
 
+/// <summary>
+/// Manages a stack of game scenes, handling transitions and lifecycle.
+/// </summary>
 public class SceneManager
 {
     private readonly Stack<GameScene> _sceneStack = new();
@@ -12,10 +15,9 @@ public class SceneManager
     private ContentManager _content = null!;
     private BitmapFont _font = null!;
     private GraphicsDevice _graphicsDevice = null!;
-    private Game? _game;
-    private bool _prevEscape;
+    private IGameContext? _gameInstance;
 
-    public void ChangeScene(GameScene newScene, ContentManager content, GraphicsDevice graphicsDevice, Game? game = null, BitmapFont? font = null)
+    public void ChangeScene(GameScene newScene, ContentManager content, GraphicsDevice graphicsDevice, IGameContext? game = null, BitmapFont? font = null)
     {
         while (_sceneStack.Count > 0)
         {
@@ -24,7 +26,7 @@ public class SceneManager
         }
         _content = content;
         _graphicsDevice = graphicsDevice;
-        _game = game;
+        _gameInstance = game;
         if (font != null) _font = font;
 
         newScene.LoadContent(content, _font, graphicsDevice);
@@ -52,7 +54,7 @@ public class SceneManager
     {
         if (_sceneStack.Count <= 1)
         {
-            _game?.Exit();
+            _gameInstance?.Exit();
             return;
         }
 
@@ -70,19 +72,18 @@ public class SceneManager
             _nextScene = null;
         }
 
-        // Check for Escape to go back (only on key press, not hold)
-        var kb = Keyboard.GetState();
-        if (kb.IsKeyDown(Keys.Escape) && !_prevEscape)
+        // Check for Escape to go back (using centralized input if available)
+        if (_gameInstance != null)
         {
-            if (_sceneStack.Count > 1)
+            if (_gameInstance.Input.IsKeyPressed(Keys.Escape))
             {
-                PopScene();
+                if (_sceneStack.Count > 1)
+                {
+                    PopScene();
+                    return;
+                }
             }
-            // If only 1 scene, Escape does nothing — let the scene handle it
-            _prevEscape = true;
-            return;
         }
-        _prevEscape = kb.IsKeyDown(Keys.Escape);
 
         if (_sceneStack.Count > 0)
             _sceneStack.Peek().Update(gameTime);

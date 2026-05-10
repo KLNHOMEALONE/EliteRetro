@@ -32,8 +32,8 @@ public class FlightScene : GameScene
     private ScannerRenderer _scannerRenderer = null!;
     private BitmapFont _font = null!;
     private GraphicsDevice? _graphicsDevice;
-    private GameInstance _gameInstance = null!;
-    private LocalBubbleManager _bubbleManager = null!;
+    private IGameContext _gameInstance = null!;
+    private IBubbleManager _bubbleManager = null!;
     private FlightControlService _flightControlService = null!;
     private OrientationMatrix _universeOrientation = OrientationMatrix.Identity;
     private Matrix _view;
@@ -80,12 +80,14 @@ public class FlightScene : GameScene
     private const float HudHeightFraction = 0.375f; // 288/768: matches current layout but scales by percentage
     private readonly RasterizerState _scissorRasterizer = new RasterizerState { ScissorTestEnable = true };
 
-    public FlightScene(Game? game = null, GalaxySeed? systemSeed = null)
+    public FlightScene(IGameContext? game = null, GalaxySeed? systemSeed = null)
     {
-        if (game is GameInstance gi)
+        if (game != null)
         {
-            _gameInstance = gi;
-            _bubbleManager = gi.BubbleManager;
+            _gameInstance = game;
+            // Temporary cast until we move to full DI for BubbleManager
+            if (game is GameInstance gi)
+                _bubbleManager = gi.BubbleManager;
         }
         _flightControlService = new FlightControlService();
         if (_bubbleManager != null)

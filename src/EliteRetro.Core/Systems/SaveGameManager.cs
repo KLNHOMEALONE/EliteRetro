@@ -49,7 +49,7 @@ public static class SaveGameManager
     /// <summary>
     /// Save commander data to a 256-byte binary file.
     /// </summary>
-    public static void Save(string filePath, GameInstance game, int galaxyIndex, int systemIndex, GalaxySeed seed)
+    public static void Save(string filePath, IGameContext game, int galaxyIndex, int systemIndex, GalaxySeed seed)
     {
         var data = new byte[FileSize];
         var bubble = game.BubbleManager;
@@ -85,7 +85,6 @@ public static class SaveGameManager
         data[OffGCNT] = (byte)(galaxyIndex & 0xFF);
 
         // Laser types (4 bytes) — 0=none, 1=short, 2=medium, 3=long, 4=military
-        // For now, all players start with no lasers; equipment system would set these
         data[OffLaser0] = 0;
         data[OffLaser1] = 0;
         data[OffLaser2] = 0;
@@ -104,34 +103,18 @@ public static class SaveGameManager
         }
 
         // Equipment flags
-        data[OffECM] = 0;   // E.C.M. — would be set by equipment system
-        data[OffBST] = 0;   // Fuel scoops — would be set by equipment system
-        data[OffBOMB] = 0;  // Energy bomb — would be set by equipment system
+        data[OffECM] = 0;
+        data[OffBST] = 0;
+        data[OffBOMB] = 0;
 
         // Energy/shield level
         data[OffENGY] = player.Ship.Energy;
-
-        // Docking computer
-        data[OffDKCMP] = 0; // Would be set by equipment system
-
-        // Galactic hyperdrive
-        data[OffGHYP] = 0; // Would be set by equipment system
-
-        // Escape pod
-        data[OffESCP] = 0; // Would be set by equipment system
 
         // Missiles
         data[OffNOMSL] = player.Missiles;
 
         // Legal status (0=clean, 1=fugitive, 2=offender, 3=criminal)
         data[OffFIST] = commander.LegalStatus;
-
-        // Market availability (18 bytes) — zeroed (regenerated on dock)
-        for (int i = 0; i < 18; i++)
-            data[OffAVL + i] = 0;
-
-        // Market random seed
-        data[OffQQ26] = 0; // Would be set when docking
 
         // TALLY (kill count, 2 bytes, little-endian)
         int tally = Math.Clamp(commander.Tally, 0, 65535);
@@ -154,7 +137,7 @@ public static class SaveGameManager
     /// Load commander data from a 256-byte binary file.
     /// Returns true if loaded successfully, false if file is invalid or checksum fails.
     /// </summary>
-    public static bool TryLoad(string filePath, GameInstance game, out int galaxyIndex, out int systemIndex, out GalaxySeed seed)
+    public static bool TryLoad(string filePath, IGameContext game, out int galaxyIndex, out int systemIndex, out GalaxySeed seed)
     {
         galaxyIndex = 0;
         systemIndex = 0;
@@ -163,59 +146,66 @@ public static class SaveGameManager
         if (!File.Exists(filePath))
             return false;
 
-        var data = File.ReadAllBytes(filePath);
-        if (data.Length < FileSize)
-            return false;
-
-        // Verify checksum
-        byte expectedCheck = data[OffCHK];
-        byte actualCheck = ComputeCHECK(data);
-        if (expectedCheck != actualCheck)
-            return false;
-
-        var player = game.PlayerManager;
-        var commander = player.Commander;
-
-        // Galactic coordinates
-        systemIndex = data[OffQQ0];
-        galaxyIndex = data[OffQQ1];
-
-        // Galaxy seed
-        ushort s0 = (ushort)(data[OffQQ21S0] | (data[OffQQ21S0 + 1] << 8));
-        ushort s1 = (ushort)(data[OffQQ21S1] | (data[OffQQ21S1 + 1] << 8));
-        ushort s2 = (ushort)(data[OffQQ21S2] | (data[OffQQ21S2 + 1] << 8));
-        seed = new GalaxySeed(s0, s1, s2);
-
-        // Credits
-        commander.Credits = data[OffCash] | (data[OffCash + 1] << 8) | (data[OffCash + 2] << 16) | (data[OffCash + 3] << 24);
-
-        // Fuel
-        commander.Fuel = data[OffFuel];
-
-        // Cargo capacity
-        commander.CargoCapacity = data[OffCRGO];
-
-        // Cargo hold
-        commander.CargoHold.Clear();
-        for (int i = 0; i < 17; i++)
+        try
         {
-            if (data[OffCARGO + i] > 0)
-                commander.CargoHold[i] = data[OffCARGO + i];
+            var data = File.ReadAllBytes(filePath);
+            if (data.Length < FileSize)
+                return false;
+
+            // Verify checksum
+            byte expectedCheck = data[OffCHK];
+            byte actualCheck = ComputeCHECK(data);
+            if (expectedCheck != actualCheck)
+                return false;
+
+            var player = game.PlayerManager;
+            var commander = player.Commander;
+
+            // Galactic coordinates
+            systemIndex = data[OffQQ0];
+            galaxyIndex = data[OffQQ1];
+
+            // Galaxy seed
+            ushort s0 = (ushort)(data[OffQQ21S0] | (data[OffQQ21S0 + 1] << 8));
+            ushort s1 = (ushort)(data[OffQQ21S1] | (data[OffQQ21S1 + 1] << 8));
+            ushort s2 = (ushort)(data[OffQQ21S2] | (data[OffQQ21S2 + 1] << 8));
+            seed = new GalaxySeed(s0, s1, s2);
+
+            // Credits
+            commander.Credits = data[OffCash] | (data[OffCash + 1] << 8) | (data[OffCash + 2] << 16) | (data[OffCash + 3] << 24);
+
+            // Fuel
+            commander.Fuel = data[OffFuel];
+
+            // Cargo capacity
+            commander.CargoCapacity = data[OffCRGO];
+
+            // Cargo hold
+            commander.CargoHold.Clear();
+            for (int i = 0; i < 17; i++)
+            {
+                if (data[OffCARGO + i] > 0)
+                    commander.CargoHold[i] = data[OffCARGO + i];
+            }
+
+            // Energy
+            player.Ship.Energy = data[OffENGY];
+
+            // Missiles
+            player.Missiles = data[OffNOMSL];
+
+            // Legal status
+            commander.LegalStatus = data[OffFIST];
+
+            // TALLY
+            commander.Tally = data[OffTALLY] | (data[OffTALLY + 1] << 8);
+
+            return true;
         }
-
-        // Energy
-        player.Ship.Energy = data[OffENGY];
-
-        // Missiles
-        player.Missiles = data[OffNOMSL];
-
-        // Legal status
-        commander.LegalStatus = data[OffFIST];
-
-        // TALLY
-        commander.Tally = data[OffTALLY] | (data[OffTALLY + 1] << 8);
-
-        return true;
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>

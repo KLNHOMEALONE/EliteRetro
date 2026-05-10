@@ -29,9 +29,9 @@ public class GalaxyMapScene : GameScene
     private StarSystem? _originSystem;   // current ship position (Lave)
     private StarSystem? _cursorSystem;   // destination under cursor
     private StarSystem? _lockedSystem;   // locked destination (Enter)
-    private GameInstance? _game;
+    private IGameContext? _game;
 
-    public GalaxyMapScene(GameInstance? game = null)
+    public GalaxyMapScene(IGameContext? game = null)
     {
         _game = game;
     }
@@ -74,18 +74,18 @@ public class GalaxyMapScene : GameScene
 
         if (_cursorSystem.HasValue)
         {
-            if (input.IsKeyPressed(Keys.Left))
+            if (input.IsKeyPressed(Microsoft.Xna.Framework.Input.Keys.Left))
                 _cursorSystem = SelectInDirection(galaxy, _cursorSystem.Value, dxSign: -1, dySign: 0);
-            if (input.IsKeyPressed(Keys.Right))
+            if (input.IsKeyPressed(Microsoft.Xna.Framework.Input.Keys.Right))
                 _cursorSystem = SelectInDirection(galaxy, _cursorSystem.Value, dxSign: 1, dySign: 0);
-            if (input.IsKeyPressed(Keys.Up))
+            if (input.IsKeyPressed(Microsoft.Xna.Framework.Input.Keys.Up))
                 _cursorSystem = SelectInDirection(galaxy, _cursorSystem.Value, dxSign: 0, dySign: -1);
-            if (input.IsKeyPressed(Keys.Down))
+            if (input.IsKeyPressed(Microsoft.Xna.Framework.Input.Keys.Down))
                 _cursorSystem = SelectInDirection(galaxy, _cursorSystem.Value, dxSign: 0, dySign: 1);
         }
 
         // Enter locks on destination only if within jump range.
-        if (input.IsKeyPressed(Keys.Enter) && _originSystem.HasValue && _cursorSystem.HasValue)
+        if (input.IsKeyPressed(Microsoft.Xna.Framework.Input.Keys.Enter) && _originSystem.HasValue && _cursorSystem.HasValue)
         {
             float fuel = Math.Clamp(_game.PlayerManager.Commander.Fuel, 0, 70);
             float jumpRangeLy = fuel / 10f; // original Elite max 7.0 LY
@@ -95,7 +95,7 @@ public class GalaxyMapScene : GameScene
             _lockedSystem = coordDist <= maxCoordDist ? _cursorSystem : null;
         }
 
-        if (input.IsKeyPressed(Keys.I) && _cursorSystem.HasValue && _originSystem.HasValue)
+        if (input.IsKeyPressed(Microsoft.Xna.Framework.Input.Keys.I) && _cursorSystem.HasValue && _originSystem.HasValue)
         {
             float ly = DistanceLightYears(_originSystem.Value, _cursorSystem.Value);
             _game.PushScene(new GalaxyStarDescriptionScene(_cursorSystem.Value, ly));

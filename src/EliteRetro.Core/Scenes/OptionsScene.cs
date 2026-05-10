@@ -13,18 +13,16 @@ public class OptionsScene : GameScene
 {
     private BitmapFont _font = null!;
     private int _selectedItem;
-    private Game? _game;
-    private GameInstance? _gameInstance;
+    private IGameContext? _gameInstance;
     private Texture2D _whitePixel = null!;
 
     // Option definitions: name, getter, setter
     private readonly (string name, Func<bool> getter, Action<bool> setter)[] _options;
 
-    public OptionsScene(Game? game = null)
+    public OptionsScene(IGameContext? game = null)
     {
-        _game = game;
-        if (game is GameInstance gi)
-            _gameInstance = gi;
+        if (game != null)
+            _gameInstance = game;
 
         _options = new (string name, Func<bool> getter, Action<bool> setter)[]
         {
@@ -52,13 +50,15 @@ public class OptionsScene : GameScene
         if (input.IsKeyPressed(Keys.Up))
         {
             _selectedItem = (_selectedItem - 1 + _options.Length) % _options.Length;
-            _gameInstance?.Audio.PlayMenuSelect();
+            if (_gameInstance is GameInstance gi)
+                gi.Audio.PlayMenuSelect();
         }
 
         if (input.IsKeyPressed(Keys.Down))
         {
             _selectedItem = (_selectedItem + 1) % _options.Length;
-            _gameInstance?.Audio.PlayMenuSelect();
+            if (_gameInstance is GameInstance gi)
+                gi.Audio.PlayMenuSelect();
         }
 
         if (input.IsKeyPressed(Keys.Enter))
