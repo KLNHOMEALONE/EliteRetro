@@ -331,6 +331,30 @@ public class FlightScene : GameScene
             _bubbleManager.TidyAllActive();
             CheckExplosions();
 
+            // --- OVERFLY PROTECTION (celestial bodies) ---
+            // Enforce a minimum radial distance from each large celestial body
+            // that scales with the angular offset from the forward axis (+Z).
+            //
+            //   minDist = bodyRadius + bodyRadius × K × sin(angleFromNose)
+            //
+            // Dead ahead  (0°) → minDist = bodyRadius    (head-on crash possible)
+            // To the side (90°) → minDist = bodyRadius×1.4 (safe overfly clearance)
+            //
+            // The position vector is scaled (direction preserved) so the body
+            // never appears closer than minDist.  Because enforcement runs every
+            // frame and the per-frame deficit is bounded by moveStep + pitch rate,
+            // the visual effect is a smooth slide — no popping.
+            EnforceOverflyDistance(_bubbleManager.Planet, GameConstants.PlanetRadius);
+            {
+                var sunOrStation = _bubbleManager.SunOrStation;
+                if (sunOrStation?.Blueprint?.Name == "Sun")
+                {
+                    float sunDangerRadius = GameConstants.PlanetRadius * 2
+                                          * GameConstants.SunFatalDistanceMultiplier;
+                    EnforceOverflyDistance(sunOrStation, sunDangerRadius);
+                }
+            }
+
             // Check player collision against nearby entities (every frame, O(n) not O(n²))
             CollisionSystem.CheckPlayerCollisions(_bubbleManager);
 
@@ -946,6 +970,23 @@ public class FlightScene : GameScene
             // AND pointing your nose directly into it.
             float effectiveAlt = height + clearanceBoost;
 
+            // 4. Overfly altitude floor — use the overfly-enforced clearance as a
+            //    minimum so the bar stays stable while flying over the planet.
+            //    This mirrors the EnforceOverflyDistance formula:
+            //      overflyClearance = bodyRadius × K × sin(angleFromNose)
+            float ovSinAngle = MathF.Sin(angleToCenter); // angleToCenter == angleFromNose
+            float overflyClearance = GameConstants.PlanetRadius * 0.4f * ovSinAngle;
+            effectiveAlt = Math.Max(effectiveAlt, overflyClearance);
+
+            // Also consider perpendicular flight-path clearance when planet is ahead
+            if (planetPos.Z > 0)
+            {
+                float perpDist = MathF.Sqrt(planetPos.X * planetPos.X + planetPos.Y * planetPos.Y);
+                float perpClearance = perpDist - GameConstants.PlanetRadius;
+                if (perpClearance > 0)
+                    effectiveAlt = Math.Max(effectiveAlt, perpClearance);
+            }
+
             // Scale: 0.4 planet radii = max bar.
             altitude = MathHelper.Clamp((int)(effectiveAlt / (GameConstants.PlanetRadius * 0.4f) * 255), 0, 255);
             
@@ -1529,5 +1570,48 @@ public class FlightScene : GameScene
         }
 
         _whitePixel?.Dispose();
+    }
+
+    // ----------------------------------------------------------------
+    //  Overfly protection helper
+    // ----------------------------------------------------------------
+
+    /// <summary>
+    /// Enforce a minimum radial distance from a celestial body so the ship
+    /// curves safely over it when the body is off the forward axis.
+    ///
+    /// The minimum distance is:
+    ///   minDist = bodyRadius + bodyRadius × K × sin(angleFromNose)
+    ///
+    /// At angle 0° (dead ahead) there is no extra clearance — a head-on
+    /// approach can still crash.  At 90° (directly to the side) the ship
+    /// is kept bodyRadius × K above the surface.
+    ///
+    /// The body's direction is preserved (it stays at the same screen
+    /// position); only the distance is increased if needed.
+    /// </summary>
+    private static void EnforceOverflyDistance(ShipInstance? body, float bodyRadius)
+    {
+        if (body == null) return;
+
+        Vector3 pos = body.Position;
+        float dist = pos.Length();
+        if (dist < 1f) return; // degenerate / at origin
+
+        // Angle between the body direction and the forward axis (+Z).
+        float noseDot = pos.Z / dist; // == Vector3.Dot(normalize(pos), UnitZ)
+        float angleFromNose = MathF.Acos(MathHelper.Clamp(noseDot, -1f, 1f));
+        float sinAngle = MathF.Sin(angleFromNose);
+
+        // K = 0.4 → at 90° the clearance is 40% of the body radius,
+        // which exactly fills the altitude bar to maximum (scale = 0.4 R).
+        const float OverflyK = 0.4f;
+        float minDist = bodyRadius + bodyRadius * OverflyK * sinAngle;
+
+        if (dist < minDist)
+        {
+            // Push the body radially outward (preserving direction on screen).
+            body.Position = (pos / dist) * minDist;
+        }
     }
 }
