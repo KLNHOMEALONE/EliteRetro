@@ -5,44 +5,30 @@ namespace EliteRetro.Core.Managers;
 
 /// <summary>
 /// Manages the player's state, including commander data, ship instance,
-/// and runtime vitals (shields, missiles).
+/// and runtime vitals (shields, missiles). Single source of truth for player info.
 /// </summary>
 public class PlayerManager : IPlayerManager
 {
-    /// <summary>Persistent commander data (credits, rank, cargo, fuel).</summary>
-    public CommanderData Commander { get; } = new();
-
-    /// <summary>The player's ship instance in the local bubble.</summary>
+    public CommanderData Commander { get; }
     public ShipInstance Ship { get; }
-
-    /// <summary>Player missiles remaining.</summary>
     public byte Missiles { get; set; } = 4;
-
-    /// <summary>Player shield strength (0-255, front).</summary>
-    public byte ShieldFront { get; set; } = 200;
-
-    /// <summary>Player shield strength (0-255, aft).</summary>
-    public byte ShieldAft { get; set; } = 200;
-
-    /// <summary>When true, no ships spawn via scheduler or random spawning.</summary>
-    public bool TargetPracticeMode { get; set; }
+    public byte ShieldFront { get; set; } = 255;
+    public byte ShieldAft { get; set; } = 255;
 
     public PlayerManager()
     {
-        // Create player ship blueprint
+        Commander = new CommanderData();
+        
         var playerBlueprint = new ShipBlueprint
         {
-            Name = "Player",
-            Model = CobraMk3Model.Create(24),
+            Name = "Cobra Mk3",
+            Model = CobraMk3Model.Create(2.0f),
             MaxSpeed = GameConstants.SpeedMax,
             MaxEnergy = 255,
             HullStrength = 255,
             ShieldStrength = 255,
-            LaserPower = 2,
-            ShipClass = (byte)NewbFlags.None,
         };
 
-        // Initialize player ship instance at origin
         Ship = new ShipInstance(playerBlueprint)
         {
             Position = Vector3.Zero,

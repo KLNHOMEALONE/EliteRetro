@@ -47,24 +47,13 @@ public class LocalBubbleManager : IBubbleManager
     /// <summary>Player ship entity (slot 2, always present).</summary>
     public ShipInstance? PlayerShip => _slots[GameConstants.PlayerSlot];
 
-    /// <summary>Access to the player manager.</summary>
-    public IPlayerManager PlayerManager { get; }
-
     /// <summary>Player position (at origin in local bubble coordinates).</summary>
     public Vector3 PlayerPosition { get; set; }
-
-    /// <summary>When true, no ships spawn via scheduler or random spawning.</summary>
-    public bool TargetPracticeMode
-    {
-        get => PlayerManager.TargetPracticeMode;
-        set => PlayerManager.TargetPracticeMode = value;
-    }
 
     public LocalBubbleManager(IPlayerManager playerManager, int capacity = GameConstants.MaxSlots)
     {
         _capacity = capacity;
         _slots = new ShipInstance[capacity];
-        PlayerManager = playerManager;
 
         // Register player ship in its reserved slot
         _slots[GameConstants.PlayerSlot] = playerManager.Ship;
@@ -158,7 +147,8 @@ public class LocalBubbleManager : IBubbleManager
 
         // Orbit point: planet position + 2 * planetNosev * PlanetRadius
         Vector3 orbitPoint = Planet.Position + Planet.Orientation.Nosev * 2 * GameConstants.PlanetRadius;
-        Vector3 diff = PlayerPosition - orbitPoint;
+        // In rotating universe, player is always at origin
+        Vector3 diff = -orbitPoint; 
         return diff.LengthSquared() < GameConstants.SafeZoneRadius * GameConstants.SafeZoneRadius;
     }
 

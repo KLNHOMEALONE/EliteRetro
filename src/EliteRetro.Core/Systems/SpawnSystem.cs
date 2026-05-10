@@ -1,5 +1,6 @@
 using EliteRetro.Core.Entities;
 using EliteRetro.Core.Managers;
+using Microsoft.Xna.Framework;
 
 namespace EliteRetro.Core.Systems;
 
@@ -90,6 +91,102 @@ public static class SpawnSystem
             return false;
 
         return bubbleManager.TrySpawn(instance);
+    }
+
+    /// <summary>
+    /// Spawn a random ship or asteroid moving in the local bubble.
+    /// Some fly toward the player, others toward the planet.
+    /// This logic was moved from FlightScene for cleaner SRP.
+    /// </summary>
+    public static void SpawnRandomEncounter(IBubbleManager bubbleManager, bool ramMode)
+    {
+        var models = new (string Name, Func<float, ShipModel> Create)[]
+        {
+            ("Sidewinder", size => SidewinderModel.Create(size)),
+            ("Viper", size => ViperModel.Create(size)),
+            ("Cobra Mk3", size => CobraMk3Model.Create(size)),
+            ("Python", size => PythonModel.Create(size)),
+            ("Asteroid", size => AsteroidModel.Create(size)),
+            ("Boulder", size => BoulderModel.Create(size)),
+            ("Rock Hermit", size => RockHermitModel.Create(size)),
+        };
+
+        var chosen = models[_rng.Next(models.Length)];
+        float size = 16f + (float)_rng.NextDouble() * 16f;
+        var model = chosen.Create(size);
+
+        float distance = 100 + (float)_rng.NextDouble() * 200;
+        float lateralX = (float)_rng.NextDouble() * 150 - 75;
+        float lateralY = (float)_rng.NextDouble() * 150 - 75;
+
+        var blueprint = new ShipBlueprint
+        {
+            Name = chosen.Name,
+            Model = model,
+            MaxSpeed = model.IsRock ? 0f : 255f,
+            MaxEnergy = model.IsRock ? (byte)0 : (byte)255,
+            HullStrength = model.IsRock ? (byte)1 : (byte)255,
+            ShieldStrength = model.IsRock ? (byte)0 : (byte)255,
+            IsRock = model.IsRock
+        };
+
+        bool towardPlayer = ramMode || _rng.NextDouble() < 0.5;
+        float speed = ramMode ? (5f + (float)_rng.NextDouble() * 5f) : (1f + (float)_rng.NextDouble() * 2f);
+
+        Vector3 position;
+        float entitySpeed;
+        OrientationMatrix orientation = OrientationMatrix.Identity;
+
+        if (towardPlayer)
+        {
+            position = new Vector3(lateralX, lateralY, distance);
+            entitySpeed = -speed;
+
+            if (ramMode)
+            {
+                Vector3 toPlayer = -position;
+                if (toPlayer.LengthSquared() > 0.01f)
+                {
+                    toPlayer = Vector3.Normalize(toPlayer);
+                    var newRoofv = Vector3.Normalize(Vector3.Cross(toPlayer, Vector3.UnitY));
+                    orientation = new OrientationMatrix
+                    {
+                        Nosev = toPlayer,
+                        Roofv = newRoofv,
+                        Sidev = Vector3.Normalize(Vector3.Cross(newRoofv, toPlayer))
+                    };
+                }
+            }
+            else
+            {
+                orientation = new OrientationMatrix
+                {
+                    Nosev = new Vector3(0, 0, 1),
+                    Roofv = new Vector3(0, 1, 0),
+                    Sidev = new Vector3(1, 0, 0)
+                };
+            }
+        }
+        else
+        {
+            position = new Vector3(lateralX, lateralY, distance * 0.3f);
+            entitySpeed = speed;
+            orientation = new OrientationMatrix
+            {
+                Nosev = new Vector3(0, 0, 1),
+                Roofv = new Vector3(0, 1, 0),
+                Sidev = new Vector3(1, 0, 0)
+            };
+        }
+
+        var entity = new ShipInstance(blueprint)
+        {
+            Position = position,
+            Speed = entitySpeed,
+            Orientation = orientation
+        };
+
+        bubbleManager.TrySpawn(entity);
     }
 
     /// <summary>

@@ -47,6 +47,26 @@ public static class SaveGameManager
     private const byte SaveVersion = 1;
 
     /// <summary>
+    /// Save commander data to the default file path using the current game context.
+    /// </summary>
+    public static bool SaveDefault(IGameContext game)
+    {
+        try
+        {
+            var savePath = GetDefaultSavePath();
+            // TODO: Galaxy/System context tracking to be added to GameInstance/Context.
+            // Using placeholder Galaxy 0, System 0 for now.
+            var seed = GalaxySeed.Galaxy0System0;
+            Save(savePath, game, 0, 0, seed);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Save commander data to a 256-byte binary file.
     /// </summary>
     public static void Save(string filePath, IGameContext game, int galaxyIndex, int systemIndex, GalaxySeed seed)

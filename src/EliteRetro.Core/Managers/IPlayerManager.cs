@@ -21,7 +21,4 @@ public interface IPlayerManager
 
     /// <summary>Player shield strength (0-255, aft).</summary>
     byte ShieldAft { get; set; }
-
-    /// <summary>When true, no ships spawn via scheduler or random spawning.</summary>
-    bool TargetPracticeMode { get; set; }
 }

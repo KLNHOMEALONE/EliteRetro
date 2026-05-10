@@ -23,15 +23,6 @@ public interface IBubbleManager
     /// <summary>Player ship entity (slot 2, always present).</summary>
     ShipInstance? PlayerShip { get; }
 
-    /// <summary>Access to the player manager.</summary>
-    IPlayerManager PlayerManager { get; }
-
-    /// <summary>Player position (at origin in local bubble coordinates).</summary>
-    Vector3 PlayerPosition { get; set; }
-
-    /// <summary>When true, no ships spawn via scheduler or random spawning.</summary>
-    bool TargetPracticeMode { get; set; }
-
     void SetSlot(int index, ShipInstance? entity);
     ShipInstance? GetSlot(int index);
     bool TrySpawn(ShipInstance ship);
