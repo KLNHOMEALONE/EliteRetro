@@ -228,32 +228,15 @@ public class FlightScene : GameScene
             _bubbleManager.TidyAllActive();
             _gameInstance.Explosions.Update(gameTime, _bubbleManager, _gameInstance.Audio);
 
-            EnforceOverflyDistance(_bubbleManager.Planet, GameConstants.PlanetRadius);
+            _gameInstance.Simulation.EnforceOverflyDistance(_bubbleManager.Planet, GameConstants.PlanetRadius);
             var sunOrStation = _bubbleManager.SunOrStation;
             if (sunOrStation?.Blueprint?.Name == "Sun")
-                EnforceOverflyDistance(sunOrStation, GameConstants.PlanetRadius * 2 * GameConstants.SunFatalDistanceMultiplier);
+                _gameInstance.Simulation.EnforceOverflyDistance(sunOrStation, GameConstants.PlanetRadius * 2 * GameConstants.SunFatalDistanceMultiplier);
 
             CollisionSystem.CheckPlayerCollisions(_bubbleManager);
-            var player = _bubbleManager.PlayerShip;
-            var planet = _bubbleManager.Planet;
-            if (player != null && planet != null)
-            {
-                var col = CollisionSystem.CheckPlanetCollision(player, planet);
-                if (col.Type == CollisionSystem.PlanetCollisionType.Crash)
-                {
-                    _gameInstance.Messages.Post("PLANET HIT", MessageType.General, int.MaxValue);
-                    _playerSpeed = 0f;
-                    _planetHit = true;
-                    return;
-                }
-                else if (col.Type == CollisionSystem.PlanetCollisionType.Glancing)
-                {
-                    _gameInstance.Messages.Post("ALTITUDE CRITICAL - SCRAPE!", MessageType.General, 60);
-                    player.TakeDamage(15);
-                    _damageFlashTimer = 20;
-                    planet.Position -= col.PushBack;
-                }
-            }
+            
+            _gameInstance.Simulation.CheckPlanetCollision(_gameInstance, _bubbleManager, ref _playerSpeed, ref _planetHit, ref _damageFlashTimer);
+            if (_planetHit) return;
 
             _bubbleManager.CleanupExpired();
 
