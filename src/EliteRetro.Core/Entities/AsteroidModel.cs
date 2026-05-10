@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class AsteroidModel : ShipModel
 {
-    public static new AsteroidModel Create(float size = 1.0f)
+    public static AsteroidModel Create(float size = 1.0f)
     {
         float scale = size / 80f;
 

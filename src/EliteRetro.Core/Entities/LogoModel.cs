@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class LogoModel : ShipModel
 {
-    public static new LogoModel Create(float size = 1.0f)
+    public static LogoModel Create(float size = 1.0f)
     {
         float scale = size / 180f;
 

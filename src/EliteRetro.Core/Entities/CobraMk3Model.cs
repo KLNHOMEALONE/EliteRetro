@@ -16,7 +16,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class CobraMk3Model : ShipModel
 {
-    public static new CobraMk3Model Create(float size = 1.0f)
+    public static CobraMk3Model Create(float size = 1.0f)
     {
         float scale = size / 120f;
 

@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class ConstrictorModel : ShipModel
 {
-    public static new ConstrictorModel Create(float size = 1.0f)
+    public static ConstrictorModel Create(float size = 1.0f)
     {
         float scale = size / 120f;
 

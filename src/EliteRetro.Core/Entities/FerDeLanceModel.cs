@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class FerDeLanceModel : ShipModel
 {
-    public static new FerDeLanceModel Create(float size = 1.0f)
+    public static FerDeLanceModel Create(float size = 1.0f)
     {
         float scale = size / 108f;
 

@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class ViperModel : ShipModel
 {
-    public static new ViperModel Create(float size = 1.0f)
+    public static ViperModel Create(float size = 1.0f)
     {
         float scale = size / 75f;
 

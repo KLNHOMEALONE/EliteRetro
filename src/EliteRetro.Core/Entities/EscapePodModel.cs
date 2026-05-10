@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class EscapePodModel : ShipModel
 {
-    public static new EscapePodModel Create(float size = 1.0f)
+    public static EscapePodModel Create(float size = 1.0f)
     {
         float scale = size / 36f;
 

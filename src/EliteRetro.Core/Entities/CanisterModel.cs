@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class CanisterModel : ShipModel
 {
-    public static new CanisterModel Create(float size = 1.0f)
+    public static CanisterModel Create(float size = 1.0f)
     {
         float scale = size / 24f;
 

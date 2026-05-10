@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class PythonModel : ShipModel
 {
-    public static new PythonModel Create(float size = 1.0f)
+    public static PythonModel Create(float size = 1.0f)
     {
         float scale = size / 224f;
 

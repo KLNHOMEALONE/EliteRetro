@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class MorayModel : ShipModel
 {
-    public static new MorayModel Create(float size = 1.0f)
+    public static MorayModel Create(float size = 1.0f)
     {
         float scale = size / 100f;
 

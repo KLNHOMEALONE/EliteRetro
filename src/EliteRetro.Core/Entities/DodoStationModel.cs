@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class DodoStationModel : ShipModel
 {
-    public static new DodoStationModel Create(float size = 1.0f)
+    public static DodoStationModel Create(float size = 1.0f)
     {
         float scale = size / 250f;
 

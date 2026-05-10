@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class SidewinderModel : ShipModel
 {
-    public static new SidewinderModel Create(float size = 1.0f)
+    public static SidewinderModel Create(float size = 1.0f)
     {
         float scale = size / 65f;
 

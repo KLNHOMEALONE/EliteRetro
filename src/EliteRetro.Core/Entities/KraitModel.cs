@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class KraitModel : ShipModel
 {
-    public static new KraitModel Create(float size = 1.0f)
+    public static KraitModel Create(float size = 1.0f)
     {
         float scale = size / 180f;
 

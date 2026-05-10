@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class WormModel : ShipModel
 {
-    public static new WormModel Create(float size = 1.0f)
+    public static WormModel Create(float size = 1.0f)
     {
         float scale = size / 60f;
 

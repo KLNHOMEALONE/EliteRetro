@@ -10,7 +10,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class CougarModel : ShipModel
 {
-    public static new CougarModel Create(float size = 1.0f)
+    public static CougarModel Create(float size = 1.0f)
     {
         float scale = size / 120f;
 

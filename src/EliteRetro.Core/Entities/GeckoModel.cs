@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class GeckoModel : ShipModel
 {
-    public static new GeckoModel Create(float size = 1.0f)
+    public static GeckoModel Create(float size = 1.0f)
     {
         float scale = size / 100f;
 

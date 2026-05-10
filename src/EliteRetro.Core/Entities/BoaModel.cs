@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class BoaModel : ShipModel
 {
-    public static new BoaModel Create(float size = 1.0f)
+    public static BoaModel Create(float size = 1.0f)
     {
         float scale = size / 200f;
 

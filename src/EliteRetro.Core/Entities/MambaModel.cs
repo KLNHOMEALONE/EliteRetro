@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class MambaModel : ShipModel
 {
-    public static new MambaModel Create(float size = 1.0f)
+    public static MambaModel Create(float size = 1.0f)
     {
         float scale = size / 70f;
 

@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class TransporterModel : ShipModel
 {
-    public static new TransporterModel Create(float size = 1.0f)
+    public static TransporterModel Create(float size = 1.0f)
     {
         float scale = size / 100f;
 

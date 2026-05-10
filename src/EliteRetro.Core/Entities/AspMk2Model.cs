@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class AspMk2Model : ShipModel
 {
-    public static new AspMk2Model Create(float size = 1.0f)
+    public static AspMk2Model Create(float size = 1.0f)
     {
         float scale = size / 138f;
 

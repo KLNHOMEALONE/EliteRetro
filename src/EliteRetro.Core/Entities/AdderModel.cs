@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class AdderModel : ShipModel
 {
-    public static new AdderModel Create(float size = 1.0f)
+    public static AdderModel Create(float size = 1.0f)
     {
         float scale = size / 108f;
 

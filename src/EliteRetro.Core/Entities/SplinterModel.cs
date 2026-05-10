@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class SplinterModel : ShipModel
 {
-    public static new SplinterModel Create(float size = 1.0f)
+    public static SplinterModel Create(float size = 1.0f)
     {
         float scale = size / 30f;
 

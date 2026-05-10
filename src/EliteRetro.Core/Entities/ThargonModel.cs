@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class ThargonModel : ShipModel
 {
-    public static new ThargonModel Create(float size = 1.0f)
+    public static ThargonModel Create(float size = 1.0f)
     {
         float scale = size / 40f;
 

@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class MissileModel : ShipModel
 {
-    public static new MissileModel Create(float size = 1.0f)
+    public static MissileModel Create(float size = 1.0f)
     {
         float scale = size / 68f;
 

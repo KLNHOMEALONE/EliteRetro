@@ -8,7 +8,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class BoulderModel : ShipModel
 {
-    public static new BoulderModel Create(float size = 1.0f)
+    public static BoulderModel Create(float size = 1.0f)
     {
         float scale = size / 60f;
 

@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class CoriolisStationModel : ShipModel
 {
-    public static new CoriolisStationModel Create(float size = 1.0f)
+    public static CoriolisStationModel Create(float size = 1.0f)
     {
         float scale = size / 160f;
 

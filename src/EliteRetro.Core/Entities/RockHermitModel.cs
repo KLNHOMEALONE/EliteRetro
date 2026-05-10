@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class RockHermitModel : ShipModel
 {
-    public static new RockHermitModel Create(float size = 1.0f)
+    public static RockHermitModel Create(float size = 1.0f)
     {
         float scale = size / 150f;
 

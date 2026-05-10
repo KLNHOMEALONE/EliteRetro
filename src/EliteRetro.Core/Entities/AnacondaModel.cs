@@ -9,7 +9,7 @@ namespace EliteRetro.Core.Entities;
 /// </summary>
 public class AnacondaModel : ShipModel
 {
-    public static new AnacondaModel Create(float size = 1.0f)
+    public static AnacondaModel Create(float size = 1.0f)
     {
         float scale = size / 254f;
 
