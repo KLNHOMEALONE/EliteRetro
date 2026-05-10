@@ -170,12 +170,20 @@
 - Draw White persistence: options saved to `%LOCALAPPDATA%/EliteRetro/options.json`, loaded on startup
 - Draw White toggle: now in Options submenu, renders all objects in white (accessibility/testing feature)
 
+**Architectural Hardening (SOLID Refactor - 2026-05-10):**
+- **Single Responsibility (SRP):** Decoupled `LocalBubbleManager`. Relocated player heat/fuel effects to `PlayerManager` and energy bomb logic to `CombatService`.
+- **Interface Segregation (ISP):** Purified `IBubbleManager` interface, removing player-specific leaks.
+- **Dependency Inversion (DIP):** Implemented formal Dependency Injection via `Microsoft.Extensions.DependencyInjection`. All services registered in `GameInstance` container.
+- **Centralized Input:** Moved `FlightControlService` to global `GameInstance`, fixing the "Double Pause" bug and ensuring input state persistence across scenes.
+- **Orientation Matrix Stability:** Expanded unit test suite verifying Minsky rotation stability and `Tidy` effectiveness.
+
 **Remaining:**
-- Top pilots leaderboard (optional — not in original Elite)
-- Options menu (key bindings, difficulty)
+- Mission system (Phase 7.7: delivery, assassination, mining contracts)
+- Top pilots leaderboard (optional тАФ not in original Elite)
+- Options menu expansion (key bindings, difficulty)
 - Performance optimization (object pooling, batched rendering)
 - Cougar easter egg (1 in 9,000 spawn chance)
-- Double pause state tracking
+
 
 **Next: Phase 7.7** — Mission system (delivery, assassination, mining contracts), then remaining Phase 8 polish
 

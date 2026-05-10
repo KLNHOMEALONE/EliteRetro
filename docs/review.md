@@ -16,8 +16,8 @@ The project has undergone significant architectural hardening. Core classes have
 ### **S - Single Responsibility Principle (SRP)**
 - **God Object Decomposition:** 
   - *FlightScene:* Still manages many concerns, but renderers are now handled via disposable interfaces.
-  - *LocalBubbleManager:* Still manages both world entities and player state. **(Refactoring in progress)**.
-- **AI Strategy:** NPC tactics have been moved from the static `ShipAISystem` to pluggable `IAIBehavior` implementations (`TraderBehavior`, `CombatBehavior`, `PirateBehavior`). **(DONE)**.
+  - *LocalBubbleManager:* Successfully decoupled. Player state and environmental effects (heat, fuel scoop) moved to `PlayerManager`; combat effects (energy bomb) moved to `CombatService`. **(DONE)**.
+- **AI Strategy:** NPC tactics moved from the static `ShipAISystem` to pluggable `IAIBehavior` implementations. **(DONE)**.
 
 ### **O - Open/Closed Principle (OCP)**
 - **NPC Logic:** Successfully refactored using the **Strategy Pattern**. New ship behaviors can now be added by implementing `IAIBehavior` without modifying `ShipAISystem`. **(DONE)**.
@@ -26,10 +26,10 @@ The project has undergone significant architectural hardening. Core classes have
 - **Scene Hierarchy:** Improvements to `IDisposable` in renderers ensure that scenes can be swapped more safely without leaking GPU resources.
 
 ### **I - Interface Segregation Principle (ISP)**
-- **Manager Bloat:** `LocalBubbleManager` split is the next priority.
+- **Manager Bloat:** `LocalBubbleManager` split is complete. It is now a pure entity container. **(DONE)**.
 
 ### **D - Dependency Inversion Principle (DIP)**
-- **Concrete Dependencies:** Renderers are now `IDisposable` and managed by scenes. Further decoupling of scenes from `GameInstance` is planned.
+- **Concrete Dependencies:** Formal **Dependency Injection** implemented via `Microsoft.Extensions.DependencyInjection`. Scenes and systems are decoupled from concrete instances via `IGameContext` and constructor injection. **(DONE)**.
 
 ---
 
