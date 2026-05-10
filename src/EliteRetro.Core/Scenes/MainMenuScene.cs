@@ -199,7 +199,7 @@ public class MainMenuScene : GameScene
                 if (_game is GameInstance gi2 && _hasSavedGame)
                 {
                     var savePath = SaveGameManager.GetDefaultSavePath();
-                    if (SaveGameManager.TryLoad(savePath, gi2.BubbleManager, out int galaxy, out int system, out var seed))
+                    if (SaveGameManager.TryLoad(savePath, gi2, out int galaxy, out int system, out var seed))
                     {
                         // TODO: pass galaxy/system context to FlightScene for proper initialization
                         gi2.ChangeScene(new FlightScene(gi2, seed));

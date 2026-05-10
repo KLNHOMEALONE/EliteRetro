@@ -15,6 +15,7 @@ public class GameInstance : Game
     private SceneManager _sceneManager = null!;
     private BitmapFont _font = null!;
     private LocalBubbleManager _bubbleManager = null!;
+    private PlayerManager _playerManager = null!;
     private MainLoopCounter _mcnt = null!;
     private Systems.TaskScheduler _taskScheduler = null!;
     private AudioManager _audioManager = null!;
@@ -23,6 +24,11 @@ public class GameInstance : Game
     /// Global access to the local bubble manager.
     /// </summary>
     public LocalBubbleManager BubbleManager => _bubbleManager;
+
+    /// <summary>
+    /// Global access to the player state manager.
+    /// </summary>
+    public PlayerManager PlayerManager => _playerManager;
 
     /// <summary>
     /// Main loop counter for frame-spread task scheduling.
@@ -64,7 +70,8 @@ public class GameInstance : Game
     protected override void Initialize()
     {
         _sceneManager = new SceneManager();
-        _bubbleManager = new LocalBubbleManager();
+        _playerManager = new PlayerManager();
+        _bubbleManager = new LocalBubbleManager(_playerManager);
         _mcnt = new MainLoopCounter();
         _taskScheduler = new Systems.TaskScheduler(_mcnt);
         _audioManager = new AudioManager();
@@ -167,8 +174,8 @@ public class GameInstance : Game
             if (sunEffect == LocalBubbleManager.SunProximityEffect.FuelScoop)
             {
                 // Scoop 1 fuel unit per ~32 frames (about 0.5s at 60fps)
-                if (_bubbleManager.Commander.Fuel < 70)
-                    _bubbleManager.Commander.Fuel++;
+                if (_playerManager.Commander.Fuel < 70)
+                    _playerManager.Commander.Fuel++;
             }
             // TODO: apply heat damage based on sunEffect
         });
@@ -176,7 +183,7 @@ public class GameInstance : Game
         // Every 256 frames, offset 0: consider spawning a new ship
         _taskScheduler.RegisterEvery(256, 0, () =>
         {
-            if (_bubbleManager.TargetPracticeMode) return;
+            if (_playerManager.TargetPracticeMode) return;
             // TODO: calculate danger level and altitude from current system
             byte dangerLevel = 3; // placeholder
             byte altitude = 10;   // placeholder

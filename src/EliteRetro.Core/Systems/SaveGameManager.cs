@@ -49,10 +49,12 @@ public static class SaveGameManager
     /// <summary>
     /// Save commander data to a 256-byte binary file.
     /// </summary>
-    public static void Save(string filePath, LocalBubbleManager bubble, int galaxyIndex, int systemIndex, GalaxySeed seed)
+    public static void Save(string filePath, GameInstance game, int galaxyIndex, int systemIndex, GalaxySeed seed)
     {
         var data = new byte[FileSize];
-        var commander = bubble.Commander;
+        var bubble = game.BubbleManager;
+        var player = game.PlayerManager;
+        var commander = player.Commander;
 
         // Galactic coordinates
         data[OffQQ0] = (byte)(systemIndex & 0xFF);
@@ -107,7 +109,7 @@ public static class SaveGameManager
         data[OffBOMB] = 0;  // Energy bomb — would be set by equipment system
 
         // Energy/shield level
-        data[OffENGY] = bubble.PlayerShip?.Energy ?? bubble.PlayerEnergy;
+        data[OffENGY] = player.Ship.Energy;
 
         // Docking computer
         data[OffDKCMP] = 0; // Would be set by equipment system
@@ -119,7 +121,7 @@ public static class SaveGameManager
         data[OffESCP] = 0; // Would be set by equipment system
 
         // Missiles
-        data[OffNOMSL] = bubble.PlayerMissiles;
+        data[OffNOMSL] = player.Missiles;
 
         // Legal status (0=clean, 1=fugitive, 2=offender, 3=criminal)
         data[OffFIST] = commander.LegalStatus;
@@ -152,7 +154,7 @@ public static class SaveGameManager
     /// Load commander data from a 256-byte binary file.
     /// Returns true if loaded successfully, false if file is invalid or checksum fails.
     /// </summary>
-    public static bool TryLoad(string filePath, LocalBubbleManager bubble, out int galaxyIndex, out int systemIndex, out GalaxySeed seed)
+    public static bool TryLoad(string filePath, GameInstance game, out int galaxyIndex, out int systemIndex, out GalaxySeed seed)
     {
         galaxyIndex = 0;
         systemIndex = 0;
@@ -171,7 +173,8 @@ public static class SaveGameManager
         if (expectedCheck != actualCheck)
             return false;
 
-        var commander = bubble.Commander;
+        var player = game.PlayerManager;
+        var commander = player.Commander;
 
         // Galactic coordinates
         systemIndex = data[OffQQ0];
@@ -201,10 +204,10 @@ public static class SaveGameManager
         }
 
         // Energy
-        bubble.PlayerEnergy = data[OffENGY];
+        player.Ship.Energy = data[OffENGY];
 
         // Missiles
-        bubble.PlayerMissiles = data[OffNOMSL];
+        player.Missiles = data[OffNOMSL];
 
         // Legal status
         commander.LegalStatus = data[OffFIST];

@@ -155,11 +155,8 @@ public class FlightScene : GameScene
         {
             InitializeBubble();
             // Initialize damage tracking
-            if (_bubbleManager.PlayerShip != null)
-            {
-                _lastPlayerHull = _bubbleManager.PlayerShip.Hull;
-                _lastPlayerEnergy = _bubbleManager.PlayerShip.Energy;
-            }
+            _lastPlayerHull = _gameInstance.PlayerManager.Ship.Hull;
+            _lastPlayerEnergy = _gameInstance.PlayerManager.Ship.Energy;
             _initialized = true;
         }
     }
@@ -172,7 +169,7 @@ public class FlightScene : GameScene
         _bubbleManager.Clear();
 
         // BBC SOLAR-style derived placement: uses system seed + FIST bit0.
-        int fistBit0 = _bubbleManager.Commander?.LegalStatus is byte ls ? (ls & 1) : 0;
+        int fistBit0 = _gameInstance.PlayerManager.Commander.LegalStatus & 1;
         var (planetPos, sunPos) = ComputeSolarSpawn(_systemSeed, fistBit0);
 
         // Slot 0: Planet
@@ -1001,17 +998,17 @@ public class FlightScene : GameScene
         var hudState = new HUDState
         {
             Speed = _playerSpeed,
-            Energy = _bubbleManager.PlayerShip?.Energy ?? 200,
+            Energy = _gameInstance.PlayerManager.Ship.Energy,
             MaxEnergy = 255,
-            Fuel = _bubbleManager.Commander.Fuel,
+            Fuel = _gameInstance.PlayerManager.Commander.Fuel,
             CabinTemp = 0,
             LaserTemp = 0,
             Altitude = altitude,
             EnergyBanks = 0,
-            Missiles = _bubbleManager.PlayerMissiles,
+            Missiles = _gameInstance.PlayerManager.Missiles,
             MaxMissiles = 4,
-            ShieldForward = (byte)(_bubbleManager.PlayerShip?.Energy ?? 200),
-            ShieldAft = (byte)(_bubbleManager.PlayerShip?.Energy ?? 200),
+            ShieldForward = (byte)(_gameInstance.PlayerManager.Ship.Energy),
+            ShieldAft = (byte)(_gameInstance.PlayerManager.Ship.Energy),
             Pitch = _lastControl.PitchAngle / GameConstants.PitchMax, // Normalized rate -1 to 1
             Roll = _lastControl.RollAngle / GameConstants.RollMax,   // Normalized rate -1 to 1
             CompassHeading = _cumulativeRoll,
@@ -1026,8 +1023,8 @@ public class FlightScene : GameScene
             },
             StatusMessage = statusMsg,
             StatusColor = statusColor,
-            LegalStatus = _bubbleManager.Commander.LegalStatus,
-            CombatRank = _bubbleManager.Commander.RankName,
+            LegalStatus = _gameInstance.PlayerManager.Commander.LegalStatus,
+            CombatRank = _gameInstance.PlayerManager.Commander.RankName,
             ShowHiddenEdges = _showHiddenEdges
         };
 
@@ -1115,7 +1112,7 @@ public class FlightScene : GameScene
         }
 
         // Legal + rank (top-right)
-        string legalText = _bubbleManager.Commander.LegalStatus switch
+        string legalText = _gameInstance.PlayerManager.Commander.LegalStatus switch
         {
             0 => "CLEAN",
             < 50 => "OFFENDER",
@@ -1124,9 +1121,9 @@ public class FlightScene : GameScene
         var legalSz = _font.MeasureString(legalText);
         _font.DrawString(spriteBatch, legalText,
             new Vector2(viewContentRect.Right - legalSz.X - 10, y),
-            _bubbleManager.Commander.LegalStatus >= 50 ? Color.OrangeRed : Color.Lime, 1.0f);
+            _gameInstance.PlayerManager.Commander.LegalStatus >= 50 ? Color.OrangeRed : Color.Lime, 1.0f);
 
-        string rankText = _bubbleManager.Commander.RankName;
+        string rankText = _gameInstance.PlayerManager.Commander.RankName;
         if (!string.IsNullOrEmpty(rankText))
         {
             var rankSz = _font.MeasureString(rankText);
@@ -1426,7 +1423,7 @@ public class FlightScene : GameScene
             var savePath = SaveGameManager.GetDefaultSavePath();
             // Use Galaxy 0, System 0 as default (full galaxy context tracking to be added)
             var seed = GalaxySeed.Galaxy0System0;
-            SaveGameManager.Save(savePath, _bubbleManager, 0, 0, seed);
+            SaveGameManager.Save(savePath, _gameInstance, 0, 0, seed);
             _lastSaveMessage = "GAME SAVED";
             _saveMessageTimer = 120; // show for 2 seconds
         }
@@ -1443,7 +1440,7 @@ public class FlightScene : GameScene
     /// </summary>
     private void FireLaserAtTarget()
     {
-        var player = _bubbleManager.PlayerShip;
+        var player = _gameInstance.PlayerManager.Ship;
         if (player == null) return;
 
         const float hitConeCos = 0.96f; // ~15° cone
@@ -1531,8 +1528,8 @@ public class FlightScene : GameScene
             if (destroyed)
             {
                 // Track kill and check for milestones
-                bool milestone = _bubbleManager.Commander.AddKill();
-                System.Diagnostics.Debug.WriteLine($"[KILL] TALLY={_bubbleManager.Commander.Tally}, milestone={milestone}");
+                bool milestone = _gameInstance.PlayerManager.Commander.AddKill();
+                System.Diagnostics.Debug.WriteLine($"[KILL] TALLY={_gameInstance.PlayerManager.Commander.Tally}, milestone={milestone}");
                 if (milestone)
                 {
                     _lastEventMessage = "RIGHT ON COMMANDER!";
@@ -1540,7 +1537,7 @@ public class FlightScene : GameScene
                 }
                 else if ((bestTarget.Blueprint.Personality & NewbFlags.Cop) != 0)
                 {
-                    _bubbleManager.Commander.LegalStatus = Math.Max(_bubbleManager.Commander.LegalStatus, (byte)64);
+                    _gameInstance.PlayerManager.Commander.LegalStatus = Math.Max(_gameInstance.PlayerManager.Commander.LegalStatus, (byte)64);
                     _lastEventMessage = "FUGITIVE! Killed a cop!";
                     _eventMessageTimer = 180;
                 }

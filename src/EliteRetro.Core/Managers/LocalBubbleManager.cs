@@ -47,77 +47,27 @@ public class LocalBubbleManager
     /// <summary>Player ship entity (slot 2, always present).</summary>
     public ShipInstance? PlayerShip => _slots[GameConstants.PlayerSlot];
 
+    /// <summary>Access to the player manager.</summary>
+    public PlayerManager PlayerManager { get; }
+
     /// <summary>Player position (at origin in local bubble coordinates).</summary>
     public Vector3 PlayerPosition { get; set; }
 
-    /// <summary>Player energy (0-255).</summary>
-    public byte PlayerEnergy
-    {
-        get => PlayerShip?.Energy ?? 200;
-        set
-        {
-            if (PlayerShip != null) PlayerShip.Energy = value;
-        }
-    }
-
-    /// <summary>Player shield strength (0-255, front).</summary>
-    public byte PlayerShieldFront { get; set; } = 200;
-
-    /// <summary>Player shield strength (0-255, aft).</summary>
-    public byte PlayerShieldAft { get; set; } = 200;
-
     /// <summary>When true, no ships spawn via scheduler or random spawning.</summary>
-    public bool TargetPracticeMode { get; set; }
-
-    /// <summary>Player hull strength (0-255).</summary>
-    public byte PlayerHull
+    public bool TargetPracticeMode
     {
-        get => PlayerShip?.Hull ?? 255;
-        set
-        {
-            if (PlayerShip != null) PlayerShip.Hull = value;
-        }
+        get => PlayerManager.TargetPracticeMode;
+        set => PlayerManager.TargetPracticeMode = value;
     }
 
-    /// <summary>Player fuel level (0-70).</summary>
-    public byte PlayerFuel { get; set; } = 35;
-
-    /// <summary>Player missiles remaining.</summary>
-    public byte PlayerMissiles { get; set; } = 4;
-
-    /// <summary>Player legal status (0=clean, 1=fugitive, 2=offender, 3=criminal).</summary>
-    public byte LegalStatus { get; set; }
-
-    /// <summary>Player commander data (kills, credits, cargo, rank).</summary>
-    public CommanderData Commander { get; set; } = new();
-
-    public LocalBubbleManager(int capacity = GameConstants.MaxSlots)
+    public LocalBubbleManager(PlayerManager playerManager, int capacity = GameConstants.MaxSlots)
     {
         _capacity = capacity;
         _slots = new ShipInstance[capacity];
+        PlayerManager = playerManager;
 
-        // Create player ship
-        var playerBlueprint = new ShipBlueprint
-        {
-            Name = "Player",
-            Model = CobraMk3Model.Create(24),
-            MaxSpeed = GameConstants.SpeedMax,
-            MaxEnergy = 255,
-            HullStrength = 255,
-            ShieldStrength = 255,
-            LaserPower = 2,
-            ShipClass = (byte)NewbFlags.None,
-        };
-        var playerShip = new ShipInstance(playerBlueprint)
-        {
-            Position = Vector3.Zero,
-            Speed = 0,
-            Energy = 200,
-            Hull = 255,
-            SlotIndex = GameConstants.PlayerSlot,
-            IsActive = true,
-        };
-        _slots[GameConstants.PlayerSlot] = playerShip;
+        // Register player ship in its reserved slot
+        _slots[GameConstants.PlayerSlot] = playerManager.Ship;
     }
 
     /// <summary>

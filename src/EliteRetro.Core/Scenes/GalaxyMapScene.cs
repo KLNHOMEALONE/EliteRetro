@@ -88,7 +88,7 @@ public class GalaxyMapScene : GameScene
         // Enter locks on destination only if within jump range.
         if (kb.IsKeyDown(Keys.Enter) && _prevKb.IsKeyUp(Keys.Enter) && _originSystem.HasValue && _cursorSystem.HasValue)
         {
-            float fuel = Math.Clamp(_game?.BubbleManager?.Commander?.Fuel ?? 35, 0, 70);
+            float fuel = Math.Clamp(_game?.PlayerManager?.Commander?.Fuel ?? 35, 0, 70);
             float jumpRangeLy = fuel / 10f; // original Elite max 7.0 LY
             var d = _cursorSystem.Value.Position - _originSystem.Value.Position;
             float coordDist = MathF.Sqrt(d.X * d.X + d.Y * d.Y);
@@ -137,7 +137,7 @@ public class GalaxyMapScene : GameScene
         // Jump range circle (fuel-based), centered on current system (Lave).
         if (_originSystem.HasValue)
         {
-            int fuel = _game?.BubbleManager?.Commander?.Fuel ?? 35;
+            int fuel = _game?.PlayerManager?.Commander?.Fuel ?? 35;
             fuel = Math.Clamp(fuel, 0, 70);
             float jumpRangeLy = fuel / 10f;
             float radiusCoords = jumpRangeLy / JumpCircleLightYearsPerCoordUnit;
