@@ -23,8 +23,9 @@ public class GameInstance : Game, IGameContext
     private Systems.IExplosionService _explosionService = null!;
     private Systems.IHudService _hudService = null!;
     private Systems.IStardustService _stardustService = null!;
-    private Systems.ICelestialService _celestialService = null!;
+    private Systems.IMessageSystem _messageSystem = null!;
     private Systems.IWorldSimulationService _simulationService = null!;
+    private Systems.ICelestialService _celestialService = null!;
 
     /// <summary>
     /// Global access to the local bubble manager.
@@ -72,6 +73,11 @@ public class GameInstance : Game, IGameContext
     public Systems.IStardustService Stardust => _stardustService;
 
     /// <summary>
+    /// On-screen message system.
+    /// </summary>
+    public Systems.IMessageSystem Messages => _messageSystem;
+
+    /// <summary>
     /// Rotating universe simulation service.
     /// </summary>
     public Systems.IWorldSimulationService Simulation => _simulationService;
@@ -115,8 +121,9 @@ public class GameInstance : Game, IGameContext
         _explosionService = new Systems.ExplosionService(GraphicsDevice);
         _hudService = new Systems.HudService();
         _stardustService = new Rendering.StardustRenderer(GraphicsDevice);
-        _celestialService = new Systems.CelestialService(GraphicsDevice);
+        _messageSystem = new Systems.MessageSystem();
         _simulationService = new Systems.WorldSimulationService();
+        _celestialService = new Systems.CelestialService(GraphicsDevice);
 
         // Register MCNT-driven scheduled tasks (Phase 1.5)
         RegisterScheduledTasks();
@@ -225,10 +232,24 @@ public class GameInstance : Game, IGameContext
         // Every 256 frames, offset 0: consider spawning a new ship
         _taskScheduler.RegisterEvery(256, 0, () =>
         {
-            // TODO: calculate danger level and altitude from current system
-            byte dangerLevel = 3; // placeholder
-            byte altitude = 10;   // placeholder
-            SpawnSystem.TrySpawnShip(_bubbleManager, dangerLevel, altitude);
+            var planet = _bubbleManager.Planet;
+            if (planet == null) return;
+
+            // Altitude in Elite is roughly distance from planet (scaled)
+            float dist = planet.Position.Length();
+            float altitude = (dist - GameConstants.PlanetRadius) / 2000f;
+            altitude = Math.Clamp(altitude, 0, 70);
+
+            // Danger level influenced by altitude and commander legal status
+            byte dangerLevel = SpawnSystem.CalculateDangerLevel(altitude, GovernmentType.Anarchy); // Default to Anarchy for maximum action in this phase
+            if (_playerManager.Commander.LegalStatus > 50)
+                dangerLevel = (byte)Math.Min(dangerLevel + 2, 7);
+
+            // Try spawning a pack or single ship
+            if (_playerManager.Commander.LegalStatus > 100 && dangerLevel > 4)
+                SpawnSystem.TrySpawnPack(_bubbleManager, dangerLevel, altitude);
+            else
+                SpawnSystem.TrySpawnShip(_bubbleManager, dangerLevel, altitude);
         });
     }
 
@@ -256,6 +277,8 @@ public class GameInstance : Game, IGameContext
 
         // Evaluate all scheduled tasks
         _taskScheduler.Evaluate();
+
+        _messageSystem.Update();
 
         _sceneManager.Update(gameTime);
         base.Update(gameTime);

@@ -47,6 +47,9 @@ public interface IGameContext
     /// <summary>Starfield (stardust) effect service.</summary>
     Systems.IStardustService Stardust { get; }
 
+    /// <summary>On-screen message system.</summary>
+    Systems.IMessageSystem Messages { get; }
+
     /// <summary>Rotating universe simulation service.</summary>
     Systems.IWorldSimulationService Simulation { get; }
 

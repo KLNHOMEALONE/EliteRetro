@@ -47,16 +47,12 @@ public class FlightScene : GameScene
     private float _cumulativeRoll; // accumulated roll angle in radians, for planet/ring counter-rotation
     private int _spawnCounter; // frame counter for random ship spawning
     private readonly Random _rng = new Random();
-    private string _lastEventMessage = ""; // HUD message for spawn/despawn events
-    private int _eventMessageTimer; // frames remaining to display event message
     private int _damageFlashTimer; // frames remaining for red damage flash
     private byte _lastPlayerHull; // track hull for damage detection
     private byte _lastPlayerEnergy; // track energy/shields for damage detection
     private Texture2D _whitePixel = null!; // 1x1 white texture for damage flash overlay
     private bool _ramMode; // when true, spawned entities aim directly at player
     private GameTime _lastGameTime = null!;
-    private string _lastSaveMessage = ""; // HUD message for save confirmation
-    private int _saveMessageTimer; // frames remaining to display save message
     private bool _isFiring; // true when player is firing lasers
     private int _laserCooldown; // frames until next shot allowed
     private int _laserFlashTimer; // frames remaining to show laser beam
@@ -253,16 +249,14 @@ public class FlightScene : GameScene
                 var col = CollisionSystem.CheckPlanetCollision(player, planet);
                 if (col.Type == CollisionSystem.PlanetCollisionType.Crash)
                 {
-                    _lastEventMessage = "PLANET HIT";
-                    _eventMessageTimer = int.MaxValue;
+                    _gameInstance.Messages.Post("PLANET HIT", MessageType.General, int.MaxValue);
                     _playerSpeed = 0f;
                     _planetHit = true;
                     return;
                 }
                 else if (col.Type == CollisionSystem.PlanetCollisionType.Glancing)
                 {
-                    _lastEventMessage = "ALTITUDE CRITICAL - SCRAPE!";
-                    _eventMessageTimer = 60;
+                    _gameInstance.Messages.Post("ALTITUDE CRITICAL - SCRAPE!", MessageType.General, 60);
                     player.TakeDamage(15);
                     _damageFlashTimer = 20;
                     planet.Position -= col.PushBack;
@@ -414,8 +408,8 @@ public class FlightScene : GameScene
             _lastControl.RollAngle / GameConstants.RollMax,
             _cumulativeRoll,
             _viewMode,
-            _lastEventMessage,
-            _eventMessageTimer,
+            _gameInstance.Messages.GeneralMessage ?? "",
+            _gameInstance.Messages.GeneralTimer,
             _showHiddenEdges);
 
         _hudRenderer.Draw(spriteBatch, hudState, _font, hudRect, screenRect);
@@ -423,18 +417,20 @@ public class FlightScene : GameScene
         int leftW = (int)MathF.Round(hudRect.Width * 0.25f);
         _scannerRenderer.Draw(spriteBatch, _bubbleManager, GameConstants.PlayerSlot, _universeOrientation, new Rectangle(hudRect.X + leftW, hudRect.Y, hudRect.Width - leftW * 2, hudRect.Height));
 
-        if (_eventMessageTimer > 0 && !string.IsNullOrEmpty(_lastEventMessage))
+        var msg = _gameInstance.Messages.GeneralMessage;
+        if (_gameInstance.Messages.GeneralTimer > 0 && !string.IsNullOrEmpty(msg))
         {
-            bool isMilestone = _lastEventMessage == "RIGHT ON COMMANDER!";
-            var msgSize = _font.MeasureString(_lastEventMessage);
-            _font.DrawString(spriteBatch, $">> {_lastEventMessage}", new Vector2(isMilestone ? (screenRect.Width - msgSize.X) / 2 : EventMsgX, isMilestone ? MilestoneMsgY : EventMsgY), isMilestone ? Color.Gold : Color.Yellow, isMilestone ? 2.0f : 1.2f);
-            _eventMessageTimer--;
+            bool isMilestone = msg == "RIGHT ON COMMANDER!";
+            var msgSize = _font.MeasureString(msg);
+            _font.DrawString(spriteBatch, $">> {msg}", new Vector2(isMilestone ? (screenRect.Width - msgSize.X) / 2 : EventMsgX, isMilestone ? MilestoneMsgY : EventMsgY), isMilestone ? Color.Gold : Color.Yellow, isMilestone ? 2.0f : 1.2f);
         }
-        if (_saveMessageTimer > 0 && !string.IsNullOrEmpty(_lastSaveMessage))
+        
+        var saveMsg = _gameInstance.Messages.StatusMessage;
+        if (_gameInstance.Messages.StatusTimer > 0 && !string.IsNullOrEmpty(saveMsg))
         {
-            _font.DrawString(spriteBatch, _lastSaveMessage, new Vector2(400, 380), Color.Green, 1.4f);
-            _saveMessageTimer--;
+            _font.DrawString(spriteBatch, saveMsg, new Vector2(400, 380), Color.Green, 1.4f);
         }
+        
         if (_paused) _font.DrawString(spriteBatch, "PAUSED", new Vector2(400, 350), Color.Red, 2f);
     }
 
@@ -491,12 +487,57 @@ public class FlightScene : GameScene
         Vector3 forward = _viewMode switch { 0 => new Vector3(0, 0, 1), 1 => new Vector3(0, 0, -1), 2 => new Vector3(-1, 0, 0), 3 => new Vector3(1, 0, 0), _ => new Vector3(0, 0, 1) };
         ShipInstance? bestTarget = null; float bestDot = -1f;
         foreach (var entity in _bubbleManager.GetAllActive()) { if (entity.SlotIndex == GameConstants.PlayerSlot || !entity.IsActive || entity.Blueprint.Name == "Planet" || entity.Blueprint.Name == "Sun") continue; float distSq = entity.Position.LengthSquared(); if (distSq > 600 * 600) continue; float dist = (float)Math.Sqrt(distSq), dot = (dist < 5.0f) ? 1.0f : Vector3.Dot(forward, entity.Position / dist); if (dot >= 0.96f && dot > bestDot) { bestDot = dot; bestTarget = entity; } }
-        if (bestTarget != null) { _gameInstance?.Audio.PlayLaserHit(); int laserDamage = 90; bool destroyed = false; if (bestTarget.Energy > 0) { int shieldDmg = Math.Min(laserDamage, (int)bestTarget.Energy); bestTarget.Energy = (byte)(bestTarget.Energy - shieldDmg); int hullDmg = laserDamage - shieldDmg; if (hullDmg > 0) destroyed = bestTarget.TakeDamage(hullDmg); } else destroyed = bestTarget.TakeDamage(laserDamage); _lastEventMessage = "HIT!"; _eventMessageTimer = 10; if (destroyed) { bool milestone = _gameInstance.PlayerManager.Commander.AddKill(); if (milestone) { _lastEventMessage = "RIGHT ON COMMANDER!"; _eventMessageTimer = 180; } else if ((bestTarget.Blueprint.Personality & NewbFlags.Cop) != 0) { _gameInstance.PlayerManager.Commander.LegalStatus = Math.Max(_gameInstance.PlayerManager.Commander.LegalStatus, (byte)64); _lastEventMessage = "FUGITIVE! Killed a cop!"; _eventMessageTimer = 180; } CollisionSystem.SpawnCargoDrops(bestTarget, _bubbleManager); bestTarget.IsActive = false; if (string.IsNullOrEmpty(_lastEventMessage) || _eventMessageTimer <= 0) { _lastEventMessage = $"{bestTarget.Blueprint.Name} destroyed!"; _eventMessageTimer = 120; } } }
+        if (bestTarget != null) { 
+            _gameInstance?.Audio.PlayLaserHit(); 
+            int laserDamage = 90; 
+            bool destroyed = false; 
+            if (bestTarget.Energy > 0) { 
+                int shieldDmg = Math.Min(laserDamage, (int)bestTarget.Energy); 
+                bestTarget.Energy = (byte)(bestTarget.Energy - shieldDmg); 
+                int hullDmg = laserDamage - shieldDmg; 
+                if (hullDmg > 0) destroyed = bestTarget.TakeDamage(hullDmg); 
+            } else destroyed = bestTarget.TakeDamage(laserDamage); 
+            
+            _gameInstance.Messages.Post("HIT!", MessageType.General, 10);
+            
+            if (destroyed) { 
+                bool milestone = _gameInstance.PlayerManager.Commander.AddKill(); 
+                if (milestone) { 
+                    _gameInstance.Messages.Post("RIGHT ON COMMANDER!", MessageType.Milestone, 180);
+                } else if ((bestTarget.Blueprint.Personality & NewbFlags.Cop) != 0) { 
+                    _gameInstance.PlayerManager.Commander.LegalStatus = Math.Max(_gameInstance.PlayerManager.Commander.LegalStatus, (byte)64); 
+                    _gameInstance.Messages.Post("FUGITIVE! Killed a cop!", MessageType.General, 180);
+                } 
+                CollisionSystem.SpawnCargoDrops(bestTarget, _bubbleManager); 
+                bestTarget.IsActive = false; 
+                
+                if (string.IsNullOrEmpty(_gameInstance.Messages.GeneralMessage) || _gameInstance.Messages.GeneralTimer <= 0) { 
+                    _gameInstance.Messages.Post($"{bestTarget.Blueprint.Name} destroyed!", MessageType.General, 120);
+                } 
+            } 
+        }
     }
 
-    private void SaveGame() { if (SaveGameManager.SaveDefault(_gameInstance)) { _lastSaveMessage = "GAME SAVED"; _saveMessageTimer = 120; } else { _lastSaveMessage = "SAVE FAILED"; _saveMessageTimer = 180; } }
-    private void OnEntityEvent(object? sender, EntityEventArgs e) { _lastEventMessage = e.Reason switch { "lifetime expired" => $"{e.EntityName} disappeared", "out of bounds" => $"{e.EntityName} left sector", _ => $"{e.EntityName} detected" }; _eventMessageTimer = 120; }
-    private void OnCollision(object? sender, CollisionEventArgs e) { _lastEventMessage = $"COLLISION with {e.OtherShipName}!"; _eventMessageTimer = 120; }
+    private void SaveGame() { 
+        if (SaveGameManager.SaveDefault(_gameInstance)) { 
+            _gameInstance.Messages.Post("GAME SAVED", MessageType.Status, 120);
+        } else { 
+            _gameInstance.Messages.Post("SAVE FAILED", MessageType.Status, 180);
+        } 
+    }
+
+    private void OnEntityEvent(object? sender, EntityEventArgs e) { 
+        string msg = e.Reason switch { 
+            "lifetime expired" => $"{e.EntityName} disappeared", 
+            "out of bounds" => $"{e.EntityName} left sector", 
+            _ => $"{e.EntityName} detected" 
+        }; 
+        _gameInstance.Messages.Post(msg, MessageType.General, 120);
+    }
+
+    private void OnCollision(object? sender, CollisionEventArgs e) { 
+        _gameInstance.Messages.Post($"COLLISION with {e.OtherShipName}!", MessageType.General, 120);
+    }
 
     public override void UnloadContent()
     {
