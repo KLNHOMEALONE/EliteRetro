@@ -8,8 +8,8 @@ namespace EliteRetro.Core.Managers;
 /// </summary>
 public class EntityEventArgs : EventArgs
 {
-    public string EntityName { get; init; }
-    public string Reason { get; init; } // "spawned", "lifetime", "out_of_bounds"
+    public required string EntityName { get; init; }
+    public required string Reason { get; init; } // "spawned", "lifetime", "out_of_bounds"
 }
 
 /// <summary>
@@ -17,7 +17,7 @@ public class EntityEventArgs : EventArgs
 /// </summary>
 public class CollisionEventArgs : EventArgs
 {
-    public string OtherShipName { get; init; }
+    public required string OtherShipName { get; init; }
 }
 
 /// <summary>

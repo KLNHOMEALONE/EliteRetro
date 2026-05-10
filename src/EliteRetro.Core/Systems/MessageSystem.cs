@@ -12,8 +12,6 @@ public class MessageSystem : IMessageSystem
     public string? StatusMessage { get; private set; }
     public int StatusTimer { get; private set; }
 
-    private bool _isMilestone;
-
     public void Post(string text, MessageType type, int duration = 120)
     {
         switch (type)
@@ -21,13 +19,11 @@ public class MessageSystem : IMessageSystem
             case MessageType.General:
                 GeneralMessage = text;
                 GeneralTimer = duration;
-                _isMilestone = false;
                 break;
 
             case MessageType.Milestone:
                 GeneralMessage = text;
                 GeneralTimer = duration;
-                _isMilestone = true;
                 break;
 
             case MessageType.Status:

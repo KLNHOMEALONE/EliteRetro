@@ -248,7 +248,7 @@ public class GameInstance : Game, IGameContext
             foreach (var entity in _bubbleManager.GetAllActive())
             {
                 if (entity.SlotIndex == GameConstants.PlanetSlot) continue;
-                if (CollisionSystem.CheckPlanetCrash(entity, planet))
+                if (CollisionSystem.CheckPlanetCollision(entity, planet).Type == CollisionSystem.PlanetCollisionType.Crash)
                     entity.IsActive = false;
             }
 
