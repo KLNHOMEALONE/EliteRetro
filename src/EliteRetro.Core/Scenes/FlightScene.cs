@@ -554,7 +554,8 @@ public class FlightScene : GameScene
         var screenCenter = new Vector2(viewRect.X + viewRect.Width / 2f, viewRect.Y + viewRect.Height / 2f);
 
         int outerMargin = GetOuterMarginPixels(screenW, screenH);
-        var viewContentRect = InsetRect(viewRect, outerMargin);
+        int viewMargin = outerMargin * 2; // Specific margin for 3D view, larger than HUD
+        var viewContentRect = InsetRect(viewRect, viewMargin);
         var hudContentRect = InsetRect(hudRect, outerMargin);
 
         // --- Main 3D view pass (clipped to view content rect) ---
@@ -686,8 +687,8 @@ public class FlightScene : GameScene
         // Draw lasers when firing
         if (_laserFlashTimer > 0)
         {
-            DrawLine(spriteBatch, new Vector2(viewRect.Left, viewRect.Bottom), new Vector2(cx, cy), Color.Yellow, 2);
-            DrawLine(spriteBatch, new Vector2(viewRect.Right, viewRect.Bottom), new Vector2(cx, cy), Color.Yellow, 2);
+            DrawLine(spriteBatch, new Vector2(viewContentRect.Left, viewContentRect.Bottom), new Vector2(cx, cy), Color.Yellow, 2);
+            DrawLine(spriteBatch, new Vector2(viewContentRect.Right, viewContentRect.Bottom), new Vector2(cx, cy), Color.Yellow, 2);
         }
 
         // Overlay messages (kept inside view frame)
@@ -699,7 +700,7 @@ public class FlightScene : GameScene
         BeginScissored(spriteBatch, hudContentRect);
         _graphicsDevice!.ScissorRectangle = hudContentRect;
 
-        DrawHUD(spriteBatch, viewRect, hudContentRect, screenRect);
+        DrawHUD(spriteBatch, hudContentRect, screenRect);
 
         spriteBatch.End();
 
@@ -913,7 +914,7 @@ public class FlightScene : GameScene
         }
     }
 
-    private void DrawHUD(SpriteBatch spriteBatch, Rectangle viewRect, Rectangle hudRect, Rectangle screenRect)
+    private void DrawHUD(SpriteBatch spriteBatch, Rectangle hudRect, Rectangle screenRect)
     {
         // Build HUD state from current game data
         var sunEffect = _bubbleManager.CheckSunProximity();
@@ -1182,7 +1183,7 @@ public class FlightScene : GameScene
     }
 
     private static int GetOuterMarginPixels(int w, int h)
-        => Math.Max(2, (int)MathF.Round(MathF.Min(w, h) * 0.008f));
+        => Math.Max(6, (int)MathF.Round(MathF.Min(w, h) * 0.024f));
 
     private static Rectangle InsetRect(Rectangle r, int inset)
     {
