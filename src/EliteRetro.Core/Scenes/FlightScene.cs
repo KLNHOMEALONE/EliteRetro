@@ -64,7 +64,7 @@ public class FlightScene : GameScene
     private int _lastBackBufferW;
     private int _lastBackBufferH;
     private int _lastViewH;
-    private const float HudHeightFraction = 0.375f; // 288/768: matches current layout but scales by percentage
+    private const float HudHeightFraction = 0.34f; // ~1/3 of screen for HUD panel
     private readonly RasterizerState _scissorRasterizer = new RasterizerState { ScissorTestEnable = true };
 
     public FlightScene(IGameContext? game = null, GalaxySeed? systemSeed = null)
@@ -405,8 +405,12 @@ public class FlightScene : GameScene
 
     private void DrawViewOverlay(SpriteBatch spriteBatch, Rectangle viewContentRect)
     {
-        float x = viewContentRect.X + 10, y = viewContentRect.Y + 10;
-        _font.DrawString(spriteBatch, _viewMode switch { 0 => "FRONT", 1 => "REAR", 2 => "LEFT", 3 => "RIGHT", _ => "FRONT" }, new Vector2(x, y), new Color(255, 180, 50), 1.5f);
+        var viewLabel = _viewMode switch { 0 => "FRONT", 1 => "REAR", 2 => "LEFT", 3 => "RIGHT", _ => "FRONT" };
+        var labelSz = _font.MeasureString(viewLabel);
+        float labelX = viewContentRect.X + (viewContentRect.Width - labelSz.X) / 2;
+        float y = viewContentRect.Y + 10;
+        _font.DrawString(spriteBatch, viewLabel, new Vector2(labelX, y), Color.Green, 1.5f);
+        float x = viewContentRect.X + 10;
         var commander = _gameInstance.PlayerManager.Commander;
         string legalText = commander.LegalStatus switch { 0 => "CLEAN", < 50 => "OFFENDER", _ => "FUGITIVE" };
         var legalSz = _font.MeasureString(legalText);
