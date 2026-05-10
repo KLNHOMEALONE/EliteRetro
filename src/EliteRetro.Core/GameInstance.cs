@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Extensions.DependencyInjection;
 using EliteRetro.Core.Scenes;
 using EliteRetro.Core.Managers;
 using EliteRetro.Core.Systems;
@@ -14,6 +15,7 @@ public class GameInstance : Game, IGameContext
     private SpriteBatch _spriteBatch = null!;
     private SceneManager _sceneManager = null!;
     private BitmapFont _font = null!;
+    private IServiceProvider _serviceProvider = null!;
     private IBubbleManager _bubbleManager = null!;
     private IPlayerManager _playerManager = null!;
     private MainLoopCounter _mcnt = null!;
@@ -124,20 +126,44 @@ public class GameInstance : Game, IGameContext
     protected override void Initialize()
     {
         _sceneManager = new SceneManager();
-        _input = new Input.InputService();
-        _flightControl = new Systems.FlightControlService();
-        _playerManager = new PlayerManager();
-        _bubbleManager = new LocalBubbleManager(_playerManager);
-        _mcnt = new MainLoopCounter();
-        _taskScheduler = new Systems.TaskScheduler(_mcnt);
-        _audioManager = new AudioManager();
-        _combatService = new Systems.CombatService();
-        _explosionService = new Systems.ExplosionService(GraphicsDevice);
-        _hudService = new Systems.HudService();
-        _stardustService = new Rendering.StardustRenderer(GraphicsDevice);
-        _messageSystem = new Systems.MessageSystem();
-        _simulationService = new Systems.WorldSimulationService();
-        _celestialService = new Systems.CelestialService(GraphicsDevice);
+
+        var services = new ServiceCollection();
+
+        // Register core managers and services
+        services.AddSingleton<Input.IInputService, Input.InputService>();
+        services.AddSingleton<Systems.FlightControlService>();
+        services.AddSingleton<IPlayerManager, PlayerManager>();
+        services.AddSingleton<IBubbleManager, LocalBubbleManager>();
+        services.AddSingleton<MainLoopCounter>();
+        services.AddSingleton<Systems.TaskScheduler>();
+        services.AddSingleton<IAudioManager, AudioManager>();
+        services.AddSingleton<Systems.ICombatService, Systems.CombatService>();
+        services.AddSingleton<Systems.IHudService, Systems.HudService>();
+        services.AddSingleton<Systems.IMessageSystem, Systems.MessageSystem>();
+        services.AddSingleton<Systems.IWorldSimulationService, Systems.WorldSimulationService>();
+
+        // Services requiring GraphicsDevice use factory functions
+        services.AddSingleton<Systems.IExplosionService>(sp => new Systems.ExplosionService(GraphicsDevice));
+        services.AddSingleton<Systems.IStardustService>(sp => new Rendering.StardustRenderer(GraphicsDevice));
+        services.AddSingleton<Systems.ICelestialService>(sp => new Systems.CelestialService(GraphicsDevice));
+
+        _serviceProvider = services.BuildServiceProvider();
+
+        // Resolve fields from container
+        _input = _serviceProvider.GetRequiredService<Input.IInputService>();
+        _flightControl = _serviceProvider.GetRequiredService<Systems.FlightControlService>();
+        _playerManager = _serviceProvider.GetRequiredService<IPlayerManager>();
+        _bubbleManager = _serviceProvider.GetRequiredService<IBubbleManager>();
+        _mcnt = _serviceProvider.GetRequiredService<MainLoopCounter>();
+        _taskScheduler = _serviceProvider.GetRequiredService<Systems.TaskScheduler>();
+        _audioManager = _serviceProvider.GetRequiredService<IAudioManager>();
+        _combatService = _serviceProvider.GetRequiredService<Systems.ICombatService>();
+        _hudService = _serviceProvider.GetRequiredService<Systems.IHudService>();
+        _messageSystem = _serviceProvider.GetRequiredService<Systems.IMessageSystem>();
+        _simulationService = _serviceProvider.GetRequiredService<Systems.IWorldSimulationService>();
+        _explosionService = _serviceProvider.GetRequiredService<Systems.IExplosionService>();
+        _stardustService = _serviceProvider.GetRequiredService<Systems.IStardustService>();
+        _celestialService = _serviceProvider.GetRequiredService<Systems.ICelestialService>();
 
         // Register MCNT-driven scheduled tasks (Phase 1.5)
         RegisterScheduledTasks();
