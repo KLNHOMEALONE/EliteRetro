@@ -37,4 +37,7 @@ public interface IGameContext
 
     /// <summary>Procedural audio manager.</summary>
     Audio.IAudioManager Audio { get; }
+
+    /// <summary>Explosion effect service.</summary>
+    Systems.IExplosionService Explosions { get; }
 }

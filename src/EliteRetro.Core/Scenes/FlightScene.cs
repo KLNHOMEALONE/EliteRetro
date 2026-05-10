@@ -26,8 +26,6 @@ public class FlightScene : GameScene
     private WireframeRenderer _wireframeRenderer = null!;
     private CircleRenderer _circleRenderer = null!;
     private StardustRenderer _stardustRenderer = null!;
-    private ExplosionRenderer _explosionRenderer = null!;
-    private readonly List<ExplosionRenderer.ExplosionCloud> _explosions = new();
     private HudRenderer _hudRenderer = null!;
     private ScannerRenderer _scannerRenderer = null!;
     private BitmapFont _font = null!;
@@ -104,7 +102,6 @@ public class FlightScene : GameScene
         _wireframeRenderer = new WireframeRenderer(_graphicsDevice);
         _circleRenderer = new CircleRenderer(_graphicsDevice);
         _stardustRenderer = new StardustRenderer(_graphicsDevice);
-        _explosionRenderer = new ExplosionRenderer(_graphicsDevice);
         _hudRenderer = new HudRenderer(_graphicsDevice);
         _scannerRenderer = new ScannerRenderer(_graphicsDevice);
         _stardustRenderer.Initialize(42); // Fixed seed for consistent starfield
@@ -247,7 +244,7 @@ public class FlightScene : GameScene
 
             _stardustRenderer.Update(_playerSpeed, -rollDelta, -pitchDelta);
             _bubbleManager.TidyAllActive();
-            CheckExplosions();
+            _gameInstance.Explosions.Update(gameTime, _bubbleManager, _gameInstance.Audio);
 
             EnforceOverflyDistance(_bubbleManager.Planet, GameConstants.PlanetRadius);
             var sunOrStation = _bubbleManager.SunOrStation;
@@ -364,13 +361,8 @@ public class FlightScene : GameScene
         BeginScissored(spriteBatch, viewContentRect);
         _stardustRenderer.Draw(spriteBatch, screenCenter, 500f, _view, _gameInstance.DrawWhite);
 
-        foreach (var cloud in _explosions)
-        {
-            if (!IsInFrontOfCamera(cloud.WorldPosElite)) continue;
-            cloud.Center = ProjectToScreenElite(cloud.WorldPosElite);
-            cloud.Distance = Math.Max(ToMonoGameWorld(cloud.WorldPosElite).Length(), 0.5f);
-            _explosionRenderer.UpdateAndDraw(spriteBatch, cloud, _lastGameTime, _gameInstance.DrawWhite);
-        }
+        // Draw explosions via service
+        _gameInstance.Explosions.Draw(spriteBatch, ProjectToScreenElite, pos => ToMonoGameWorld(pos).Length(), IsInFrontOfCamera, _gameInstance.DrawWhite);
 
         foreach (var entity in _bubbleManager.GetAllActive())
         {
@@ -511,8 +503,19 @@ public class FlightScene : GameScene
     private void DrawLine(SpriteBatch spriteBatch, Vector2 start, Vector2 end, Color color, int thickness) { Vector2 edge = end - start; float angle = (float)Math.Atan2(edge.Y, edge.X); spriteBatch.Draw(_whitePixel, start, null, color, angle, new Vector2(0, 0.5f), new Vector2(edge.Length(), thickness), SpriteEffects.None, 0); }
     private bool IsInFrontOfCamera(Vector3 worldPos) { Vector3 mg = ToMonoGameWorld(worldPos); if (mg.LengthSquared() < 0.001f) return true; return Vector3.Dot(Vector3.Normalize(mg), _cameraLookDir) > 0; }
     private static Vector3 ToMonoGameWorld(Vector3 eliteWorldPos) => new Vector3(eliteWorldPos.X, eliteWorldPos.Y, -eliteWorldPos.Z) * RenderScale;
-    private void CheckExplosions() { for (int i = GameConstants.FirstAvailableSlot; i < GameConstants.MaxSlots; i++) { var entity = _bubbleManager.GetSlot(i); if (entity != null && !entity.IsActive && !_explosions.Any(e => e.Tag == entity)) { _gameInstance?.Audio.PlayExplosion(); var cloud = _explosionRenderer.CreateExplosion(entity.Blueprint.Model, entity.Position); cloud.Tag = entity; _explosions.Add(cloud); } } _explosions.RemoveAll(cloud => { if (cloud.AgeSeconds >= 3f) { if (cloud.Tag is ShipInstance taggedTtl) _bubbleManager.Despawn(taggedTtl.SlotIndex, "explosion ttl"); return true; } if (cloud.Counter <= 0) { cloud.CleanupDelayFrames--; if (cloud.CleanupDelayFrames <= 0 && cloud.Tag is ShipInstance tagged) { _bubbleManager.Despawn(tagged.SlotIndex, "explosion complete"); return true; } } return false; }); }
-    private Vector2 ProjectToScreenElite(Vector3 eliteWorldPos) { Vector3 worldPos = ToMonoGameWorld(eliteWorldPos), viewPos = Vector3.Transform(worldPos, _view); Vector4 projected = Vector4.Transform(new Vector4(viewPos, 1f), _projection); if (MathF.Abs(projected.W) < 0.001f) return new Vector2((_graphicsDevice?.Viewport.Width ?? 1024) / 2f, (Math.Max(1, (_graphicsDevice?.Viewport.Height ?? 768) - (int)MathF.Round((_graphicsDevice?.Viewport.Height ?? 768) * HudHeightFraction))) / 2f); float screenX = (projected.X / projected.W + 1f) * 0.5f * (_graphicsDevice?.Viewport.Width ?? 1024); float screenY = (1 - projected.Y / projected.W) * 0.5f * (Math.Max(1, (_graphicsDevice?.Viewport.Height ?? 768) - (int)MathF.Round((_graphicsDevice?.Viewport.Height ?? 768) * HudHeightFraction))); return new Vector2(screenX, screenY); }
+
+    private Vector2 ProjectToScreenElite(Vector3 eliteWorldPos)
+    {
+        Vector3 worldPos = ToMonoGameWorld(eliteWorldPos);
+        Vector3 viewPos = Vector3.Transform(worldPos, _view);
+        Vector4 projected = Vector4.Transform(new Vector4(viewPos, 1f), _projection);
+        int w = _graphicsDevice?.Viewport.Width ?? 1024;
+        int h = _graphicsDevice?.Viewport.Height ?? 768;
+        int viewH = Math.Max(1, h - (int)MathF.Round(h * HudHeightFraction));
+        if (MathF.Abs(projected.W) < 0.001f) return new Vector2(w / 2f, viewH / 2f);
+        return new Vector2((projected.X / projected.W + 1f) * 0.5f * w, (1 - projected.Y / projected.W) * 0.5f * viewH);
+    }
+
     private void DrawCelestialSun(SpriteBatch spriteBatch, CelestialDisc disc) => _circleRenderer.DrawFilledCircle(spriteBatch, disc.ScreenCenter, disc.ScreenRadius, Color.White, _gameInstance.DrawWhite);
     private void DrawCelestialPlanet(SpriteBatch spriteBatch, CelestialDisc disc) => _circleRenderer.DrawCircle(spriteBatch, disc.ScreenCenter, disc.ScreenRadius, Color.White, 48, _gameInstance.DrawWhite);
 
