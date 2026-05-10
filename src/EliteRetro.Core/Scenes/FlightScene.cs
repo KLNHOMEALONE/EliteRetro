@@ -25,7 +25,6 @@ public class FlightScene : GameScene
     private const int MilestoneMsgY = 200;
     private WireframeRenderer _wireframeRenderer = null!;
     private CircleRenderer _circleRenderer = null!;
-    private StardustRenderer _stardustRenderer = null!;
     private HudRenderer _hudRenderer = null!;
     private ScannerRenderer _scannerRenderer = null!;
     private BitmapFont _font = null!;
@@ -101,10 +100,9 @@ public class FlightScene : GameScene
         _graphicsDevice = graphicsDevice;
         _wireframeRenderer = new WireframeRenderer(_graphicsDevice);
         _circleRenderer = new CircleRenderer(_graphicsDevice);
-        _stardustRenderer = new StardustRenderer(_graphicsDevice);
         _hudRenderer = new HudRenderer(_graphicsDevice);
         _scannerRenderer = new ScannerRenderer(_graphicsDevice);
-        _stardustRenderer.Initialize(42); // Fixed seed for consistent starfield
+        _gameInstance.Stardust.Initialize(42); // Fixed seed for consistent starfield
 
         // Initialize audio
         _gameInstance?.Audio.Initialize();
@@ -242,7 +240,7 @@ public class FlightScene : GameScene
                 if (entity.Speed != 0) entity.MoveForward();
             }
 
-            _stardustRenderer.Update(_playerSpeed, -rollDelta, -pitchDelta);
+            _gameInstance.Stardust.Update(_playerSpeed, -rollDelta, -pitchDelta, gameTime);
             _bubbleManager.TidyAllActive();
             _gameInstance.Explosions.Update(gameTime, _bubbleManager, _gameInstance.Audio);
 
@@ -309,19 +307,19 @@ public class FlightScene : GameScene
             _bubbleManager.CheckSunProximity();
         }
 
-        if (input.IsKeyPressed(Microsoft.Xna.Framework.Input.Keys.P) && !_lastControl.IsPaused)
+        if (input.IsKeyPressed(Keys.P) && !_lastControl.IsPaused)
             _paused = !_paused;
 
-        if (input.IsKeyPressed(Microsoft.Xna.Framework.Input.Keys.F5))
+        if (input.IsKeyPressed(Keys.F5))
             SaveGame();
 
-        if (input.IsKeyPressed(Microsoft.Xna.Framework.Input.Keys.Escape))
+        if (input.IsKeyPressed(Keys.Escape))
             _gameInstance.ChangeScene(new MainMenuScene(_gameInstance));
 
-        if (input.IsKeyPressed(Microsoft.Xna.Framework.Input.Keys.R))
+        if (input.IsKeyPressed(Keys.R))
             _ramMode = !_ramMode;
 
-        if (input.IsKeyPressed(Microsoft.Xna.Framework.Input.Keys.I))
+        if (input.IsKeyPressed(Keys.I))
         {
             _showHiddenEdges = !_showHiddenEdges;
             _gameInstance.DrawInvisible = _showHiddenEdges;
@@ -359,7 +357,7 @@ public class FlightScene : GameScene
         var hudContentRect = InsetRect(hudRect, outerMargin);
 
         BeginScissored(spriteBatch, viewContentRect);
-        _stardustRenderer.Draw(spriteBatch, screenCenter, 500f, _view, _gameInstance.DrawWhite);
+        _gameInstance.Stardust.Draw(spriteBatch, screenCenter, 500f, _view, _gameInstance.DrawWhite);
 
         // Draw explosions via service
         _gameInstance.Explosions.Draw(spriteBatch, ProjectToScreenElite, pos => ToMonoGameWorld(pos).Length(), IsInFrontOfCamera, _gameInstance.DrawWhite);

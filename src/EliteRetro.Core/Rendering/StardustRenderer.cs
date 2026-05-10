@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using EliteRetro.Core.Systems;
 
 namespace EliteRetro.Core.Rendering;
 
@@ -9,7 +10,7 @@ namespace EliteRetro.Core.Rendering;
 /// with perspective-driven X/Y expansion. Roll and pitch affect star positions.
 /// Stars wrap around on overflow.
 /// </summary>
-public class StardustRenderer : IDisposable
+public class StardustRenderer : IStardustService
 {
     private readonly Texture2D _whitePixel;
     private bool _isDisposed;
@@ -66,7 +67,6 @@ public class StardustRenderer : IDisposable
         for (int i = 0; i < StarCount; i++)
         {
             // Distribute stars uniformly in a sphere segment in front of the camera
-            // Use spherical coordinates for even distribution
             float theta = (float)rng.NextDouble() * MathHelper.TwoPi; // 0 to 2π (azimuth)
             float phi = (float)rng.NextDouble() * MathHelper.PiOver2; // 0 to π/2 (elevation, front hemisphere only)
             float r = (float)rng.NextDouble() * 16000 + 384; // distance from 384 to 16383
@@ -87,9 +87,8 @@ public class StardustRenderer : IDisposable
 
     /// <summary>
     /// Update star positions based on player speed and universe rotation.
-    /// Implements the authentic Elite MVS4 rotation and movement.
     /// </summary>
-    public void Update(float speed, float alpha, float beta)
+    public void Update(float speed, float alpha, float beta, GameTime gameTime)
     {
         _currentSpeed = speed;
 
@@ -101,40 +100,30 @@ public class StardustRenderer : IDisposable
         {
             ref StarData s = ref _stars[i];
 
-            // Extract signed values from sign-magnitude
-            // sz represents depth magnitude. World Z = -sz.
             int sx = SignMagToSigned(s.X);
             int sy = SignMagToSigned(s.Y);
             int sz = SignMagToSigned(s.Z);
 
             if (sz <= 0) continue;
 
-            // 1. ROTATE UNIVERSE (Minsky MVS4 routine)
-            // Roll then Pitch applied to star world coordinates
-            // Use float math to maintain precision with ship positions
             float fsx = sx;
             float fsy = sy;
             float fsz = -sz; // Depth magnitude to world Z
 
+            // Minsky MVS4 rotation
             float k2 = fsy - alpha * fsx;
             fsz = fsz + beta * k2;
             fsy = k2 - beta * fsz;
             fsx = fsx + alpha * fsy;
 
-            // 2. MOVE FORWARD
-            // World position uses Z = -depth (ahead is negative). Moving "forward" reduces depth,
-            // so world Z moves toward 0 (less negative), i.e. we ADD zDelta here.
             fsz += zDelta;
 
             sx = (int)fsx;
             sy = (int)fsy;
-            sz = (int)(-fsz); // Back to depth magnitude
+            sz = (int)(-fsz);
 
-            // Perspective expansion is handled by the 3D projection in Draw.
-            // Wrap around: if star goes too far or behind camera, respawn in distance
             if (sz <= 0 || sz > 16383 || Math.Abs(sx) > 16000 || Math.Abs(sy) > 16000)
             {
-                // Respawn at far distance with random X/Y
                 float theta = (float)(s.Brightness * 0.0245 + i * 0.001);
                 float r = 14000 + (s.Brightness % 2000);
                 sx = (int)(r * Math.Sin(theta) * Math.Cos(theta * 7));
@@ -142,7 +131,6 @@ public class StardustRenderer : IDisposable
                 sz = (int)r;
             }
 
-            // Store back as sign-magnitude
             s.X = SignedToSignMag(sx);
             s.Y = SignedToSignMag(sy);
             s.Z = SignedToSignMag(sz);
@@ -152,7 +140,7 @@ public class StardustRenderer : IDisposable
     /// <summary>
     /// Draw the starfield projected onto screen space.
     /// </summary>
-    public void Draw(SpriteBatch spriteBatch, Vector2 center, float scale, Matrix view, bool drawWhite = false)
+    public void Draw(SpriteBatch spriteBatch, Vector2 screenCenter, float scale, Matrix view, bool drawWhite = false)
     {
         for (int i = 0; i < StarCount; i++)
         {
@@ -160,74 +148,49 @@ public class StardustRenderer : IDisposable
 
             int x = SignMagToSigned(s.X);
             int y = SignMagToSigned(s.Y);
-            int z = SignMagToSigned(s.Z); // magnitude of depth
+            int z = SignMagToSigned(s.Z);
 
             if (z <= 0 || z > 16383) continue;
 
-            // World position: X=right, Y=up, Z=-depth (ahead)
             Vector3 worldPos = new Vector3(x, y, -z);
             Vector3 viewPos = Vector3.Transform(worldPos, view);
 
-            // Objects in front have negative Z in RH view space
             if (viewPos.Z >= 0) continue;
 
-            // Perspective projection: screen pos = center + (x, y) * scale / -z
             float factor = scale / -viewPos.Z;
-            float screenX = center.X + viewPos.X * factor;
-            float screenY = center.Y + viewPos.Y * factor;
+            float screenX = screenCenter.X + viewPos.X * factor;
+            float screenY = screenCenter.Y + viewPos.Y * factor;
 
-            // Skip if off-screen
-            // NE-20 fix: Use correct screen bounds (center is at 512,384 for 1024x768)
-            // Right edge = center.X + 512, bottom = center.Y + 384
-            if (screenX < -10 || screenX > center.X + 512 + 10) continue;
-            if (screenY < -10 || screenY > center.Y + 384 + 10) continue;
+            if (screenX < -10 || screenX > screenCenter.X + 512 + 10) continue;
+            if (screenY < -10 || screenY > screenCenter.Y + 384 + 10) continue;
 
-            // Star size: uniform for all distances
             int size = 7;
-
-            // At high speed, stars stretch into dashes (motion blur effect)
             float speedFactor = Math.Max(0, _currentSpeed - (GameConstants.SpeedMax * 0.175f)) / (GameConstants.SpeedMax * 0.825f); 
-            speedFactor = Math.Min(speedFactor, 1f); // clamp at SpeedMax+
-            int dashLength = 1 + (int)(speedFactor * 8); // 1 to 9 pixels long
+            speedFactor = Math.Min(speedFactor, 1f);
+            int dashLength = 1 + (int)(speedFactor * 8);
 
-            // Brightness: closer stars are brighter, with higher base brightness
             float brightness = s.Brightness / 255f * Math.Clamp(1.0f - z / 16384f, 0.4f, 1.0f);
             brightness = Math.Clamp(brightness * 1.5f * (1f + speedFactor * 0.5f), 0.1f, 1.0f);
 
-            Color starColor = drawWhite
-                ? new Color((int)(255 * brightness), (int)(255 * brightness), (int)(255 * brightness))
-                : new Color(
-                    (int)(255 * brightness),
-                    (int)(255 * brightness),
-                    (int)(255 * brightness));
+            Color starColor = new Color((int)(255 * brightness), (int)(255 * brightness), (int)(255 * brightness));
 
             if (dashLength > 1)
             {
-                // Draw star as a dash (line) radiating from screen center
-                Vector2 dir = Vector2.Normalize(new Vector2((float)(screenX - center.X), (float)(screenY - center.Y)));
-                if (dir.Length() < 0.01f) dir = Vector2.UnitX; // center star edge case
+                Vector2 dir = Vector2.Normalize(new Vector2((float)(screenX - screenCenter.X), (float)(screenY - screenCenter.Y)));
+                if (dir.Length() < 0.01f) dir = Vector2.UnitX;
                 Vector2 start = new Vector2(screenX, screenY) - dir * dashLength / 2f;
                 Vector2 end = new Vector2(screenX, screenY) + dir * dashLength / 2f;
 
-                // Draw line using rotation
                 float angle = (float)Math.Atan2(end.Y - start.Y, end.X - start.X);
-                float length = dashLength;
-                spriteBatch.Draw(_whitePixel, start, null, starColor, angle, Vector2.Zero,
-                    new Vector2(length, 3), SpriteEffects.None, 0);
+                spriteBatch.Draw(_whitePixel, start, null, starColor, angle, Vector2.Zero, new Vector2(dashLength, 3), SpriteEffects.None, 0);
             }
             else
             {
-                spriteBatch.Draw(_whitePixel,
-                    new Rectangle((int)screenX, (int)screenY, size, size),
-                    starColor);
+                spriteBatch.Draw(_whitePixel, new Rectangle((int)screenX, (int)screenY, size, size), starColor);
             }
         }
     }
 
-    /// <summary>
-    /// Convert from signed magnitude to int.
-    /// In Elite's sign-magnitude format: bit 15 is sign (1=negative), bits 0-14 are magnitude.
-    /// </summary>
     private static int SignMagToSigned(short value)
     {
         int magnitude = value & 0x7FFF;
@@ -235,9 +198,6 @@ public class StardustRenderer : IDisposable
         return isNegative ? -magnitude : magnitude;
     }
 
-    /// <summary>
-    /// Convert from int to signed magnitude.
-    /// </summary>
     private static short SignedToSignMag(int value)
     {
         if (value < 0)

@@ -43,4 +43,7 @@ public interface IGameContext
 
     /// <summary>HUD state calculation service.</summary>
     Systems.IHudService Hud { get; }
+
+    /// <summary>Starfield (stardust) effect service.</summary>
+    Systems.IStardustService Stardust { get; }
 }

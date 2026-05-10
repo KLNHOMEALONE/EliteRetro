@@ -22,6 +22,7 @@ public class GameInstance : Game, IGameContext
     private Input.IInputService _input = null!;
     private Systems.IExplosionService _explosionService = null!;
     private Systems.IHudService _hudService = null!;
+    private Systems.IStardustService _stardustService = null!;
 
     /// <summary>
     /// Global access to the local bubble manager.
@@ -64,6 +65,11 @@ public class GameInstance : Game, IGameContext
     public Systems.IHudService Hud => _hudService;
 
     /// <summary>
+    /// Starfield (stardust) effect service.
+    /// </summary>
+    public Systems.IStardustService Stardust => _stardustService;
+
+    /// <summary>
     /// When true, all rendered objects use white color.
     /// </summary>
     public bool DrawWhite { get; set; }
@@ -96,6 +102,7 @@ public class GameInstance : Game, IGameContext
         _audioManager = new AudioManager();
         _explosionService = new Systems.ExplosionService(GraphicsDevice);
         _hudService = new Systems.HudService();
+        _stardustService = new Rendering.StardustRenderer(GraphicsDevice);
 
         // Register MCNT-driven scheduled tasks (Phase 1.5)
         RegisterScheduledTasks();
@@ -268,6 +275,7 @@ public class GameInstance : Game, IGameContext
         {
             _audioManager?.Dispose();
             _explosionService?.Dispose();
+            _stardustService?.Dispose();
         }
         base.Dispose(disposing);
     }
