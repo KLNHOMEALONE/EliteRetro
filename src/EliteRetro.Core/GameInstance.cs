@@ -21,6 +21,7 @@ public class GameInstance : Game, IGameContext
     private IAudioManager _audioManager = null!;
     private Input.IInputService _input = null!;
     private Systems.IExplosionService _explosionService = null!;
+    private Systems.IHudService _hudService = null!;
 
     /// <summary>
     /// Global access to the local bubble manager.
@@ -58,6 +59,11 @@ public class GameInstance : Game, IGameContext
     public Systems.IExplosionService Explosions => _explosionService;
 
     /// <summary>
+    /// HUD state calculation service.
+    /// </summary>
+    public Systems.IHudService Hud => _hudService;
+
+    /// <summary>
     /// When true, all rendered objects use white color.
     /// </summary>
     public bool DrawWhite { get; set; }
@@ -89,6 +95,7 @@ public class GameInstance : Game, IGameContext
         _taskScheduler = new Systems.TaskScheduler(_mcnt);
         _audioManager = new AudioManager();
         _explosionService = new Systems.ExplosionService(GraphicsDevice);
+        _hudService = new Systems.HudService();
 
         // Register MCNT-driven scheduled tasks (Phase 1.5)
         RegisterScheduledTasks();

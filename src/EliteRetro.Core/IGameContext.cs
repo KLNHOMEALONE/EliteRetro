@@ -40,4 +40,7 @@ public interface IGameContext
 
     /// <summary>Explosion effect service.</summary>
     Systems.IExplosionService Explosions { get; }
+
+    /// <summary>HUD state calculation service.</summary>
+    Systems.IHudService Hud { get; }
 }

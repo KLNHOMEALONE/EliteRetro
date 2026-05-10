@@ -429,25 +429,17 @@ public class FlightScene : GameScene
 
     private void DrawHUD(SpriteBatch spriteBatch, Rectangle hudRect, Rectangle screenRect)
     {
-        var sunEffect = _bubbleManager.CheckSunProximity();
-        string statusMsg = sunEffect switch { LocalBubbleManager.SunProximityEffect.Fatal => "DANGER - FATAL PROXIMITY", LocalBubbleManager.SunProximityEffect.FuelScoop => "FUEL SCOOP ACTIVE", LocalBubbleManager.SunProximityEffect.HeatWarning => "HEAT WARNING", _ => "" };
-        Color statusColor = sunEffect switch { LocalBubbleManager.SunProximityEffect.Fatal => Color.Red, LocalBubbleManager.SunProximityEffect.FuelScoop => Color.Green, LocalBubbleManager.SunProximityEffect.HeatWarning => Color.Orange, _ => Color.Gray };
+        var hudState = _gameInstance.Hud.CalculateState(
+            _gameInstance,
+            _playerSpeed,
+            _lastControl.PitchAngle / GameConstants.PitchMax,
+            _lastControl.RollAngle / GameConstants.RollMax,
+            _cumulativeRoll,
+            _viewMode,
+            _lastEventMessage,
+            _eventMessageTimer,
+            _showHiddenEdges);
 
-        if (_bubbleManager.SunOrStation?.Blueprint?.Name == "Coriolis Station") { statusMsg = "STATION IN VIEW"; statusColor = Color.Yellow; }
-
-        int altitude = 255;
-        if (_bubbleManager.Planet != null)
-        {
-            float dist = _bubbleManager.Planet.Position.Length();
-            float noseDot = _bubbleManager.Planet.Position.Z / dist;
-            float angleToCenter = MathF.Acos(MathHelper.Clamp(noseDot, -1, 1));
-            float angularRadius = MathF.Asin(MathHelper.Clamp(GameConstants.PlanetRadius / dist, 0, 1));
-            float clearanceAngle = angleToCenter - angularRadius;
-            float effectiveAlt = Math.Max(dist - GameConstants.PlanetRadius + Math.Max(0, clearanceAngle) * (GameConstants.PlanetRadius * 4.0f), GameConstants.PlanetRadius * 0.4f * MathF.Sin(angleToCenter));
-            altitude = MathHelper.Clamp((int)(effectiveAlt / (GameConstants.PlanetRadius * 0.4f) * 255), 0, 255);
-        }
-
-        var hudState = new HUDState { Speed = _playerSpeed, Energy = _gameInstance.PlayerManager.Ship.Energy, MaxEnergy = 255, Fuel = _gameInstance.PlayerManager.Commander.Fuel, CabinTemp = 0, LaserTemp = 0, Altitude = altitude, EnergyBanks = 0, Missiles = _gameInstance.PlayerManager.Missiles, MaxMissiles = 4, ShieldForward = _gameInstance.PlayerManager.Ship.Energy, ShieldAft = _gameInstance.PlayerManager.Ship.Energy, Pitch = _lastControl.PitchAngle / GameConstants.PitchMax, Roll = _lastControl.RollAngle / GameConstants.RollMax, CompassHeading = _cumulativeRoll, ECMBulbs = 0, ViewMode = _viewMode switch { 0 => "FRONT", 1 => "REAR", 2 => "LEFT", 3 => "RIGHT", _ => "FRONT" }, StatusMessage = statusMsg, StatusColor = statusColor, LegalStatus = _gameInstance.PlayerManager.Commander.LegalStatus, CombatRank = _gameInstance.PlayerManager.Commander.RankName, ShowHiddenEdges = _showHiddenEdges };
         _hudRenderer.Draw(spriteBatch, hudState, _font, hudRect, screenRect);
 
         int leftW = (int)MathF.Round(hudRect.Width * 0.25f);
