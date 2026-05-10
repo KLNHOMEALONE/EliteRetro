@@ -34,7 +34,6 @@ public class MainMenuScene : GameScene
     private bool _hasSavedGame;
     private readonly string[] _ratings = { "HARMLESS", "MOSTLY HARMLESS", "NOVICE", "COMPETENT", "EXPERT", "DANGEROUS", "DEADLY", "ELITE" };
     private string _currentRating = "DANGEROUS";
-    private KeyboardState _prevKb;
     private float _shipRotationY;
     private int _currentModelIndex;
     private bool _paused;
@@ -112,11 +111,12 @@ public class MainMenuScene : GameScene
 
     public override void Update(GameTime gameTime)
     {
-        var kb = Keyboard.GetState();
+        if (_gameInstance == null) return;
+        var input = _gameInstance.Input;
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
         // Toggle pause on Space
-        if (kb.IsKeyDown(Keys.Space) && _prevKb.IsKeyUp(Keys.Space))
+        if (input.IsKeyPressed(Keys.Space))
         {
             _paused = !_paused;
         }
@@ -129,48 +129,48 @@ public class MainMenuScene : GameScene
         _world = Matrix.CreateRotationY(_shipRotationY);
 
         // Cycle through ship models with left/right
-        if (kb.IsKeyDown(Keys.Right) && _prevKb.IsKeyUp(Keys.Right))
+        if (input.IsKeyPressed(Keys.Right))
         {
             _currentModelIndex = (_currentModelIndex + 1) % _shipModels.Count;
             _cobraModel = _shipModels[_currentModelIndex].Create(2.4f);
         }
-        if (kb.IsKeyDown(Keys.Left) && _prevKb.IsKeyUp(Keys.Left))
+        if (input.IsKeyPressed(Keys.Left))
         {
             _currentModelIndex = (_currentModelIndex - 1 + _shipModels.Count) % _shipModels.Count;
             _cobraModel = _shipModels[_currentModelIndex].Create(2.4f);
         }
 
         // Menu navigation
-        if (kb.IsKeyDown(Keys.Up) && _prevKb.IsKeyUp(Keys.Up))
+        if (input.IsKeyPressed(Keys.Up))
         {
             _selectedItem = (_selectedItem - 1 + _menuItems.Length) % _menuItems.Length;
             _gameInstance?.Audio.PlayMenuSelect();
         }
-        if (kb.IsKeyDown(Keys.Down) && _prevKb.IsKeyUp(Keys.Down))
+        if (input.IsKeyPressed(Keys.Down))
         {
             _selectedItem = (_selectedItem + 1) % _menuItems.Length;
             _gameInstance?.Audio.PlayMenuSelect();
         }
 
-        if (kb.IsKeyDown(Keys.Enter) && _prevKb.IsKeyUp(Keys.Enter))
+        if (input.IsKeyPressed(Keys.Enter))
         {
             HandleSelection();
         }
 
         // Cycle edges with ] and [
-        if (kb.IsKeyDown(Keys.OemCloseBrackets) && _prevKb.IsKeyUp(Keys.OemCloseBrackets))
+        if (input.IsKeyPressed(Keys.OemCloseBrackets))
         {
             if (_cobraModel.Edges.Count > 0)
                 _highlightedEdgeIndex = (_highlightedEdgeIndex + 1) % _cobraModel.Edges.Count;
         }
-        if (kb.IsKeyDown(Keys.OemOpenBrackets) && _prevKb.IsKeyUp(Keys.OemOpenBrackets))
+        if (input.IsKeyPressed(Keys.OemOpenBrackets))
         {
             if (_cobraModel.Edges.Count > 0)
                 _highlightedEdgeIndex = (_highlightedEdgeIndex - 1 + _cobraModel.Edges.Count) % _cobraModel.Edges.Count;
         }
 
         // Toggle hidden edges with I
-        if (kb.IsKeyDown(Keys.I) && _prevKb.IsKeyUp(Keys.I))
+        if (input.IsKeyPressed(Keys.I))
         {
             _showHiddenEdges = !_showHiddenEdges;
             if (_gameInstance != null)
@@ -179,8 +179,6 @@ public class MainMenuScene : GameScene
                 Systems.OptionsManager.Save(_gameInstance.DrawWhite, _gameInstance.DrawInvisible);
             }
         }
-
-        _prevKb = kb;
     }
 
     private void HandleSelection()

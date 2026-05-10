@@ -45,7 +45,6 @@ public class FlightScene : GameScene
     private int _planetRotationCounter;
     private int _viewMode; // 0=front, 1=rear, 2=left, 3=right
     private Vector3 _cameraLookDir = -Vector3.UnitZ; // current camera look direction in world space
-    private KeyboardState _prevKb;
     private float _cameraDistance = 80f;
     private float _playerSpeed;
     private float _cumulativeRoll; // accumulated roll angle in radians, for planet/ring counter-rotation
@@ -251,8 +250,8 @@ public class FlightScene : GameScene
     public override void Update(GameTime gameTime)
     {
         _lastGameTime = gameTime;
-        var kb = Keyboard.GetState();
-        _lastControl = _flightControlService.Update(gameTime);
+        var input = _gameInstance.Input;
+        _lastControl = _flightControlService.Update(gameTime, input);
 
         // Handle laser fire
         if (_laserCooldown > 0) _laserCooldown--;
@@ -276,16 +275,14 @@ public class FlightScene : GameScene
             if (_planetHit)
             {
                 _lastMoveStep = 0f;
-                if (kb.IsKeyDown(Keys.Escape) && _prevKb.IsKeyUp(Keys.Escape))
+                if (input.IsKeyPressed(Keys.Escape))
                 {
                     if (_gameInstance != null)
                     {
                         _gameInstance.ChangeScene(new MainMenuScene(_gameInstance));
-                        _prevKb = kb;
                         return;
                     }
                 }
-                _prevKb = kb;
                 return;
             }
 
@@ -368,7 +365,6 @@ public class FlightScene : GameScene
                     _playerSpeed = 0f;
                     _planetHit = true;
                     _lastMoveStep = 0f;
-                    _prevKb = kb;
                     return;
                 }
                 else if (col.Type == CollisionSystem.PlanetCollisionType.Glancing)
@@ -406,8 +402,8 @@ public class FlightScene : GameScene
 
             // Zoom with +/-
             float speed = 2f * (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (kb.IsKeyDown(Keys.OemPlus) || kb.IsKeyDown(Keys.Add)) _cameraDistance -= speed;
-            if (kb.IsKeyDown(Keys.OemMinus) || kb.IsKeyDown(Keys.Subtract)) _cameraDistance += speed;
+            if (input.IsKeyDown(Keys.OemPlus) || input.IsKeyDown(Keys.Add)) _cameraDistance -= speed;
+            if (input.IsKeyDown(Keys.OemMinus) || input.IsKeyDown(Keys.Subtract)) _cameraDistance += speed;
             _cameraDistance = MathHelper.Clamp(_cameraDistance, 2f, 20f);
 
             // Speed control via W/S keys (SpeedDelta is in units/sec)
@@ -440,7 +436,7 @@ public class FlightScene : GameScene
             // TODO: Apply heat damage, fuel scooping, etc. based on sunEffect
 
             // Toggle local target practice practice mode with L
-            if (kb.IsKeyDown(Keys.L) && _prevKb.IsKeyUp(Keys.L))
+            if (input.IsKeyPressed(Keys.L))
             {
                 _targetPracticeMode = !_targetPracticeMode;
                 _bubbleManager.TargetPracticeMode = _targetPracticeMode;
@@ -452,17 +448,17 @@ public class FlightScene : GameScene
         }
 
         // Toggle local pause on P (when not already paused by flight control)
-        if (kb.IsKeyDown(Keys.P) && _prevKb.IsKeyUp(Keys.P) && !_lastControl.IsPaused)
+        if (input.IsKeyPressed(Keys.P) && !_lastControl.IsPaused)
             _paused = !_paused;
 
         // Save game with F5
-        if (kb.IsKeyDown(Keys.F5) && _prevKb.IsKeyUp(Keys.F5))
+        if (input.IsKeyPressed(Keys.F5))
         {
             SaveGame();
         }
 
         // Return to menu with Escape
-        if (kb.IsKeyDown(Keys.Escape) && _prevKb.IsKeyUp(Keys.Escape))
+        if (input.IsKeyPressed(Keys.Escape))
         {
             if (_gameInstance != null)
             {
@@ -472,11 +468,11 @@ public class FlightScene : GameScene
         }
 
         // Toggle ram mode with R
-        if (kb.IsKeyDown(Keys.R) && _prevKb.IsKeyUp(Keys.R))
+        if (input.IsKeyPressed(Keys.R))
             _ramMode = !_ramMode;
 
         // Toggle hidden edges with I
-        if (kb.IsKeyDown(Keys.I) && _prevKb.IsKeyUp(Keys.I))
+        if (input.IsKeyPressed(Keys.I))
         {
             _showHiddenEdges = !_showHiddenEdges;
             if (_gameInstance != null)
@@ -524,8 +520,6 @@ public class FlightScene : GameScene
             sideBasis.Y, upBasis.Y, forwardBasis.Y, 0,
             sideBasis.Z, upBasis.Z, forwardBasis.Z, 0,
             0, 0, 0, 1);
-
-        _prevKb = kb;
     }
 
     public override void Draw(SpriteBatch spriteBatch)

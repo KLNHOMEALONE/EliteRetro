@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using EliteRetro.Core.Input;
 
 namespace EliteRetro.Core.Systems;
 
@@ -30,7 +31,6 @@ public struct FlightControlState
 /// </summary>
 public class FlightControlService
 {
-    private KeyboardState _previousState;
     private bool _isPaused;
     private int _currentViewIndex; // persistent view index across frames
     private float _rollRatePerSec;  // signed, radians/sec
@@ -48,9 +48,8 @@ public class FlightControlService
     /// - Space: fire laser
     /// - P: pause toggle
     /// </summary>
-    public FlightControlState Update(GameTime gameTime)
+    public FlightControlState Update(GameTime gameTime, IInputService input)
     {
-        var state = Keyboard.GetState();
         var control = new FlightControlState();
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
         if (dt <= 0) dt = 1f / 60f;
@@ -58,12 +57,12 @@ public class FlightControlService
         if (!_isPaused)
         {
             float targetRoll = 0f;
-            if (state.IsKeyDown(Keys.Left)) targetRoll = -1f;
-            else if (state.IsKeyDown(Keys.Right)) targetRoll = 1f;
+            if (input.IsKeyDown(Keys.Left)) targetRoll = -1f;
+            else if (input.IsKeyDown(Keys.Right)) targetRoll = 1f;
 
             float targetPitch = 0f;
-            if (state.IsKeyDown(Keys.Up)) targetPitch = 1f;
-            else if (state.IsKeyDown(Keys.Down)) targetPitch = -1f;
+            if (input.IsKeyDown(Keys.Up)) targetPitch = 1f;
+            else if (input.IsKeyDown(Keys.Down)) targetPitch = -1f;
 
             // Smooth digital controls into a turn-rate (radians/sec).
             // RollAngle/PitchAngle are still expressed as radians-per-frame-at-60fps
@@ -94,22 +93,22 @@ public class FlightControlService
 
             // Speed: treat W/S as throttle changes (no auto-braking when released).
             // This keeps forward motion stable unless the player actively slows down.
-            if (state.IsKeyDown(Keys.W))
+            if (input.IsKeyDown(Keys.W))
                 control.SpeedDelta = GameConstants.SpeedAccel;
-            else if (state.IsKeyDown(Keys.S))
+            else if (input.IsKeyDown(Keys.S))
                 control.SpeedDelta = -GameConstants.SpeedAccel;
             else
                 control.SpeedDelta = 0f;
 
             // View switching: V key cycles through views
-            if (state.IsKeyDown(Keys.V) && !_previousState.IsKeyDown(Keys.V))
+            if (input.IsKeyPressed(Keys.V))
             {
                 _currentViewIndex = (_currentViewIndex + 1) % 4;
             }
             control.ViewIndex = _currentViewIndex;
 
             // Laser fire: Space key (continuous fire while held)
-            control.FireLaser = state.IsKeyDown(Keys.Space);
+            control.FireLaser = input.IsKeyDown(Keys.Space);
         }
         else
         {
@@ -119,16 +118,13 @@ public class FlightControlService
         }
 
         // Pause toggle: P key only
-        bool currentPause = state.IsKeyDown(Keys.P);
-        bool prevPause = _previousState.IsKeyDown(Keys.P);
-        if (currentPause && !prevPause)
+        if (input.IsKeyPressed(Keys.P))
         {
             _isPaused = !_isPaused;
             control.PauseToggled = true;
         }
 
         control.IsPaused = _isPaused;
-        _previousState = state;
         return control;
     }
 
@@ -154,7 +150,6 @@ public class FlightControlService
     /// </summary>
     public void Reset()
     {
-        _previousState = default;
         _isPaused = false;
         _currentViewIndex = 0;
         _rollRatePerSec = 0f;

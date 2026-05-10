@@ -25,12 +25,11 @@ public class GalaxyMapScene : GameScene
     private int _screenH;
     private int _currentGalaxy;
     private Vector2 _scrollOffset;
-    private float _zoom = 0.3f;
+    private float _zoom = 3.0f;
     private StarSystem? _originSystem;   // current ship position (Lave)
     private StarSystem? _cursorSystem;   // destination under cursor
     private StarSystem? _lockedSystem;   // locked destination (Enter)
     private GameInstance? _game;
-    private KeyboardState _prevKb;
 
     public GalaxyMapScene(GameInstance? game = null)
     {
@@ -53,7 +52,6 @@ public class GalaxyMapScene : GameScene
         // Pre-create white pixel for drawing rectangles efficiently
         _whitePixel = new Texture2D(font.Atlas.GraphicsDevice, 1, 1);
         _whitePixel.SetData(new[] { Color.White });
-        _prevKb = Keyboard.GetState();
 
         // Current ship position is Lave. Find it and initialize cursor there.
         _originSystem = FindSystemByName(_galaxies[_currentGalaxy], "Lave") ?? _galaxies[_currentGalaxy].Systems[0];
@@ -63,11 +61,12 @@ public class GalaxyMapScene : GameScene
 
     public override void Update(GameTime gameTime)
     {
-        var kb = Keyboard.GetState();
+        if (_game == null) return;
+        var input = _game.Input;
         // No panning. Cursor keys move destination selection (snap to stars).
 
-        if (kb.IsKeyDown(Keys.OemPlus) || kb.IsKeyDown(Keys.Add)) _zoom *= 1.1f;
-        if (kb.IsKeyDown(Keys.OemMinus) || kb.IsKeyDown(Keys.Subtract)) _zoom /= 1.1f;
+        if (input.IsKeyDown(Keys.OemPlus) || input.IsKeyDown(Keys.Add)) _zoom *= 1.1f;
+        if (input.IsKeyDown(Keys.OemMinus) || input.IsKeyDown(Keys.Subtract)) _zoom /= 1.1f;
 
         // Escape handled by SceneManager — pops back to previous scene
 
@@ -75,20 +74,20 @@ public class GalaxyMapScene : GameScene
 
         if (_cursorSystem.HasValue)
         {
-            if (kb.IsKeyDown(Keys.Left) && _prevKb.IsKeyUp(Keys.Left))
+            if (input.IsKeyPressed(Keys.Left))
                 _cursorSystem = SelectInDirection(galaxy, _cursorSystem.Value, dxSign: -1, dySign: 0);
-            if (kb.IsKeyDown(Keys.Right) && _prevKb.IsKeyUp(Keys.Right))
+            if (input.IsKeyPressed(Keys.Right))
                 _cursorSystem = SelectInDirection(galaxy, _cursorSystem.Value, dxSign: 1, dySign: 0);
-            if (kb.IsKeyDown(Keys.Up) && _prevKb.IsKeyUp(Keys.Up))
+            if (input.IsKeyPressed(Keys.Up))
                 _cursorSystem = SelectInDirection(galaxy, _cursorSystem.Value, dxSign: 0, dySign: -1);
-            if (kb.IsKeyDown(Keys.Down) && _prevKb.IsKeyUp(Keys.Down))
+            if (input.IsKeyPressed(Keys.Down))
                 _cursorSystem = SelectInDirection(galaxy, _cursorSystem.Value, dxSign: 0, dySign: 1);
         }
 
         // Enter locks on destination only if within jump range.
-        if (kb.IsKeyDown(Keys.Enter) && _prevKb.IsKeyUp(Keys.Enter) && _originSystem.HasValue && _cursorSystem.HasValue)
+        if (input.IsKeyPressed(Keys.Enter) && _originSystem.HasValue && _cursorSystem.HasValue)
         {
-            float fuel = Math.Clamp(_game?.PlayerManager?.Commander?.Fuel ?? 35, 0, 70);
+            float fuel = Math.Clamp(_game.PlayerManager.Commander.Fuel, 0, 70);
             float jumpRangeLy = fuel / 10f; // original Elite max 7.0 LY
             var d = _cursorSystem.Value.Position - _originSystem.Value.Position;
             float coordDist = MathF.Sqrt(d.X * d.X + d.Y * d.Y);
@@ -96,13 +95,11 @@ public class GalaxyMapScene : GameScene
             _lockedSystem = coordDist <= maxCoordDist ? _cursorSystem : null;
         }
 
-        if (kb.IsKeyDown(Keys.I) && _prevKb.IsKeyUp(Keys.I) && _cursorSystem.HasValue && _originSystem.HasValue && _game != null)
+        if (input.IsKeyPressed(Keys.I) && _cursorSystem.HasValue && _originSystem.HasValue)
         {
             float ly = DistanceLightYears(_originSystem.Value, _cursorSystem.Value);
             _game.PushScene(new GalaxyStarDescriptionScene(_cursorSystem.Value, ly));
         }
-
-        _prevKb = kb;
     }
 
     private static float DistanceLightYears(StarSystem from, StarSystem to)

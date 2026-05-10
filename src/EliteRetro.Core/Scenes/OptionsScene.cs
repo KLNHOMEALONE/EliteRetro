@@ -15,7 +15,6 @@ public class OptionsScene : GameScene
     private int _selectedItem;
     private Game? _game;
     private GameInstance? _gameInstance;
-    private KeyboardState _prevKb;
     private Texture2D _whitePixel = null!;
 
     // Option definitions: name, getter, setter
@@ -43,28 +42,26 @@ public class OptionsScene : GameScene
         _font = font;
         _whitePixel = new Texture2D(graphicsDevice, 1, 1);
         _whitePixel.SetData(new[] { Color.White });
-        // Sync so Enter used to open this menu is not treated as a new press on the first Update
-        // (otherwise DRAW WHITE toggles immediately when the scene appears).
-        _prevKb = Keyboard.GetState();
     }
 
     public override void Update(GameTime gameTime)
     {
-        var kb = Keyboard.GetState();
+        if (_gameInstance == null) return;
+        var input = _gameInstance.Input;
 
-        if (kb.IsKeyDown(Keys.Up) && _prevKb.IsKeyUp(Keys.Up))
+        if (input.IsKeyPressed(Keys.Up))
         {
             _selectedItem = (_selectedItem - 1 + _options.Length) % _options.Length;
             _gameInstance?.Audio.PlayMenuSelect();
         }
 
-        if (kb.IsKeyDown(Keys.Down) && _prevKb.IsKeyUp(Keys.Down))
+        if (input.IsKeyPressed(Keys.Down))
         {
             _selectedItem = (_selectedItem + 1) % _options.Length;
             _gameInstance?.Audio.PlayMenuSelect();
         }
 
-        if (kb.IsKeyDown(Keys.Enter) && _prevKb.IsKeyUp(Keys.Enter))
+        if (input.IsKeyPressed(Keys.Enter))
         {
             // Toggle selected option
             var (name, getter, setter) = _options[_selectedItem];
@@ -74,8 +71,6 @@ public class OptionsScene : GameScene
             bool drawInvisible = _gameInstance?.DrawInvisible ?? false;
             Systems.OptionsManager.Save(drawWhite, drawInvisible);
         }
-
-        _prevKb = kb;
     }
 
     public override void Draw(SpriteBatch spriteBatch)

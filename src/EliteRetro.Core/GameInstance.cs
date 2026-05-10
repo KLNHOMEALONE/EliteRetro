@@ -19,6 +19,7 @@ public class GameInstance : Game
     private MainLoopCounter _mcnt = null!;
     private Systems.TaskScheduler _taskScheduler = null!;
     private AudioManager _audioManager = null!;
+    private Input.IInputService _input = null!;
 
     /// <summary>
     /// Global access to the local bubble manager.
@@ -29,6 +30,11 @@ public class GameInstance : Game
     /// Global access to the player state manager.
     /// </summary>
     public PlayerManager PlayerManager => _playerManager;
+
+    /// <summary>
+    /// Global access to the centralized input service.
+    /// </summary>
+    public Input.IInputService Input => _input;
 
     /// <summary>
     /// Main loop counter for frame-spread task scheduling.
@@ -70,6 +76,7 @@ public class GameInstance : Game
     protected override void Initialize()
     {
         _sceneManager = new SceneManager();
+        _input = new Input.InputService();
         _playerManager = new PlayerManager();
         _bubbleManager = new LocalBubbleManager(_playerManager);
         _mcnt = new MainLoopCounter();
@@ -208,6 +215,8 @@ public class GameInstance : Game
 
     protected override void Update(GameTime gameTime)
     {
+        _input.Update();
+
         // Decrement MCNT each frame (wraps 0 → 255)
         _mcnt.Decrement();
 

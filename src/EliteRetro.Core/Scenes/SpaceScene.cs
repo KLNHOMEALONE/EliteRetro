@@ -24,14 +24,9 @@ public class SpaceScene : GameScene
     private bool _isPaused;
     private LocalBubbleManager _bubbleManager = null!;
     private FlightControlService _flightControlService = null!;
-    private bool _prevSpaceState;
-    private bool _prevT;
     private bool _initialized;
-    private int _tidyCounter;
     private float _cumulativeRoll; // accumulated roll angle in radians, for planet/ring counter-rotation
     private int _debugHighlightedEdge = -1;
-    private bool _prevUp;
-    private bool _prevDown;
 
     public SpaceScene(Game? game = null)
     {
@@ -106,8 +101,8 @@ public class SpaceScene : GameScene
 
     public override void Update(GameTime gameTime)
     {
-        var control = _flightControlService.Update(gameTime);
-        var kb = Keyboard.GetState();
+        var input = _gameInstance.Input;
+        var control = _flightControlService.Update(gameTime, input);
         _isPaused = control.IsPaused;
 
         if (!control.IsPaused)
@@ -116,7 +111,6 @@ public class SpaceScene : GameScene
 
             // 1. ROTATE UNIVERSE (Minsky algorythm)
             // Roll and Pitch are applied to ALL entities in the universe.
-            // ShipInstance.ApplyUniverseRotation uses authentic Elite MVS4 logic.
             // Signs are set for aircraft-style control (UP = Dive, planet goes UP):
             // Positive Roll (Right) -> rotate universe LEFT (negative rollDelta).
             // Positive Pitch (Up/Climb) -> rotate universe DOWN (negative pitchDelta).
@@ -135,22 +129,20 @@ public class SpaceScene : GameScene
                 _planetRotation = (_planetRotation + 1) % 64;
 
             // Debug: T key for station spawn
-            if (kb.IsKeyDown(Keys.T) && !_prevT)
+            if (input.IsKeyPressed(Keys.T))
             {
                 if (_bubbleManager.SunOrStation?.Blueprint?.Name == "Sun")
                     SpawnStation();
             }
-            _prevT = kb.IsKeyDown(Keys.T);
         }
         else
         {
             // Debug: T key still works when paused
-            if (kb.IsKeyDown(Keys.T) && !_prevT)
+            if (input.IsKeyPressed(Keys.T))
             {
                 if (_bubbleManager.SunOrStation?.Blueprint?.Name == "Sun")
                     SpawnStation();
             }
-            _prevT = kb.IsKeyDown(Keys.T);
         }
 
         // FIXED VIEW DIRECTIONS for Rotating Universe model (Front View).
@@ -168,13 +160,11 @@ public class SpaceScene : GameScene
         // Debug: cycle highlighted edge with Up/Down when paused
         if (control.IsPaused)
         {
-            if (kb.IsKeyDown(Keys.Up) && !_prevUp)
+            if (input.IsKeyPressed(Keys.Up))
                 _debugHighlightedEdge = (_debugHighlightedEdge + 1) % 12; // cube has 12 edges
-            _prevUp = kb.IsKeyDown(Keys.Up);
 
-            if (kb.IsKeyDown(Keys.Down) && !_prevDown)
+            if (input.IsKeyPressed(Keys.Down))
                 _debugHighlightedEdge = (_debugHighlightedEdge - 1 + 12) % 12;
-            _prevDown = kb.IsKeyDown(Keys.Down);
         }
         else
         {
