@@ -23,6 +23,21 @@ public struct FlightControlState
     public bool PauseToggled;
     /// <summary>Whether the service is currently paused.</summary>
     public bool IsPaused;
+
+    /// <summary>Camera zoom in requested.</summary>
+    public bool ZoomIn;
+    /// <summary>Camera zoom out requested.</summary>
+    public bool ZoomOut;
+    /// <summary>Save game requested.</summary>
+    public bool SaveRequested;
+    /// <summary>Exit to menu requested.</summary>
+    public bool ExitRequested;
+    /// <summary>Toggle ram mode requested.</summary>
+    public bool RamModeToggled;
+    /// <summary>Toggle hidden edges requested.</summary>
+    public bool EdgeToggleRequested;
+    /// <summary>Debug station spawn requested.</summary>
+    public bool StationSpawnRequested;
 }
 
 /// <summary>
@@ -109,13 +124,29 @@ public class FlightControlService
 
             // Laser fire: Space key (continuous fire while held)
             control.FireLaser = input.IsKeyDown(Keys.Space);
+
+            // Zoom: +/- keys (continuous while held)
+            control.ZoomIn = input.IsKeyDown(Keys.OemPlus) || input.IsKeyDown(Keys.Add);
+            control.ZoomOut = input.IsKeyDown(Keys.OemMinus) || input.IsKeyDown(Keys.Subtract);
+
+            // Mode toggles: single-press triggers
+            control.RamModeToggled = input.IsKeyPressed(Keys.R);
+            control.EdgeToggleRequested = input.IsKeyPressed(Keys.I);
+            control.StationSpawnRequested = input.IsKeyPressed(Keys.T);
         }
         else
         {
             // When paused, avoid accumulating/retaining turn rate.
             _rollRatePerSec = 0f;
             _pitchRatePerSec = 0f;
+
+            // Debug triggers often work while paused
+            control.StationSpawnRequested = input.IsKeyPressed(Keys.T);
         }
+
+        // Global triggers: work even if paused (or determine pause state)
+        control.ExitRequested = input.IsKeyPressed(Keys.Escape);
+        control.SaveRequested = input.IsKeyPressed(Keys.F5);
 
         // Pause toggle: P key only
         if (input.IsKeyPressed(Keys.P))

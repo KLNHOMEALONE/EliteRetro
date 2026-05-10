@@ -221,7 +221,7 @@ public class FlightScene : GameScene
             if (_planetHit)
             {
                 _lastMoveStep = 0f;
-                if (input.IsKeyPressed(Keys.Escape))
+                if (_lastControl.ExitRequested)
                     _gameInstance.ChangeScene(new MainMenuScene(_gameInstance));
                 return;
             }
@@ -281,8 +281,8 @@ public class FlightScene : GameScene
             _viewMode = _lastControl.ViewIndex;
 
             float zoomSpeed = 2f * dt;
-            if (input.IsKeyDown(Keys.OemPlus) || input.IsKeyDown(Keys.Add)) _cameraDistance -= zoomSpeed;
-            if (input.IsKeyDown(Keys.OemMinus) || input.IsKeyDown(Keys.Subtract)) _cameraDistance += zoomSpeed;
+            if (_lastControl.ZoomIn) _cameraDistance -= zoomSpeed;
+            if (_lastControl.ZoomOut) _cameraDistance += zoomSpeed;
             _cameraDistance = MathHelper.Clamp(_cameraDistance, 2f, 20f);
 
             if (_lastControl.SpeedDelta != 0)
@@ -303,19 +303,19 @@ public class FlightScene : GameScene
             _bubbleManager.CheckSunProximity();
         }
 
-        if (input.IsKeyPressed(Keys.P) && !_lastControl.IsPaused)
+        if (_lastControl.PauseToggled)
             _paused = !_paused;
 
-        if (input.IsKeyPressed(Keys.F5))
+        if (_lastControl.SaveRequested)
             SaveGame();
 
-        if (input.IsKeyPressed(Keys.Escape))
+        if (_lastControl.ExitRequested)
             _gameInstance.ChangeScene(new MainMenuScene(_gameInstance));
 
-        if (input.IsKeyPressed(Keys.R))
+        if (_lastControl.RamModeToggled)
             _ramMode = !_ramMode;
 
-        if (input.IsKeyPressed(Keys.I))
+        if (_lastControl.EdgeToggleRequested)
         {
             _showHiddenEdges = !_showHiddenEdges;
             _gameInstance.DrawInvisible = _showHiddenEdges;
