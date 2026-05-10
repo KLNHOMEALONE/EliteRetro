@@ -31,11 +31,9 @@ public class FlightScene : GameScene
     private GraphicsDevice? _graphicsDevice;
     private IGameContext _gameInstance = null!;
     private IBubbleManager _bubbleManager = null!;
-    private FlightControlService _flightControlService = null!;
     private OrientationMatrix _universeOrientation = OrientationMatrix.Identity;
     private Matrix _view;
     private Matrix _projection;
-    private bool _paused;
     private bool _initialized;
     private bool _showHiddenEdges = true;
     private int _planetRotation;
@@ -78,7 +76,6 @@ public class FlightScene : GameScene
             if (game is GameInstance gi)
                 _bubbleManager = gi.BubbleManager;
         }
-        _flightControlService = new FlightControlService();
         if (_bubbleManager != null)
         {
             _bubbleManager.EntityEvent += OnEntityEvent;
@@ -192,7 +189,7 @@ public class FlightScene : GameScene
     {
         _lastGameTime = gameTime;
         var input = _gameInstance.Input;
-        _lastControl = _flightControlService.Update(gameTime, input);
+        _lastControl = _gameInstance.FlightControl.Update(gameTime, input);
 
         _isFiring = _lastControl.FireLaser;
         if (_isFiring && _gameInstance.Combat.LaserCooldown <= 0)
@@ -271,9 +268,6 @@ public class FlightScene : GameScene
 
             _gameInstance.PlayerManager.CheckSunProximity(_bubbleManager);
         }
-
-        if (_lastControl.PauseToggled)
-            _paused = !_paused;
 
         if (_lastControl.SaveRequested)
             SaveGame();
@@ -406,7 +400,7 @@ public class FlightScene : GameScene
             _font.DrawString(spriteBatch, saveMsg, new Vector2(400, 380), Color.Green, 1.4f);
         }
         
-        if (_paused) _font.DrawString(spriteBatch, "PAUSED", new Vector2(400, 350), Color.Red, 2f);
+        if (_lastControl.IsPaused) _font.DrawString(spriteBatch, "PAUSED", new Vector2(400, 350), Color.Red, 2f);
     }
 
     private void DrawViewOverlay(SpriteBatch spriteBatch, Rectangle viewContentRect)

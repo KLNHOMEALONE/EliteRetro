@@ -36,9 +36,9 @@ public class MainMenuScene : GameScene
     private string _currentRating = "DANGEROUS";
     private float _shipRotationY;
     private int _currentModelIndex;
-    private bool _paused;
     private int _highlightedEdgeIndex = -1;
     private bool _showHiddenEdges = true;
+    private FlightControlState _lastControl;
     private readonly List<(string Name, Func<float, ShipModel> Create)> _shipModels = new();
 
     public MainMenuScene(IGameContext? game = null)
@@ -119,20 +119,16 @@ public class MainMenuScene : GameScene
     {
         if (_gameInstance == null) return;
         var input = _gameInstance.Input;
+        _lastControl = _gameInstance.FlightControl.Update(gameTime, input);
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-        // Toggle pause on Space
-        if (input.IsKeyPressed(Keys.Space))
-        {
-            _paused = !_paused;
-        }
-
-        // Auto-rotate around Z axis — ship spins flat like a clock hand
-        if (!_paused)
+        // Auto-rotate around Z axis тАФ ship spins flat like a clock hand
+        if (!_lastControl.IsPaused)
         {
             _shipRotationY += dt * 0.3f;
         }
         _world = Matrix.CreateRotationY(_shipRotationY);
+
 
         // Cycle through ship models with left/right
         if (input.IsKeyPressed(Keys.Right))
@@ -285,11 +281,11 @@ public class MainMenuScene : GameScene
         // Right-side info panel
         _font.DrawString(spriteBatch, "SPACE: PAUSE   ESC: QUIT   [/]: EDGE   [I]: HIDDEN EDGES", new Vector2(320, 740), Color.Gray, 0.75f);
 
-        if (_paused)
+        if (_lastControl.IsPaused)
             _font.DrawString(spriteBatch, "PAUSED", new Vector2(400, 350), Color.Red, 2f);
 
         // Debug rotation info when paused
-        if (_paused)
+        if (_lastControl.IsPaused)
         {
             var worldToLocal = Matrix.Invert(_world);
             Vector3 shipToCameraLocal = Vector3.TransformNormal(_view.Translation - _world.Translation, worldToLocal);

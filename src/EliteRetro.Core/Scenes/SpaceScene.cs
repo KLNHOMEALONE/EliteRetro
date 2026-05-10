@@ -21,11 +21,10 @@ public class SpaceScene : GameScene
     private BitmapFont _font = null!;
     private GraphicsDevice? _graphicsDevice;
     private IGameContext _gameInstance = null!;
-    private bool _isPaused;
     private IBubbleManager _bubbleManager = null!;
-    private FlightControlService _flightControlService = null!;
     private bool _initialized;
     private float _cumulativeRoll; // accumulated roll angle in radians, for planet/ring counter-rotation
+    private FlightControlState _lastControl;
     private int _debugHighlightedEdge = -1;
 
     public SpaceScene(IGameContext? game = null)
@@ -36,7 +35,6 @@ public class SpaceScene : GameScene
             if (game is GameInstance gi)
                 _bubbleManager = gi.BubbleManager;
         }
-        _flightControlService = new FlightControlService();
     }
 
     public override void LoadContent(ContentManager content, BitmapFont font, GraphicsDevice graphicsDevice)
@@ -103,10 +101,9 @@ public class SpaceScene : GameScene
     public override void Update(GameTime gameTime)
     {
         var input = _gameInstance.Input;
-        var control = _flightControlService.Update(gameTime, input);
-        _isPaused = control.IsPaused;
+        _lastControl = _gameInstance.FlightControl.Update(gameTime, input);
 
-        if (!control.IsPaused)
+        if (!_lastControl.IsPaused)
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -115,8 +112,8 @@ public class SpaceScene : GameScene
             // Signs are set for aircraft-style control (UP = Dive, planet goes UP):
             // Positive Roll (Right) -> rotate universe LEFT (negative rollDelta).
             // Positive Pitch (Up/Climb) -> rotate universe DOWN (negative pitchDelta).
-            float rollDelta = Math.Clamp(control.RollAngle * dt * 60f, -0.1f, 0.1f);
-            float pitchDelta = Math.Clamp(control.PitchAngle * dt * 60f, -0.1f, 0.1f);
+            float rollDelta = Math.Clamp(_lastControl.RollAngle * dt * 60f, -0.1f, 0.1f);
+            float pitchDelta = Math.Clamp(_lastControl.PitchAngle * dt * 60f, -0.1f, 0.1f);
             _bubbleManager.ApplyUniverseRotation(-rollDelta, -pitchDelta);
 
             // Track cumulative roll for planet/ring counter-rotation
@@ -159,7 +156,7 @@ public class SpaceScene : GameScene
             0, 0, 0, 1);
 
         // Debug: cycle highlighted edge with Up/Down when paused
-        if (control.IsPaused)
+        if (_lastControl.IsPaused)
         {
             if (input.IsKeyPressed(Keys.Up))
                 _debugHighlightedEdge = (_debugHighlightedEdge + 1) % 12; // cube has 12 edges
@@ -226,7 +223,7 @@ public class SpaceScene : GameScene
         _font.DrawString(spriteBatch, $"Entities: {_bubbleManager.GetAllActive().Count()}", new Vector2(10, 30), Color.Cyan, 1f);
         _font.DrawString(spriteBatch, $"Cam: ({_view.Translation.X:F1}, {_view.Translation.Y:F1}, {_view.Translation.Z:F1})", new Vector2(10, 300), Color.Magenta, 1f);
         _font.DrawString(spriteBatch, "Arrows: Pitch/Roll  +/-: Zoom  P: Pause  T: Station  V: View", new Vector2(10, 50), Color.White, 1f);
-        if (_isPaused)
+        if (_lastControl.IsPaused)
         {
             _font.DrawString(spriteBatch, "PAUSED", new Vector2(10, 70), Color.Red, 1.5f);
             _font.DrawString(spriteBatch, $"Edge: {_debugHighlightedEdge}  Up/Down: cycle", new Vector2(10, 90), Color.Orange, 1f);

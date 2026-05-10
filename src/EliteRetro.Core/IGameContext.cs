@@ -29,6 +29,9 @@ public interface IGameContext
     /// <summary>Centralized input service.</summary>
     Input.IInputService Input { get; }
 
+    /// <summary>Flight control and movement state service.</summary>
+    Systems.FlightControlService FlightControl { get; }
+
     /// <summary>Player state manager.</summary>
     Managers.IPlayerManager PlayerManager { get; }
 

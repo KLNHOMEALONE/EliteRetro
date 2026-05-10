@@ -70,7 +70,7 @@ SpeedDelta in `FlightControlService` is now applied as a per-second rate.
 | Priority | Task | Target Class | Status |
 |----------|------|--------------|--------|
 | 1 | Decouple Player State from World Manager | `LocalBubbleManager` | **DONE** |
-| 2 | Extract Input to a dedicated service | `FlightScene` | PENDING |
+| 2 | Extract Input to a dedicated service | `FlightScene` | **DONE** |
 | 3 | Implement formal Dependency Injection | `GameInstance` | PENDING |
 | 4 | Add Unit Tests for `OrientationMatrix` | `Tests` | PENDING |
 

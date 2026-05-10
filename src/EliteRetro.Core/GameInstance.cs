@@ -19,6 +19,7 @@ public class GameInstance : Game, IGameContext
     private MainLoopCounter _mcnt = null!;
     private Systems.TaskScheduler _taskScheduler = null!;
     private IAudioManager _audioManager = null!;
+    private Systems.FlightControlService _flightControl = null!;
     private Systems.ICombatService _combatService = null!;
     private Input.IInputService _input = null!;
     private Systems.IExplosionService _explosionService = null!;
@@ -42,6 +43,11 @@ public class GameInstance : Game, IGameContext
     /// Global access to the centralized input service.
     /// </summary>
     public Input.IInputService Input => _input;
+
+    /// <summary>
+    /// Global access to the flight control service.
+    /// </summary>
+    public Systems.FlightControlService FlightControl => _flightControl;
 
     /// <summary>
     /// Main loop counter for frame-spread task scheduling.
@@ -119,6 +125,7 @@ public class GameInstance : Game, IGameContext
     {
         _sceneManager = new SceneManager();
         _input = new Input.InputService();
+        _flightControl = new Systems.FlightControlService();
         _playerManager = new PlayerManager();
         _bubbleManager = new LocalBubbleManager(_playerManager);
         _mcnt = new MainLoopCounter();
