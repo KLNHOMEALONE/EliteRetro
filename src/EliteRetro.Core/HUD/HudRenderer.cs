@@ -77,34 +77,34 @@ public class HudRenderer
         int barY = leftRect.Y + 2;
         int barH = Math.Max(6, barSlotH - 4);
         
-        // Match Legend: Labels are thin, but must fit text. 15% is a better balance.
-        int labelW = Math.Clamp((int)MathF.Round(leftRect.Width * 0.15f), 24, 48);
+        // Match Legend: Labels are thin, but must fit text. 18% is a better balance.
+        int labelW = Math.Clamp((int)MathF.Round(leftRect.Width * 0.18f), 28, 56);
         int gap = 4;
         int innerPad = 4;
         int barMaxW = Math.Max(10, leftRect.Width - labelW - (gap + innerPad) - 4);
 
         float fwdRatio = MathHelper.Clamp(state.ShieldForward / 255f, 0, 1);
-        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(fwdRatio * barMaxW), barMaxW, "FS", font, gap);
+        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(fwdRatio * barMaxW), barMaxW, "FS", font, gap, textCenter: true);
         barY += barSlotH;
 
         float aftRatio = MathHelper.Clamp(state.ShieldAft / 255f, 0, 1);
-        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(aftRatio * barMaxW), barMaxW, "RS", font, gap);
+        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(aftRatio * barMaxW), barMaxW, "RS", font, gap, textCenter: true);
         barY += barSlotH;
 
         float fuelRatio = MathHelper.Clamp(state.Fuel / 70f, 0, 1);
-        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(fuelRatio * barMaxW), barMaxW, "FU", font, gap);
+        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(fuelRatio * barMaxW), barMaxW, "FU", font, gap, textCenter: true);
         barY += barSlotH;
 
         float cabinRatio = MathHelper.Clamp(state.CabinTemp / 255f, 0, 1);
-        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(cabinRatio * barMaxW), barMaxW, "CT", font, gap);
+        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(cabinRatio * barMaxW), barMaxW, "CT", font, gap, textCenter: true);
         barY += barSlotH;
 
         float laserRatio = MathHelper.Clamp(state.LaserTemp / 255f, 0, 1);
-        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(laserRatio * barMaxW), barMaxW, "LT", font, gap);
+        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(laserRatio * barMaxW), barMaxW, "LT", font, gap, textCenter: true);
         barY += barSlotH;
 
         float altRatio = MathHelper.Clamp(state.Altitude / 255f, 0, 1);
-        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(altRatio * barMaxW), barMaxW, "AL", font, gap);
+        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(altRatio * barMaxW), barMaxW, "AL", font, gap, textCenter: true);
         barY += barSlotH;
 
         // Bottom slot: Missile Icon (Label) + Missile Indicators + Lock Box
@@ -159,25 +159,24 @@ public class HudRenderer
     {
         int barY = rightRect.Y + 2;
         int barH = Math.Max(6, barSlotH - 4);
-        int labelW = Math.Clamp((int)MathF.Round(rightRect.Width * 0.15f), 24, 48);
+        int labelW = Math.Clamp((int)MathF.Round(rightRect.Width * 0.18f), 28, 56);
         int gap = 4;
         int innerPad = 4;
         int barMaxW = Math.Max(10, rightRect.Width - labelW - (gap + innerPad) - 4);
 
         float speedRatio = MathHelper.Clamp(state.Speed / GameConstants.SpeedMax, 0, 1);
-        DrawBarH(spriteBatch, rightRect.X + 2, barY, labelW, barH, (int)(speedRatio * barMaxW), barMaxW, "SP", font, gap, textRight: true, labelOnRight: true);
+        DrawBarH(spriteBatch, rightRect.X + 2, barY, labelW, barH, (int)(speedRatio * barMaxW), barMaxW, "SP", font, gap, textCenter: true, labelOnRight: true);
         barY += barSlotH;
 
         float rollNorm = (state.Roll + 1) / 2;
-        DrawBarV(spriteBatch, rightRect.X + 2, barY, labelW, barH, rollNorm, "RL", font, barMaxW, gap, textRight: true, labelOnRight: true);
+        DrawBarV(spriteBatch, rightRect.X + 2, barY, labelW, barH, rollNorm, "RL", font, barMaxW, gap, textCenter: true, labelOnRight: true);
         barY += barSlotH;
 
         float pitchNorm = (state.Pitch + 1) / 2;
-        DrawBarV(spriteBatch, rightRect.X + 2, barY, labelW, barH, pitchNorm, "DC", font, barMaxW, gap, textRight: true, labelOnRight: true);
+        DrawBarV(spriteBatch, rightRect.X + 2, barY, labelW, barH, pitchNorm, "DC", font, barMaxW, gap, textCenter: true, labelOnRight: true);
         barY += barSlotH;
 
         // Slots 1-4: Energy Banks (Additional Shield Units)
-        // state.EnergyBanks is 0-16. Mapping: 16 banks -> 4 units full. 4 banks per bar.
         for (int i = 1; i <= 4; i++)
         {
             float unitBanks = MathHelper.Clamp(state.EnergyBanks - (i - 1) * 4, 0, 4);
@@ -191,8 +190,8 @@ public class HudRenderer
     {
         // Simple graphical missile icon in the label area
         int midY = y + h / 2;
-        int iconW = (int)(w * 0.7f);
-        int iconH = (int)(h * 0.5f);
+        int iconW = (int)(w * 0.8f);
+        int iconH = (int)(h * 0.6f);
         int iconX = x + (w - iconW) / 2;
         int iconY = midY - iconH / 2;
 
@@ -273,6 +272,7 @@ public class HudRenderer
         int barW,
         int gap,
         bool textRight = false,
+        bool textCenter = false,
         bool labelOnRight = false)
     {
         int labelX = labelOnRight ? x + barW + gap : x;
@@ -282,11 +282,15 @@ public class HudRenderer
         if (!string.IsNullOrEmpty(label))
         {
             var lsz = font.MeasureString(label);
-            float textX = textRight ? labelX + labelW - lsz.X - 2 : labelX + 2;
+            float textX = 
+                textCenter ? labelX + (labelW - lsz.X) / 2f :
+                textRight ? labelX + labelW - lsz.X - 2 : 
+                labelX + 2;
             DrawThickText(spriteBatch, font, label,
                 new Vector2(textX, y + (barH - lsz.Y) / 2),
-                LabelText, 1.2f);
+                LabelText, 1.0f);
         }
+
 
         spriteBatch.Draw(_whitePixel, new Rectangle(barX, y, barW, barH), BarBg);
 
