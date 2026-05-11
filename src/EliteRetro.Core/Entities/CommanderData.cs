@@ -114,5 +114,25 @@ public class CommanderData
         LegalStatus = 0;
         CurrentBounty = 0;
         CargoHold.Clear();
+        HasFuelScoops = false;
+        HasECM = false;
+        HasDockingComp = false;
     }
+
+    // --- Equipment Flags ---
+
+    /// <summary>Fuel scoops equipped.</summary>
+    public bool HasFuelScoops { get; set; }
+
+    /// <summary>E.C.M. system equipped.</summary>
+    public bool HasECM { get; set; }
+
+    /// <summary>Docking computer equipped.</summary>
+    public bool HasDockingComp { get; set; }
+
+    /// <summary>Energy bomb equipped.</summary>
+    public bool HasEnergyBomb { get; set; }
+
+    /// <summary>Escape pod equipped.</summary>
+    public bool HasEscapePod { get; set; }
 }

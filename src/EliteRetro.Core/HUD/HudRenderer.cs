@@ -51,21 +51,37 @@ public class HudRenderer
         spriteBatch.Draw(_whitePixel, new Rectangle(rightX - 1, hudRect.Y, 2, hudRect.Height), PanelBorder);
 
         DrawLeftBars(spriteBatch, state, font, new Rectangle(leftX, hudRect.Y, leftW, hudRect.Height), barSlotH);
-        DrawCompass(spriteBatch, state.CompassHeading, font, new Rectangle(centerX, hudRect.Y, centerW, hudRect.Height));
         DrawRightBars(spriteBatch, state, font, new Rectangle(rightX, hudRect.Y, rightW, hudRect.Height), barSlotH);
 
         // Note: top-of-screen overlay (view mode, status, legal, rank)
         // is drawn by the scene so it can be clipped to the view frame.
     }
 
+    /// <summary>
+    /// Draw indicators that sit ON TOP of the scanner area.
+    /// </summary>
+    public void DrawCenterOverlays(SpriteBatch spriteBatch, HUDState state, Rectangle hudRect)
+    {
+        int leftW = (int)MathF.Round(hudRect.Width * 0.25f);
+        int rightW = leftW;
+        int centerW = hudRect.Width - leftW - rightW;
+        int centerX = hudRect.X + leftW;
+        Rectangle centerRect = new Rectangle(centerX, hudRect.Y, centerW, hudRect.Height);
+
+        DrawStatusBulbs(spriteBatch, state, centerRect);
+        DrawSmallCompass(spriteBatch, state.TargetBearing, centerRect);
+    }
+
     private void DrawLeftBars(SpriteBatch spriteBatch, HUDState state, BitmapFont font, Rectangle leftRect, int barSlotH)
     {
         int barY = leftRect.Y + 2;
         int barH = Math.Max(6, barSlotH - 4);
-        int labelW = Math.Clamp((int)MathF.Round(leftRect.Width * 0.14f), 24, 64);
-        int gap = Math.Clamp((int)MathF.Round(leftRect.Width * 0.04f), 6, 18);
-        int innerPad = Math.Clamp((int)MathF.Round(leftRect.Width * 0.02f), 4, 14);
-        int barMaxW = Math.Max(10, leftRect.Width - labelW - (gap + innerPad));
+        
+        // Match Legend: Labels are thin, but must fit text. 15% is a better balance.
+        int labelW = Math.Clamp((int)MathF.Round(leftRect.Width * 0.15f), 24, 48);
+        int gap = 4;
+        int innerPad = 4;
+        int barMaxW = Math.Max(10, leftRect.Width - labelW - (gap + innerPad) - 4);
 
         float fwdRatio = MathHelper.Clamp(state.ShieldForward / 255f, 0, 1);
         DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(fwdRatio * barMaxW), barMaxW, "FS", font, gap);
@@ -91,19 +107,62 @@ public class HudRenderer
         DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(altRatio * barMaxW), barMaxW, "AL", font, gap);
         barY += barSlotH;
 
-        float bankRatio = MathHelper.Clamp(state.EnergyBanks / 16f, 0, 1);
-        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(bankRatio * barMaxW), barMaxW, "EB", font, gap);
+        // Bottom slot: Missile Icon (Label) + Missile Indicators + Lock Box
+        DrawMissileIcon(spriteBatch, leftRect.X + 2, barY, labelW, barH);
+        DrawMissileBar(spriteBatch, leftRect.X + 2 + labelW + gap, barY, barMaxW, barH, state.Missiles, state.TargetLocked);
+    }
 
+    private void DrawMissileBar(SpriteBatch spriteBatch, int x, int y, int w, int h, int count, bool locked)
+    {
+        // Red background for the entire bar
+        spriteBatch.Draw(_whitePixel, new Rectangle(x, y, w, h), BarBg);
+
+        // Lock indicator: square on the far right
+        int lockSize = h - 4;
+        int lockX = x + w - lockSize - 2;
+        int lockY = y + 2;
+        Color lockColor = locked ? Color.White : Color.Black;
+        spriteBatch.Draw(_whitePixel, new Rectangle(lockX, lockY, lockSize, lockSize), lockColor);
+
+        // Vertical missile icons
+        int availableW = w - lockSize - 6;
+        int missileW = Math.Max(4, availableW / 4 - 4);
+        int missileH = h - 6;
+        int spacing = (availableW - (missileW * 4)) / 5;
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (i < count)
+            {
+                int mx = x + spacing + i * (missileW + spacing);
+                int my = y + 3;
+                
+                // Draw vertical missile icon
+                // Body
+                spriteBatch.Draw(_whitePixel, new Rectangle(mx + 1, my + 3, missileW - 2, missileH - 3), Color.White);
+                // Tip
+                DrawLine(spriteBatch, mx + 1, my + 3, mx + missileW / 2, my, Color.White);
+                DrawLine(spriteBatch, mx + missileW - 1, my + 3, mx + missileW / 2, my, Color.White);
+                // Fins
+                spriteBatch.Draw(_whitePixel, new Rectangle(mx, my + missileH - 2, missileW, 2), Color.White);
+            }
+        }
+
+        // Border around bar
+        spriteBatch.Draw(_whitePixel, new Rectangle(x - 1, y + 1, 1, h - 2), PanelBorder);
+        spriteBatch.Draw(_whitePixel, new Rectangle(x + w, y + 1, 1, h - 2), PanelBorder);
+        spriteBatch.Draw(_whitePixel, new Rectangle(x - 1, y + 1, w + 2, 1), PanelBorder);
+        spriteBatch.Draw(_whitePixel, new Rectangle(x - 1, y + h - 2, w + 2, 1), PanelBorder);
     }
 
     private void DrawRightBars(SpriteBatch spriteBatch, HUDState state, BitmapFont font, Rectangle rightRect, int barSlotH)
     {
         int barY = rightRect.Y + 2;
         int barH = Math.Max(6, barSlotH - 4);
-        int labelW = Math.Clamp((int)MathF.Round(rightRect.Width * 0.14f), 24, 64);
-        int gap = Math.Clamp((int)MathF.Round(rightRect.Width * 0.04f), 6, 18);
-        int innerPad = Math.Clamp((int)MathF.Round(rightRect.Width * 0.02f), 4, 14);
-        int barMaxW = Math.Max(10, rightRect.Width - labelW - (gap + innerPad));
+        int labelW = Math.Clamp((int)MathF.Round(rightRect.Width * 0.15f), 24, 48);
+        int gap = 4;
+        int innerPad = 4;
+        int barMaxW = Math.Max(10, rightRect.Width - labelW - (gap + innerPad) - 4);
 
         float speedRatio = MathHelper.Clamp(state.Speed / GameConstants.SpeedMax, 0, 1);
         DrawBarH(spriteBatch, rightRect.X + 2, barY, labelW, barH, (int)(speedRatio * barMaxW), barMaxW, "SP", font, gap, textRight: true, labelOnRight: true);
@@ -117,17 +176,33 @@ public class HudRenderer
         DrawBarV(spriteBatch, rightRect.X + 2, barY, labelW, barH, pitchNorm, "DC", font, barMaxW, gap, textRight: true, labelOnRight: true);
         barY += barSlotH;
 
-        float msRatio = state.MaxMissiles > 0 ? MathHelper.Clamp((float)state.Missiles / state.MaxMissiles, 0, 1) : 0;
-        DrawBarH(spriteBatch, rightRect.X + 2, barY, labelW, barH, (int)(msRatio * barMaxW), barMaxW, "1", font, gap, textCenter: true, labelOnRight: true);
-        barY += barSlotH;
+        // Slots 1-4: Energy Banks (Additional Shield Units)
+        // state.EnergyBanks is 0-16. Mapping: 16 banks -> 4 units full. 4 banks per bar.
+        for (int i = 1; i <= 4; i++)
+        {
+            float unitBanks = MathHelper.Clamp(state.EnergyBanks - (i - 1) * 4, 0, 4);
+            int unitFillW = (int)((unitBanks / 4f) * barMaxW);
+            DrawBarH(spriteBatch, rightRect.X + 2, barY, labelW, barH, unitFillW, barMaxW, i.ToString(), font, gap, textCenter: true, labelOnRight: true);
+            barY += barSlotH;
+        }
+    }
 
-        DrawBarH(spriteBatch, rightRect.X + 2, barY, labelW, barH, barMaxW, barMaxW, "2", font, gap, textCenter: true, labelOnRight: true);
-        barY += barSlotH;
+    private void DrawMissileIcon(SpriteBatch spriteBatch, int x, int y, int w, int h)
+    {
+        // Simple graphical missile icon in the label area
+        int midY = y + h / 2;
+        int iconW = (int)(w * 0.7f);
+        int iconH = (int)(h * 0.5f);
+        int iconX = x + (w - iconW) / 2;
+        int iconY = midY - iconH / 2;
 
-        DrawBarH(spriteBatch, rightRect.X + 2, barY, labelW, barH, barMaxW, barMaxW, "3", font, gap, textCenter: true, labelOnRight: true);
-        barY += barSlotH;
-
-        DrawBarH(spriteBatch, rightRect.X + 2, barY, labelW, barH, barMaxW, barMaxW, "4", font, gap, textCenter: true, labelOnRight: true);
+        // Missile body
+        spriteBatch.Draw(_whitePixel, new Rectangle(iconX, iconY + 2, iconW - 4, iconH - 4), LabelText);
+        // Tip
+        DrawLine(spriteBatch, iconX + iconW - 4, iconY + 2, iconX + iconW, midY, LabelText);
+        DrawLine(spriteBatch, iconX + iconW - 4, iconY + iconH - 2, iconX + iconW, midY, LabelText);
+        // Fins
+        spriteBatch.Draw(_whitePixel, new Rectangle(iconX, iconY, 2, iconH), LabelText);
     }
 
     /// <summary>
@@ -234,62 +309,92 @@ public class HudRenderer
         spriteBatch.Draw(_whitePixel, new Rectangle(centerX - 1, y + 2, 1, barH - 4), AmberDim);
     }
 
+    private void DrawStatusBulbs(SpriteBatch spriteBatch, HUDState state, Rectangle centerRect)
+    {
+        // Bulbs are positioned in the top-left area of the center panel
+        // Use a unified radius for both bulb and compass for balance
+        int unifiedRadius = Math.Max(8, (int)(centerRect.Height * 0.12f));
+        
+        // Match Legend: Push further toward the top-left corner
+        int bulbX = centerRect.X + (int)(centerRect.Width * 0.08f);
+        int bulbY = centerRect.Y + (int)(centerRect.Height * 0.15f);
+
+        // Status bulb (Green/Red/Yellow based on danger/station)
+        Color statusColor = state.StationInView ? Color.Yellow : Color.Lime;
+        DrawCircleFilled(spriteBatch, bulbX, bulbY, unifiedRadius, statusColor);
+
+        // Fuel scoop / Docking bulb (Yellow icon below status)
+        if (state.HasFuelScoop || state.HasDockingComputer)
+        {
+            int iconY = bulbY + unifiedRadius + 10;
+            // Draw a simple "canister" shape for scoop
+            spriteBatch.Draw(_whitePixel, new Rectangle(bulbX - (int)(unifiedRadius * 0.6f), iconY, (int)(unifiedRadius * 1.2f), (int)(unifiedRadius * 1.2f)), Color.Yellow);
+            // "Top" of the canister
+            spriteBatch.Draw(_whitePixel, new Rectangle(bulbX - (int)(unifiedRadius * 0.8f), iconY - 2, (int)(unifiedRadius * 1.6f), 3), Color.Yellow);
+        }
+    }
+
+    private void DrawSmallCompass(SpriteBatch spriteBatch, Vector2 bearing, Rectangle centerRect)
+    {
+        // Small compass is a circle with a dot in the top-right area
+        int unifiedRadius = Math.Max(8, (int)(centerRect.Height * 0.12f));
+        
+        // Match Legend: Push further toward the top-right corner
+        int compX = centerRect.Right - (int)(centerRect.Width * 0.08f);
+        int compY = centerRect.Y + (int)(centerRect.Height * 0.15f);
+
+        // Compass outline
+        DrawCircleOutline(spriteBatch, compX, compY, unifiedRadius, Color.White);
+        
+        // Target dot: bearing is -1 to 1 on both axes
+        float dist = bearing.Length();
+        Vector2 clampedBearing = bearing;
+        if (dist > 1.0f) clampedBearing /= dist;
+        
+        int dotX = compX + (int)(clampedBearing.X * (unifiedRadius - 4));
+        int dotY = compY + (int)(clampedBearing.Y * (unifiedRadius - 4));
+        int dotSize = Math.Max(2, unifiedRadius / 4);
+        
+        spriteBatch.Draw(_whitePixel, new Rectangle(dotX - dotSize / 2, dotY - dotSize / 2, dotSize, dotSize), Color.White);
+    }
+
+    private void DrawCircleFilled(SpriteBatch spriteBatch, int cx, int cy, int radius, Color color)
+    {
+        // Simple filled circle via overlapping rectangles
+        for (int y = -radius; y <= radius; y++)
+        {
+            int x = (int)MathF.Sqrt(radius * radius - y * y);
+            spriteBatch.Draw(_whitePixel, new Rectangle(cx - x, cy + y, x * 2, 1), color);
+        }
+    }
+
+    private void DrawCircleOutline(SpriteBatch spriteBatch, int cx, int cy, int radius, Color color)
+    {
+        const int segments = 24;
+        for (int i = 0; i < segments; i++)
+        {
+            float a1 = (i / (float)segments) * MathF.Tau;
+            float a2 = ((i + 1) / (float)segments) * MathF.Tau;
+            int x1 = cx + (int)(MathF.Cos(a1) * radius);
+            int y1 = cy + (int)(MathF.Sin(a1) * radius);
+            int x2 = cx + (int)(MathF.Cos(a2) * radius);
+            int y2 = cy + (int)(MathF.Sin(a2) * radius);
+            DrawLine(spriteBatch, x1, y1, x2, y2, color);
+        }
+    }
+
+    private void DrawLine(SpriteBatch spriteBatch, int x1, int y1, int x2, int y2, Color color)
+    {
+        Vector2 edge = new Vector2(x2 - x1, y2 - y1);
+        float angle = MathF.Atan2(edge.Y, edge.X);
+        spriteBatch.Draw(_whitePixel, new Vector2(x1, y1), null, color, angle, Vector2.Zero, new Vector2(edge.Length(), 1), SpriteEffects.None, 0);
+    }
+
     private static void DrawThickText(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 pos, Color color, float scale)
     {
         // Bitmap font has no bold; emulate thickness with 1px overdraw.
         font.DrawString(spriteBatch, text, pos, color, scale);
         font.DrawString(spriteBatch, text, pos + new Vector2(1, 0), color, scale);
         font.DrawString(spriteBatch, text, pos + new Vector2(0, 1), color, scale);
-    }
-
-    private void DrawCompass(SpriteBatch spriteBatch, float heading, BitmapFont font, Rectangle centerRect)
-    {
-        spriteBatch.Draw(_whitePixel, new Rectangle(centerRect.X + 1, centerRect.Y + 1, centerRect.Width - 2, centerRect.Height - 2), new Color(12, 10, 8));
-
-        float twoPi = MathHelper.TwoPi;
-        heading = (heading % twoPi + twoPi) % twoPi;
-
-        string[] dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
-        int segW = Math.Max(1, centerRect.Width / 8);
-        int segH = Math.Max(1, centerRect.Height / 8);
-
-        for (int row = 0; row < 8; row++)
-        {
-            for (int col = 0; col < 8; col++)
-            {
-                int sx = centerRect.X + 5 + col * segW;
-                int sy = centerRect.Y + 5 + row * segH;
-                Color c = (row + col) % 2 == 0 ? new Color(18, 16, 10) : new Color(22, 20, 12);
-                spriteBatch.Draw(_whitePixel, new Rectangle(sx, sy, segW - 1, segH - 1), c);
-            }
-        }
-
-        for (int i = 0; i < 8; i++)
-        {
-            int segCx = centerRect.X + i * segW + segW / 2;
-            int segCy = centerRect.Y + segH / 2;
-            var dsz = font.MeasureString(dirs[i]);
-            font.DrawString(spriteBatch, dirs[i],
-                new Vector2(segCx - dsz.X / 2, segCy - dsz.Y / 2), AmberDim, 0.7f);
-        }
-
-        int midX = centerRect.X + centerRect.Width / 2;
-        int midY = centerRect.Y + centerRect.Height / 2;
-        spriteBatch.Draw(_whitePixel, new Rectangle(midX - 1, centerRect.Y + 5, 2, centerRect.Height - 10), AmberDim);
-        spriteBatch.Draw(_whitePixel, new Rectangle(centerRect.X + 5, midY - 1, centerRect.Width - 10, 2), AmberDim);
-
-        spriteBatch.Draw(_whitePixel, new Rectangle(midX - 3, centerRect.Y + 7, 1, 8), Amber);
-        spriteBatch.Draw(_whitePixel, new Rectangle(midX + 2, centerRect.Y + 7, 1, 8), Amber);
-
-        int seg = (int)((heading / twoPi) * 8 + 0.5f) % 8;
-        int hlX = centerRect.X + seg * segW;
-        spriteBatch.Draw(_whitePixel, new Rectangle(hlX + 5, centerRect.Y + 5, segW - 1, centerRect.Height - 10), new Color(30, 25, 10));
-
-        var hlDsz = font.MeasureString(dirs[seg]);
-        font.DrawString(spriteBatch, dirs[seg],
-            new Vector2(hlX + segW / 2 - hlDsz.X / 2, centerRect.Y + centerRect.Height / 2 - hlDsz.Y / 2), Amber, 0.8f);
-
-        font.DrawString(spriteBatch, "COMPASS",
-            new Vector2(midX - 25, centerRect.Y + centerRect.Height - 25), AmberDim, 0.6f);
     }
 }

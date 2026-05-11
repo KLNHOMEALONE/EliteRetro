@@ -68,73 +68,8 @@ public class ScannerRenderer
         // White ellipse outline (solid)
         DrawEllipse(spriteBatch, centerX, centerY, radiusX, radiusY, Color.White);
 
-        // Sun indicator: small circle in upper left area
-        DrawSunIndicator(spriteBatch, bubbleManager, centerX, centerY, radiusX, radiusY);
-
-        // Station indicator: circle with square in upper right area
-        DrawStationIndicator(spriteBatch, bubbleManager, centerX, centerY, radiusX, radiusY);
-
         // Ship contacts (transformed by universe orientation)
         DrawContacts(spriteBatch, bubbleManager, playerSlot, universeOrientation, centerX, centerY, radiusX, radiusY);
-    }
-
-    /// <summary>
-    /// Draw sun indicator: small circle in upper left.
-    /// Shows sun direction when sun is present (not replaced by station).
-    /// </summary>
-    private void DrawSunIndicator(SpriteBatch spriteBatch, IBubbleManager bubbleManager, int centerX, int centerY, int radiusX, int radiusY)
-    {
-        var sun = bubbleManager.SunOrStation;
-        if (sun == null || sun.Blueprint?.Name != "Sun")
-            return;
-
-        // Position: upper left area of scanner, proportional to ellipse size
-        int indX = centerX - radiusX + (int)(radiusX * 0.25f);
-        int indY = centerY - radiusY + (int)(radiusY * 0.35f);
-        int radius = (int)(MathF.Min(radiusX, radiusY) * 0.18f);
-
-        // Circle outline in orange/yellow
-        DrawCircleOutline(spriteBatch, indX, indY, radius, Color.Orange);
-
-        // Larger dot in center
-        int dotSize = Math.Max(2, radius / 4);
-        spriteBatch.Draw(_whitePixel, new Rectangle(indX - dotSize, indY - dotSize, dotSize * 2, dotSize * 2), Color.Yellow);
-    }
-
-    /// <summary>
-    /// Draw station indicator: circle with square (Coriolis symbol).
-    /// Filled square = station ahead (in safe zone), outlined = station behind.
-    /// </summary>
-    private void DrawStationIndicator(SpriteBatch spriteBatch, IBubbleManager bubbleManager, int centerX, int centerY, int radiusX, int radiusY)
-    {
-        var station = bubbleManager.SunOrStation;
-        if (station == null || station.Blueprint?.Name != "Coriolis Station")
-            return;
-
-        // Position: upper right area of scanner, inside ellipse, proportional to size
-        int indX = centerX + radiusX - (int)(radiusX * 0.25f);
-        int indY = centerY - radiusY + (int)(radiusY * 0.35f);
-        int radius = (int)(MathF.Min(radiusX, radiusY) * 0.20f);
-        int sqSize = (int)(radius * 1.2f);
-
-        // Circle outline
-        DrawCircleOutline(spriteBatch, indX, indY, radius, Color.Cyan);
-
-        // Square: filled if station is ahead (in safe zone), outlined if behind
-        bool inSafeZone = bubbleManager.IsInSafeZone();
-        if (inSafeZone)
-        {
-            // Filled square
-            spriteBatch.Draw(_whitePixel, new Rectangle(indX - sqSize / 2, indY - sqSize / 2, sqSize, sqSize), Color.Cyan);
-        }
-        else
-        {
-            // Outlined square (2px thick lines)
-            spriteBatch.Draw(_whitePixel, new Rectangle(indX - sqSize / 2, indY - sqSize / 2, sqSize, 2), Color.Cyan); // top
-            spriteBatch.Draw(_whitePixel, new Rectangle(indX - sqSize / 2, indY + sqSize / 2 - 2, sqSize, 2), Color.Cyan); // bottom
-            spriteBatch.Draw(_whitePixel, new Rectangle(indX - sqSize / 2, indY - sqSize / 2, 2, sqSize), Color.Cyan); // left
-            spriteBatch.Draw(_whitePixel, new Rectangle(indX + sqSize / 2 - 2, indY - sqSize / 2, 2, sqSize), Color.Cyan); // right
-        }
     }
 
     /// <summary>
@@ -222,12 +157,12 @@ public class ScannerRenderer
     /// Returns the dot position and stick base for rendering.
     ///
     /// Follows BBC Elite's SCAN routine conventions (https://elite.bbcelite.com/deep_dives/the_3d_scanner.html):
-    ///   X1 = center + x_hi          (lateral: right of player → right on scanner)
-    ///   SC = center - z_hi / 4      (depth: ahead of player → top of scanner)
-    ///   A  = -(y_hi / 2)            (altitude: above player → stick goes up from base)
+    ///   X1 = center + x_hi          (lateral: right of player -> right on scanner)
+    ///   SC = center - z_hi / 4      (depth: ahead of player -> top of scanner)
+    ///   A  = -(y_hi / 2)            (altitude: above player -> stick goes up from base)
     ///
-    /// The original BBC Elite scanner was 138×36 pixels with x_hi in [-63, 63].
-    /// This scanner is larger (RadiusX×2 by RadiusY×2), so all three axes are
+    /// The original BBC Elite scanner was 138x36 pixels with x_hi in [-63, 63].
+    /// This scanner is larger (RadiusX*2 by RadiusY*2), so all three axes are
     /// proportionally scaled to fill the ellipse while preserving the BBC Elite
     /// depth-to-lateral ratio (1:4) and altitude-to-lateral ratio (1:2).
     /// </summary>
@@ -244,17 +179,17 @@ public class ScannerRenderer
         yHi = Math.Clamp(yHi, -MaxRange, MaxRange);
         zHi = Math.Clamp(zHi, -MaxRange, MaxRange);
 
-        // Lateral position: positive X (right of player) → right on scanner
+        // Lateral position: positive X (right of player) -> right on scanner
         // Matches BBC Elite: X1 = 123 + x_hi, scaled to our scanner width
         int screenX = centerX + (int)(xHi * (radiusX / (float)MaxRange));
 
-        // Depth position: positive Z (ahead of player) → top of scanner (smaller Y)
+        // Depth position: positive Z (ahead of player) -> top of scanner (smaller Y)
         // BBC Elite: SC = 220 - z_hi/4, where z_hi/4 spans ~88% of the 18-pixel half-height.
         // We scale depth to fill the same proportion of our larger scanner.
         float depthScale = radiusY * 0.875f / MaxRange;
         int stickBaseY = centerY - (int)(zHi * depthScale);
 
-        // Altitude (stick height): positive Y (above player) → negative stick (dot above base)
+        // Altitude (stick height): positive Y (above player) -> negative stick (dot above base)
         // BBC Elite: A = -(y_hi/2). Stick sensitivity is 2x depth sensitivity.
         float stickScale = depthScale * 2f;
         int stickHeight = -(int)(yHi * stickScale);

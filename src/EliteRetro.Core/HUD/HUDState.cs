@@ -33,6 +33,14 @@ public struct HUDState
     // ECM
     public int ECMBulbs;          // 0-3 (number of active bulbs)
 
+    // Status indicators
+    public bool HasFuelScoop;      // Show yellow scoop bulb
+    public bool HasECM;            // Show green status bulb (active/passive)
+    public bool HasDockingComputer; // Show docking icon
+    public bool StationInView;     // Influence status bulb color
+    public Vector2 TargetBearing;  // Relative position for the small compass dot (-1 to 1)
+    public bool TargetLocked;      // Whether a missile lock is acquired
+
     // Text indicators
     public string ViewMode;       // "FRONT"/"REAR"/"LEFT"/"RIGHT"
     public string StatusMessage;  // "STATION IN VIEW", "DANGER", etc.

@@ -84,7 +84,55 @@ public class HudService : IHudService
             _ => "FRONT"
         };
 
-        // 4. Assemble HUDState
+        // 4. Space Compass Bearing
+        Vector2 bearing = Vector2.Zero;
+        var target = bubbleManager.SunOrStation;
+        if (target != null)
+        {
+            // Space Compass is a 2D projection of the 3D unit vector to the target in player's local frame
+            // Player is always at origin looking at Z+ ahead in local space after rotation.
+            // But we already have the target position in bubble-space which IS rotated relative to player.
+            // Z+ is ahead, X+ is right, Y+ is up.
+            Vector3 rel = target.Position;
+            
+            if (rel.Length() > 1f)
+            {
+                Vector3 norm = Vector3.Normalize(rel);
+                bearing = new Vector2(norm.X, -norm.Y); // Y is up in world, but down on screen
+            }
+        }
+
+        // 5. Missile Lock Detection
+        bool targetLocked = false;
+        if (playerManager.Missiles > 0)
+        {
+            // Simple lock logic: any ship (not sun/planet) within 600m and near center view
+            // Using logic similar to CombatService hit detection
+            Vector3 forward = viewMode switch 
+            { 
+                0 => new Vector3(0, 0, 1), 
+                1 => new Vector3(0, 0, -1), 
+                2 => new Vector3(-1, 0, 0), 
+                3 => new Vector3(1, 0, 0), 
+                _ => new Vector3(0, 0, 1) 
+            };
+
+            foreach (var entity in bubbleManager.GetActiveShips()) 
+            { 
+                float distSq = entity.Position.LengthSquared(); 
+                if (distSq > 600 * 600) continue; 
+
+                float dist = (float)Math.Sqrt(distSq);
+                float dot = (dist < 5.0f) ? 1.0f : Vector3.Dot(forward, entity.Position / dist); 
+                if (dot >= 0.95f) 
+                { 
+                    targetLocked = true;
+                    break;
+                } 
+            }
+        }
+
+        // 6. Assemble HUDState
         return new HUDState
         {
             Speed = playerSpeed,
@@ -94,15 +142,21 @@ public class HudService : IHudService
             CabinTemp = 0,
             LaserTemp = 0,
             Altitude = altitude,
-            EnergyBanks = 0,
+            EnergyBanks = (int)MathF.Ceiling(playerManager.Ship.Shields / 16f), // Map 255 shields to ~16 banks
             Missiles = playerManager.Missiles,
             MaxMissiles = 4,
-            ShieldForward = playerManager.Ship.Energy, // Simplified mapping as baseline
-            ShieldAft = playerManager.Ship.Energy,
+            ShieldForward = playerManager.ShieldFront,
+            ShieldAft = playerManager.ShieldAft,
             Pitch = pitchRate,
             Roll = rollRate,
             CompassHeading = cumulativeRoll,
             ECMBulbs = 0,
+            HasFuelScoop = playerManager.Commander.HasFuelScoops,
+            HasECM = playerManager.Commander.HasECM,
+            HasDockingComputer = playerManager.Commander.HasDockingComp,
+            StationInView = bubbleManager.SunOrStation?.Blueprint?.Name == "Coriolis Station",
+            TargetBearing = bearing,
+            TargetLocked = targetLocked,
             ViewMode = viewModeName,
             StatusMessage = eventMessageTimer > 0 ? eventMessage : statusMsg,
             StatusColor = eventMessageTimer > 0 ? Color.Gold : statusColor,

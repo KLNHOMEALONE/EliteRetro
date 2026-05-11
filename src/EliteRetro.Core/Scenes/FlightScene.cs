@@ -386,6 +386,9 @@ public class FlightScene : GameScene
         int leftW = (int)MathF.Round(hudRect.Width * 0.25f);
         _scannerRenderer.Draw(spriteBatch, _bubbleManager, GameConstants.PlayerSlot, _universeOrientation, new Rectangle(hudRect.X + leftW, hudRect.Y, hudRect.Width - leftW * 2, hudRect.Height));
 
+        // Draw overlays (bulbs, compass) ON TOP of scanner
+        _hudRenderer.DrawCenterOverlays(spriteBatch, hudState, hudRect);
+
         var msg = _gameInstance.Messages.GeneralMessage;
         if (_gameInstance.Messages.GeneralTimer > 0 && !string.IsNullOrEmpty(msg))
         {
