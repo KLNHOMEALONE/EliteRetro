@@ -36,11 +36,18 @@ public class CommanderData
     /// <summary>Current bounty on player's head (in credits).</summary>
     public int CurrentBounty { get; set; }
 
-    /// <summary>Fuel level (0-70). Each unit = 1 light-year jump capacity.</summary>
-    public int Fuel { get; set; } = 35;
+    /// <summary>
+    /// Fuel level (0-70). Stored as a fixed-point byte where 1 unit = 0.1 light-years,
+    /// matching the authentic BBC Elite format. The maximum value of 70 represents a
+    /// full tank of 7.0 light-years of hyperspace range.
+    /// </summary>
+    public int Fuel { get; set; } = 70;
 
-    /// <summary>Cargo capacity in tons. Default 10.</summary>
-    public int CargoCapacity { get; set; } = 10;
+    /// <summary>
+    /// Cargo capacity in tons. Default 20 for the Cobra Mk III,
+    /// matching the authentic BBC Elite commander file format (CRGO at offset 0x15).
+    /// </summary>
+    public int CargoCapacity { get; set; } = 20;
 
     /// <summary>Cargo hold (commodity index → tons).</summary>
     public Dictionary<int, int> CargoHold { get; } = new();
