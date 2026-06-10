@@ -24,17 +24,16 @@ public class ScannerRenderer
 
     public void Draw(SpriteBatch spriteBatch, IBubbleManager bubbleManager, int playerSlot, OrientationMatrix universeOrientation, Rectangle centerPanelRect)
     {
-        // Derive scanner geometry from available center panel area.
-        // Keep a wide ellipse like the original, but responsive to panel size.
-        // Scale down by 1.2 for a more compact display
-        float scaleDown = 1f / 1.2f;
+        // Derive scanner geometry from the center panel area, proportioned like the
+        // Legend reference: ellipse spans ~76% of the panel width and ~64% of its
+        // height, with its center pushed slightly below the panel middle (the bulb
+        // and compass occupy the top corners).
         int centerX = centerPanelRect.X + centerPanelRect.Width / 2;
-        int centerY = centerPanelRect.Y + centerPanelRect.Height / 2;
-        int pad = Math.Clamp((int)MathF.Round(MathF.Min(centerPanelRect.Width, centerPanelRect.Height) * 0.06f), 6, 18);
-        int maxRx = Math.Max(10, centerPanelRect.Width / 2 - pad);
-        int maxRy = Math.Max(8, centerPanelRect.Height / 2 - pad);
-        int radiusX = (int)(Math.Clamp((int)MathF.Round(centerPanelRect.Width * 0.47f), 10, maxRx) * scaleDown);
-        int radiusY = (int)(Math.Clamp((int)MathF.Round(centerPanelRect.Height * 0.42f), 8, maxRy) * scaleDown);
+        int centerY = centerPanelRect.Y + (int)(centerPanelRect.Height * 0.58f);
+        int radiusX = Math.Max(10, (int)(centerPanelRect.Width * 0.38f));
+        int radiusY = Math.Max(8, (int)(centerPanelRect.Height * 0.32f));
+        // Keep the ellipse inside the panel
+        radiusY = Math.Min(radiusY, centerPanelRect.Bottom - centerY - 4);
         _currentRadiusX = radiusX;
 
         // Black background for scanner area
@@ -43,8 +42,8 @@ public class ScannerRenderer
         if (bg.Width > 0 && bg.Height > 0)
             spriteBatch.Draw(_whitePixel, bg, Color.Black);
 
-        // Dashed grey grid lines
-        Color gridColor = new Color(80, 80, 80);
+        // Dotted silver-white grid lines (the reference grid is dotted, not dim grey)
+        Color gridColor = new Color(200, 200, 200);
         // 3 horizontal lines
         int topWidth = (int)(radiusX * MathF.Sqrt(Math.Max(0, 1 - (radiusY * radiusY / 4f) / (radiusY * radiusY))));
         DrawDashedLine(spriteBatch, centerX - topWidth, centerY - radiusY / 2, centerX + topWidth, centerY - radiusY / 2, gridColor);
@@ -65,8 +64,8 @@ public class ScannerRenderer
         DrawDashedLine(spriteBatch, centerX, centerY, (int)(centerX + wXInner), (int)wPeakY, gridColor);
         DrawDashedLine(spriteBatch, (int)(centerX + wXInner), (int)wPeakY, centerX + bottomLineHalfWidth, (int)wBottom, gridColor);
 
-        // White ellipse outline (solid)
-        DrawEllipse(spriteBatch, centerX, centerY, radiusX, radiusY, Color.White);
+        // White ellipse outline (dotted, like the Legend reference)
+        DrawDottedEllipse(spriteBatch, centerX, centerY, radiusX, radiusY, Color.White);
 
         // Ship contacts (transformed by universe orientation)
         DrawContacts(spriteBatch, bubbleManager, playerSlot, universeOrientation, centerX, centerY, radiusX, radiusY);
@@ -92,20 +91,22 @@ public class ScannerRenderer
         }
     }
 
-    private void DrawEllipse(SpriteBatch spriteBatch, int cx, int cy, int rx, int ry, Color color)
+    private void DrawDottedEllipse(SpriteBatch spriteBatch, int cx, int cy, int rx, int ry, Color color)
     {
-        const int segments = 36;
-        for (int i = 0; i < segments; i++)
+        // Dot size and spacing scale with the scanner so the dotted look holds at any resolution.
+        float scale = MathF.Max(0.5f, MathF.Min(2f, rx / 180f)); // 180 = reference radiusX at 1024x768
+        int dotSize = Math.Max(2, (int)MathF.Round(2f * scale));
+        float spacing = 7f * scale;
+
+        // Ramanujan approximation of ellipse perimeter to space dots evenly.
+        float perimeter = MathF.PI * (3f * (rx + ry) - MathF.Sqrt((3f * rx + ry) * (rx + 3f * ry)));
+        int dots = Math.Max(24, (int)(perimeter / spacing));
+        for (int i = 0; i < dots; i++)
         {
-            float a1 = (i / (float)segments) * MathF.Tau;
-            float a2 = ((i + 1) / (float)segments) * MathF.Tau;
-
-            int x1 = cx + (int)(MathF.Cos(a1) * rx);
-            int y1 = cy + (int)(MathF.Sin(a1) * ry);
-            int x2 = cx + (int)(MathF.Cos(a2) * rx);
-            int y2 = cy + (int)(MathF.Sin(a2) * ry);
-
-            DrawLine(spriteBatch, x1, y1, x2, y2, color);
+            float a = (i / (float)dots) * MathF.Tau;
+            int x = cx + (int)(MathF.Cos(a) * rx);
+            int y = cy + (int)(MathF.Sin(a) * ry);
+            spriteBatch.Draw(_whitePixel, new Rectangle(x - dotSize / 2, y - dotSize / 2, dotSize, dotSize), color);
         }
     }
 
@@ -132,8 +133,10 @@ public class ScannerRenderer
         float refRadiusX = 180f;
         float scale = MathF.Max(0.5f, MathF.Min(2f, _currentRadiusX / refRadiusX));
 
-        float dashLen = 6f * scale;
-        float gapLen = 4f * scale;
+        // Short dashes with wide gaps read as a dotted line, like the reference grid.
+        float dashLen = 2.5f * scale;
+        float gapLen = 4.5f * scale;
+        int strokeTh = Math.Max(1, (int)MathF.Round(2f * scale)); // line thickness scales with scanner size
         float pos = 0f;
         bool dash = true;
 
@@ -144,7 +147,7 @@ public class ScannerRenderer
             {
                 int sx = x1 + (int)(dir.X * pos);
                 int sy = y1 + (int)(dir.Y * pos);
-                spriteBatch.Draw(_whitePixel, new Rectangle(sx, sy, (int)segLen, 1), null, color, angle, Vector2.Zero, SpriteEffects.None, 0f);
+                spriteBatch.Draw(_whitePixel, new Rectangle(sx, sy, (int)segLen, strokeTh), null, color, angle, Vector2.Zero, SpriteEffects.None, 0f);
             }
             pos += segLen;
             dash = !dash;

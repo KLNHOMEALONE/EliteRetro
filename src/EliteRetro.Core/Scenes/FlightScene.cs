@@ -20,9 +20,6 @@ namespace EliteRetro.Core.Scenes;
 public class FlightScene : GameScene
 {
     private const float RenderScale = 0.001f; // Elite internal units -> MonoGame world units
-    private const int EventMsgX = 300;
-    private const int EventMsgY = 350;
-    private const int MilestoneMsgY = 200;
     private WireframeRenderer _wireframeRenderer = null!;
     private CircleRenderer _circleRenderer = null!;
     private HudRenderer _hudRenderer = null!;
@@ -57,14 +54,11 @@ public class FlightScene : GameScene
     private bool _planetHit;
     private float _lastMoveStep;
     private float _lastDt;
-    private float _prevPlanetDist;
-    private float _prevPlanetZ;
-    private float _planetDistDelta;
-    private float _planetZDelta;
     private int _lastBackBufferW;
     private int _lastBackBufferH;
     private int _lastViewH;
-    private const float HudHeightFraction = 0.34f; // ~1/3 of screen for HUD panel
+    private const float HudHeightFraction = 0.28f; // dashboard height, matches Legend reference proportions
+    private static readonly Color EliteGreen = new Color(0, 210, 0); // authentic green for reticle and view title
     private readonly RasterizerState _scissorRasterizer = new RasterizerState { ScissorTestEnable = true };
 
     public FlightScene(IGameContext? game = null, GalaxySeed? systemSeed = null)
@@ -340,14 +334,17 @@ public class FlightScene : GameScene
             spriteBatch.Draw(_whitePixel, viewContentRect, new Color(255, 0, 0, (int)alpha));
         }
 
+        // Green crosshair: four tick marks with a gap at the center (matches Legend
+        // reference — no circle, the circle in the reference image is a planet).
+        // All sizes derive from the view height so the crosshair scales with resolution.
         int cx = (int)screenCenter.X, cy = (int)screenCenter.Y;
-        const int inner = 16, outer = 48;
-        var crossColor = Color.White;
-        spriteBatch.Draw(_whitePixel, new Rectangle(cx - 1, cy - 1, 2, 2), crossColor);
-        spriteBatch.Draw(_whitePixel, new Rectangle(cx - 1, cy - outer, 2, outer - inner), crossColor);
-        spriteBatch.Draw(_whitePixel, new Rectangle(cx - 1, cy + inner, 2, outer - inner), crossColor);
-        spriteBatch.Draw(_whitePixel, new Rectangle(cx - outer, cy - 1, outer - inner, 2), crossColor);
-        spriteBatch.Draw(_whitePixel, new Rectangle(cx + inner, cy - 1, outer - inner, 2), crossColor);
+        int tickInner = Math.Max(8, (int)(viewContentRect.Height * 0.045f));
+        int tickOuter = Math.Max(tickInner + 8, (int)(viewContentRect.Height * 0.13f));
+        int lineTh = Math.Max(2, viewContentRect.Height / 180);
+        spriteBatch.Draw(_whitePixel, new Rectangle(cx - lineTh / 2, cy - tickOuter, lineTh, tickOuter - tickInner), EliteGreen);
+        spriteBatch.Draw(_whitePixel, new Rectangle(cx - lineTh / 2, cy + tickInner, lineTh, tickOuter - tickInner), EliteGreen);
+        spriteBatch.Draw(_whitePixel, new Rectangle(cx - tickOuter, cy - lineTh / 2, tickOuter - tickInner, lineTh), EliteGreen);
+        spriteBatch.Draw(_whitePixel, new Rectangle(cx + tickInner, cy - lineTh / 2, tickOuter - tickInner, lineTh), EliteGreen);
 
         if (_gameInstance.Combat.LaserFlashTimer > 0)
         {
@@ -383,56 +380,45 @@ public class FlightScene : GameScene
 
         _hudRenderer.Draw(spriteBatch, hudState, _font, hudRect, screenRect);
 
-        int leftW = (int)MathF.Round(hudRect.Width * 0.25f);
-        _scannerRenderer.Draw(spriteBatch, _bubbleManager, GameConstants.PlayerSlot, _universeOrientation, new Rectangle(hudRect.X + leftW, hudRect.Y, hudRect.Width - leftW * 2, hudRect.Height));
+        int sideW = (int)MathF.Round(hudRect.Width * HudRenderer.SideFraction);
+        _scannerRenderer.Draw(spriteBatch, _bubbleManager, GameConstants.PlayerSlot, _universeOrientation, new Rectangle(hudRect.X + sideW, hudRect.Y, hudRect.Width - sideW * 2, hudRect.Height));
 
         // Draw overlays (bulbs, compass) ON TOP of scanner
         _hudRenderer.DrawCenterOverlays(spriteBatch, hudState, hudRect);
 
+        // Message positions are proportional to the screen so they work at any resolution.
         var msg = _gameInstance.Messages.GeneralMessage;
         if (_gameInstance.Messages.GeneralTimer > 0 && !string.IsNullOrEmpty(msg))
         {
             bool isMilestone = msg == "RIGHT ON COMMANDER!";
             var msgSize = _font.MeasureString(msg);
-            _font.DrawString(spriteBatch, $">> {msg}", new Vector2(isMilestone ? (screenRect.Width - msgSize.X) / 2 : EventMsgX, isMilestone ? MilestoneMsgY : EventMsgY), isMilestone ? Color.Gold : Color.Yellow, isMilestone ? 2.0f : 1.2f);
+            float eventX = isMilestone ? (screenRect.Width - msgSize.X * 2.0f) / 2 : screenRect.Width * 0.29f;
+            float eventY = screenRect.Height * (isMilestone ? 0.26f : 0.46f);
+            _font.DrawString(spriteBatch, $">> {msg}", new Vector2(eventX, eventY), isMilestone ? Color.Gold : Color.Yellow, isMilestone ? 2.0f : 1.2f);
         }
-        
+
         var saveMsg = _gameInstance.Messages.StatusMessage;
         if (_gameInstance.Messages.StatusTimer > 0 && !string.IsNullOrEmpty(saveMsg))
         {
-            _font.DrawString(spriteBatch, saveMsg, new Vector2(400, 380), Color.Green, 1.4f);
+            var saveSize = _font.MeasureString(saveMsg);
+            _font.DrawString(spriteBatch, saveMsg, new Vector2((screenRect.Width - saveSize.X * 1.4f) / 2, screenRect.Height * 0.49f), Color.Green, 1.4f);
         }
-        
-        if (_lastControl.IsPaused) _font.DrawString(spriteBatch, "PAUSED", new Vector2(400, 350), Color.Red, 2f);
+
+        if (_lastControl.IsPaused)
+        {
+            var pausedSize = _font.MeasureString("PAUSED");
+            _font.DrawString(spriteBatch, "PAUSED", new Vector2((screenRect.Width - pausedSize.X * 2f) / 2, screenRect.Height * 0.45f), Color.Red, 2f);
+        }
     }
 
     private void DrawViewOverlay(SpriteBatch spriteBatch, Rectangle viewContentRect)
     {
-        var viewLabel = _viewMode switch { 0 => "FRONT", 1 => "REAR", 2 => "LEFT", 3 => "RIGHT", _ => "FRONT" };
+        // Clean view like the Legend reference: only the view title, mixed case, green.
+        var viewLabel = _viewMode switch { 0 => "Front View", 1 => "Rear View", 2 => "Left View", 3 => "Right View", _ => "Front View" };
+        const float titleScale = 1.5f;
         var labelSz = _font.MeasureString(viewLabel);
-        float labelX = viewContentRect.X + (viewContentRect.Width - labelSz.X) / 2;
-        float y = viewContentRect.Y + 10;
-        _font.DrawString(spriteBatch, viewLabel, new Vector2(labelX, y), Color.Green, 1.5f);
-        float x = viewContentRect.X + 10;
-        var commander = _gameInstance.PlayerManager.Commander;
-        string legalText = commander.LegalStatus switch { 0 => "CLEAN", < 50 => "OFFENDER", _ => "FUGITIVE" };
-        var legalSz = _font.MeasureString(legalText);
-        _font.DrawString(spriteBatch, legalText, new Vector2(viewContentRect.Right - legalSz.X - 10, y), commander.LegalStatus >= 50 ? Color.OrangeRed : Color.Lime, 1.0f);
-        string rankText = commander.RankName;
-        if (!string.IsNullOrEmpty(rankText)) { var rankSz = _font.MeasureString(rankText); _font.DrawString(spriteBatch, rankText, new Vector2(viewContentRect.Right - rankSz.X - 10, y + 22), Color.Gold, 1.0f); }
-
-        float planetDist = _bubbleManager.Planet?.Position.Length() ?? 0, sunDist = _bubbleManager.SunOrStation?.Position.Length() ?? 0;
-        if (_bubbleManager.Planet != null) { _planetDistDelta = planetDist - _prevPlanetDist; _planetZDelta = _bubbleManager.Planet.Position.Z - _prevPlanetZ; _prevPlanetDist = planetDist; _prevPlanetZ = _bubbleManager.Planet.Position.Z; }
-        _font.DrawString(spriteBatch, $"PLANET DIST: {planetDist:F4} (Δ { _planetDistDelta:+0.0000;-0.0000;0.0000})", new Vector2(x, y + 50), Color.Cyan, 1.2f);
-        _font.DrawString(spriteBatch, $"SUN DIST: {sunDist:F4}", new Vector2(x, y + 72), Color.Orange, 1.2f);
-        _font.DrawString(spriteBatch, $"SPEED: {_playerSpeed:F4}", new Vector2(x, y + 130), Color.Gray, 0.9f);
-        if (_planetHit) _font.DrawString(spriteBatch, "PLANET HIT: TRUE", new Vector2(x, y + 148), Color.Red, 0.9f);
-        _font.DrawString(spriteBatch, _showHiddenEdges ? "HIDDEN: ON" : "HIDDEN: OFF", new Vector2(x, y + 190), Color.White, 0.8f);
-        _font.DrawString(spriteBatch, _ramMode ? "RAM MODE: ON (press R to toggle)" : "RAM MODE: OFF (press R to toggle)", new Vector2(x, y + 212), _ramMode ? Color.Red : Color.DarkGray, 0.8f);
-
-        int debugY = (int)(y + 235);
-        foreach (var entity in _bubbleManager.GetActiveShips()) { float dist = entity.Position.Length(); if (dist < 500) { _font.DrawString(spriteBatch, $"{entity.Blueprint.Name}: {dist:F0}", new Vector2(x, debugY), dist < 50 ? Color.Red : dist < 200 ? Color.Orange : Color.Yellow, 0.8f); debugY += 22; if (debugY > viewContentRect.Bottom - 24) break; } }
-        _font.DrawString(spriteBatch, "ARROWS: PITCH/ROLL  W/S: SPEED  V: VIEW  SPACE: FIRE  P: PAUSE  +/-: ZOOM  I: EDGES  F5: SAVE  ESC: MENU", new Vector2(viewContentRect.X + 10, viewContentRect.Bottom - 24), Color.Gray, 0.8f);
+        float labelX = viewContentRect.X + (viewContentRect.Width - labelSz.X * titleScale) / 2;
+        _font.DrawString(spriteBatch, viewLabel, new Vector2(labelX, viewContentRect.Y + 10), EliteGreen, titleScale);
     }
 
     private static int GetOuterMarginPixels(int w, int h) => Math.Max(6, (int)MathF.Round(MathF.Min(w, h) * 0.024f));
@@ -441,6 +427,7 @@ public class FlightScene : GameScene
     private void DrawFrame(SpriteBatch spriteBatch, Rectangle rect, Color color, int thickness) { thickness = Math.Max(1, thickness); spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Y, rect.Width, thickness), color); spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Bottom - thickness, rect.Width, thickness), color); spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Y, thickness, rect.Height), color); spriteBatch.Draw(_whitePixel, new Rectangle(rect.Right - thickness, rect.Y, thickness, rect.Height), color); }
 
     private void DrawLine(SpriteBatch spriteBatch, Vector2 start, Vector2 end, Color color, int thickness) { Vector2 edge = end - start; float angle = (float)Math.Atan2(edge.Y, edge.X); spriteBatch.Draw(_whitePixel, start, null, color, angle, new Vector2(0, 0.5f), new Vector2(edge.Length(), thickness), SpriteEffects.None, 0); }
+
     private bool IsInFrontOfCamera(Vector3 worldPos) { Vector3 mg = ToMonoGameWorld(worldPos); if (mg.LengthSquared() < 0.001f) return true; return Vector3.Dot(Vector3.Normalize(mg), _cameraLookDir) > 0; }
     private static Vector3 ToMonoGameWorld(Vector3 eliteWorldPos) => new Vector3(eliteWorldPos.X, eliteWorldPos.Y, -eliteWorldPos.Z) * RenderScale;
 
