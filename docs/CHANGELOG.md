@@ -37,6 +37,9 @@ All notable changes to this project.
   - Options loaded on startup, saved on every toggle change
 
 ### Fixed
+- **HUD fidelity vs Legend reference** — `src/EliteRetro.Core/HUD/HudRenderer.cs`
+  - Left-bar label `RS` → `AS` (Aft Shield, authentic Elite/Legend)
+  - Missile icons now red (unarmed) / yellow (target locked), no longer flat white
 - **Target practice sun loss** — target practice mode now preserves sun/station when clearing the bubble
 - **Near-zero projection W** — guards against near-singular perspective divide (`|W| < 0.001f`)
 - **Ram mode orientation** — fixed object initializer referencing its own not-yet-set `Roofv` field

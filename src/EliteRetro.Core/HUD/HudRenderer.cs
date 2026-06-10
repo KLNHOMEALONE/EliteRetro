@@ -88,7 +88,7 @@ public class HudRenderer
         barY += barSlotH;
 
         float aftRatio = MathHelper.Clamp(state.ShieldAft / 255f, 0, 1);
-        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(aftRatio * barMaxW), barMaxW, "RS", font, gap, textCenter: true);
+        DrawBarH(spriteBatch, leftRect.X + 2, barY, labelW, barH, (int)(aftRatio * barMaxW), barMaxW, "AS", font, gap, textCenter: true);
         barY += barSlotH;
 
         float fuelRatio = MathHelper.Clamp(state.Fuel / 70f, 0, 1);
@@ -130,21 +130,24 @@ public class HudRenderer
         int missileH = h - 6;
         int spacing = (availableW - (missileW * 4)) / 5;
 
+        // Authentic Elite: red unarmed, yellow when target locked.
+        Color missileColor = locked ? Color.Yellow : new Color(220, 30, 30);
+
         for (int i = 0; i < 4; i++)
         {
             if (i < count)
             {
                 int mx = x + spacing + i * (missileW + spacing);
                 int my = y + 3;
-                
+
                 // Draw vertical missile icon
                 // Body
-                spriteBatch.Draw(_whitePixel, new Rectangle(mx + 1, my + 3, missileW - 2, missileH - 3), Color.White);
+                spriteBatch.Draw(_whitePixel, new Rectangle(mx + 1, my + 3, missileW - 2, missileH - 3), missileColor);
                 // Tip
-                DrawLine(spriteBatch, mx + 1, my + 3, mx + missileW / 2, my, Color.White);
-                DrawLine(spriteBatch, mx + missileW - 1, my + 3, mx + missileW / 2, my, Color.White);
+                DrawLine(spriteBatch, mx + 1, my + 3, mx + missileW / 2, my, missileColor);
+                DrawLine(spriteBatch, mx + missileW - 1, my + 3, mx + missileW / 2, my, missileColor);
                 // Fins
-                spriteBatch.Draw(_whitePixel, new Rectangle(mx, my + missileH - 2, missileW, 2), Color.White);
+                spriteBatch.Draw(_whitePixel, new Rectangle(mx, my + missileH - 2, missileW, 2), missileColor);
             }
         }
 
