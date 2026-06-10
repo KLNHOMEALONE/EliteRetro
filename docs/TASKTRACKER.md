@@ -148,6 +148,12 @@
 - Crosshair: BBC Elite diamond reticle at screen center
 - Flight controls: pitch/roll mapping under review (sign conventions differ between input and rotating-universe application)
 
+**HUD fidelity vs Legend reference (2026-06-10):**
+- Left-bar label `RS` → `AS` (Aft Shield) — matches authentic Elite/Legend
+- Missile icons now red (unarmed) / yellow (locked) — was flat white
+- Verified vs `Images/HUDFromLegend.png`: layout, columns, scanner ellipse, status bulb, compass all match
+- Remaining cosmetic gaps: fuel scoop icon shape (currently canister, reference = ladybug); off-scanner green target arrow not drawn
+
 **Recent stability fixes (2026-05-04):**
 - Scene switching: `GameInstance.ChangeScene()` now replaces the scene stack (no longer pushes)
 - FlightScene: unsubscribes bubble event handlers on unload (prevents duplicate events on re-entry)
