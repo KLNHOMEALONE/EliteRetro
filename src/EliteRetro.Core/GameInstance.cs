@@ -111,6 +111,60 @@ public class GameInstance : Game, IGameContext
     /// </summary>
     public bool DrawInvisible { get; set; }
 
+    private List<(int Width, int Height)> _supportedResolutions = new();
+    private int _resolutionIndex;
+
+    public IReadOnlyList<(int Width, int Height)> SupportedResolutions => _supportedResolutions;
+
+    public int ResolutionIndex
+    {
+        get => _resolutionIndex;
+        set
+        {
+            if (_supportedResolutions.Count == 0) return;
+            int count = _supportedResolutions.Count;
+            _resolutionIndex = ((value % count) + count) % count;
+        }
+    }
+
+    public int DisplayWidth => _graphics.PreferredBackBufferWidth;
+
+    public int DisplayHeight => _graphics.PreferredBackBufferHeight;
+
+    public bool IsFullScreen
+    {
+        get => _graphics.IsFullScreen;
+        set => _graphics.IsFullScreen = value;
+    }
+
+    public void ApplyDisplayMode()
+    {
+        if (_supportedResolutions.Count == 0) return;
+        var (w, h) = _supportedResolutions[_resolutionIndex];
+        _graphics.PreferredBackBufferWidth = w;
+        _graphics.PreferredBackBufferHeight = h;
+        _graphics.ApplyChanges();
+    }
+
+    private void EnumerateResolutions()
+    {
+        var seen = new HashSet<(int, int)>();
+        var modes = new List<(int Width, int Height)>();
+        foreach (var dm in GraphicsAdapter.DefaultAdapter.SupportedDisplayModes)
+        {
+            var key = (dm.Width, dm.Height);
+            if (dm.Format != SurfaceFormat.Color) continue;
+            if (!seen.Add(key)) continue;
+            modes.Add(key);
+        }
+        modes.Sort((a, b) => (a.Item1 * a.Item2).CompareTo(b.Item1 * b.Item2));
+        _supportedResolutions = modes;
+
+        // Pick a sensible default that matches the historical Elite resolution.
+        int preferred = _supportedResolutions.FindIndex(m => m.Width == 1024 && m.Height == 768);
+        _resolutionIndex = preferred >= 0 ? preferred : 0;
+    }
+
     public GameInstance()
     {
         _graphics = new GraphicsDeviceManager(this);
@@ -118,8 +172,19 @@ public class GameInstance : Game, IGameContext
         IsMouseVisible = true;
         Window.Title = "EliteRetro";
 
-        _graphics.PreferredBackBufferWidth = 1024;
-        _graphics.PreferredBackBufferHeight = 768;
+        EnumerateResolutions();
+
+        if (_supportedResolutions.Count > 0)
+        {
+            var (w, h) = _supportedResolutions[_resolutionIndex];
+            _graphics.PreferredBackBufferWidth = w;
+            _graphics.PreferredBackBufferHeight = h;
+        }
+        else
+        {
+            _graphics.PreferredBackBufferWidth = 1024;
+            _graphics.PreferredBackBufferHeight = 768;
+        }
         _graphics.ApplyChanges();
     }
 
@@ -299,10 +364,13 @@ public class GameInstance : Game, IGameContext
         _font = new BitmapFont(GraphicsDevice);
 
         // Load persistent options
-        if (Systems.OptionsManager.TryLoad(out bool drawWhite, out bool drawInvisible))
+        if (Systems.OptionsManager.TryLoad(out bool drawWhite, out bool drawInvisible, out int resIndex, out bool fullscreen))
         {
             DrawWhite = drawWhite;
             DrawInvisible = drawInvisible;
+            ResolutionIndex = resIndex;
+            IsFullScreen = fullscreen;
+            ApplyDisplayMode();
         }
 
         _sceneManager.ChangeScene(new MainMenuScene(this), Content, GraphicsDevice, this, _font);

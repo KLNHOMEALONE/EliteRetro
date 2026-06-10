@@ -18,10 +18,16 @@ public static class OptionsManager
         return Path.Combine(appData, FileName);
     }
 
-    public static bool TryLoad(out bool drawWhite, out bool drawInvisible)
+    public static bool TryLoad(
+        out bool drawWhite,
+        out bool drawInvisible,
+        out int resolutionIndex,
+        out bool fullscreen)
     {
         drawWhite = false;
         drawInvisible = false;
+        resolutionIndex = 0;
+        fullscreen = false;
         try
         {
             var path = GetSavePath();
@@ -35,6 +41,10 @@ public static class OptionsManager
                 drawWhite = dw.GetBoolean();
             if (root.TryGetProperty("drawInvisible", out var di))
                 drawInvisible = di.GetBoolean();
+            if (root.TryGetProperty("resolutionIndex", out var ri))
+                resolutionIndex = ri.GetInt32();
+            if (root.TryGetProperty("fullscreen", out var fs))
+                fullscreen = fs.GetBoolean();
 
             return true;
         }
@@ -44,7 +54,11 @@ public static class OptionsManager
         }
     }
 
-    public static void Save(bool drawWhite, bool drawInvisible)
+    public static void Save(
+        bool drawWhite,
+        bool drawInvisible,
+        int resolutionIndex,
+        bool fullscreen)
     {
         try
         {
@@ -52,7 +66,9 @@ public static class OptionsManager
             var json = JsonSerializer.Serialize(new
             {
                 drawWhite,
-                drawInvisible
+                drawInvisible,
+                resolutionIndex,
+                fullscreen
             }, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(path, json);
         }

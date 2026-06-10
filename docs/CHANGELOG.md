@@ -35,6 +35,11 @@ All notable changes to this project.
   - Extensible design for future options (sound, music, FPS counter, etc.)
   - Options persisted to `%LOCALAPPDATA%/EliteRetro/options.json`
   - Options loaded on startup, saved on every toggle change
+- **Resolution & Fullscreen controls** — OPTIONS submenu extended
+  - `RESOLUTION` row enumerates `GraphicsAdapter.DefaultAdapter.SupportedDisplayModes`, dedupes, sorts ascending by area
+  - `LEFT`/`RIGHT` cycles the resolution; `ENTER` toggles `FULLSCREEN`; both apply live via `GraphicsDeviceManager.ApplyChanges()`
+  - Selected resolution index and fullscreen flag persisted alongside existing options
+  - Default index falls back to 1024×768 when available, else first mode in list
 
 ### Fixed
 - **HUD fidelity vs Legend reference** — `src/EliteRetro.Core/HUD/HudRenderer.cs`

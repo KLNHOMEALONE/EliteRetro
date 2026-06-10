@@ -276,7 +276,7 @@ public class FlightScene : GameScene
         {
             _showHiddenEdges = !_showHiddenEdges;
             _gameInstance.DrawInvisible = _showHiddenEdges;
-            Systems.OptionsManager.Save(_gameInstance.DrawWhite, _gameInstance.DrawInvisible);
+            Systems.OptionsManager.Save(_gameInstance.DrawWhite, _gameInstance.DrawInvisible, _gameInstance.ResolutionIndex, _gameInstance.IsFullScreen);
         }
 
         _cameraLookDir = -Vector3.UnitZ;

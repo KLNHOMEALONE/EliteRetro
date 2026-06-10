@@ -61,4 +61,22 @@ public interface IGameContext
 
     /// <summary>Celestial body projection and rendering service.</summary>
     Systems.ICelestialService Celestial { get; }
+
+    /// <summary>Resolutions enumerated from the current display adapter, sorted ascending by area.</summary>
+    IReadOnlyList<(int Width, int Height)> SupportedResolutions { get; }
+
+    /// <summary>Index into SupportedResolutions for the active resolution.</summary>
+    int ResolutionIndex { get; set; }
+
+    /// <summary>Current backbuffer width in pixels.</summary>
+    int DisplayWidth { get; }
+
+    /// <summary>Current backbuffer height in pixels.</summary>
+    int DisplayHeight { get; }
+
+    /// <summary>Whether the game is currently rendering in fullscreen mode.</summary>
+    bool IsFullScreen { get; set; }
+
+    /// <summary>Apply the current ResolutionIndex and IsFullScreen to the graphics device immediately.</summary>
+    void ApplyDisplayMode();
 }
