@@ -114,10 +114,10 @@ public class OptionsScene : GameScene
     {
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
 
-        int w = _gameInstance?.DisplayWidth ?? 1024;
-        int h = _gameInstance?.DisplayHeight ?? 768;
+        int w = _gameInstance?.VirtualWidth ?? GameInstance.VirtualWidth;
+        int h = _gameInstance?.VirtualHeight ?? GameInstance.VirtualHeight;
 
-        // Dark background — full display
+        // Dark background — full virtual display
         spriteBatch.Draw(_whitePixel, new Rectangle(0, 0, w, h), Color.Black);
 
         // Title panel — full width, fixed height

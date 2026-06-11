@@ -14,6 +14,10 @@ public class CelestialService : ICelestialService
 {
     private readonly CircleRenderer _circleRenderer;
     private const float RenderScale = 0.001f;
+    private const float TanHalfFov = 0.767f; // tan(75 deg / 2) for 75 deg vertical FOV
+    private const float HudHeightFraction = 0.28f; // HUD strip below the 3D view
+    private const int VirtualViewW = 1024; // full virtual RT width
+    private const int VirtualViewH = 768;  // full virtual RT height
     private bool _disposed;
 
     public CelestialService(GraphicsDevice graphicsDevice)
@@ -21,13 +25,13 @@ public class CelestialService : ICelestialService
         _circleRenderer = new CircleRenderer(graphicsDevice);
     }
 
-    public void Draw(SpriteBatch spriteBatch, IBubbleManager bubbleManager, Matrix view, Matrix projection, Vector3 cameraLookDir, GraphicsDevice graphicsDevice, float hudHeightFraction, bool drawWhite)
+    public void Draw(SpriteBatch spriteBatch, IBubbleManager bubbleManager, Matrix view, Matrix projection, Vector3 cameraLookDir, GraphicsDevice graphicsDevice, bool drawWhite)
     {
         var planetEntity = bubbleManager.Planet;
         var sunEntity = (bubbleManager.SunOrStation?.Blueprint?.Name == "Sun") ? bubbleManager.SunOrStation : null;
 
-        CelestialDisc? planetDisc = planetEntity != null ? ComputeCelestialDisc(planetEntity.Position, GameConstants.PlanetRadius, view, projection, cameraLookDir, graphicsDevice, hudHeightFraction) : null;
-        CelestialDisc? sunDisc = sunEntity != null ? ComputeCelestialDisc(sunEntity.Position, GameConstants.PlanetRadius * 6, view, projection, cameraLookDir, graphicsDevice, hudHeightFraction) : null;
+        CelestialDisc? planetDisc = planetEntity != null ? ComputeCelestialDisc(planetEntity.Position, GameConstants.PlanetRadius, view, projection, cameraLookDir, graphicsDevice) : null;
+        CelestialDisc? sunDisc = sunEntity != null ? ComputeCelestialDisc(sunEntity.Position, GameConstants.PlanetRadius * 6, view, projection, cameraLookDir, graphicsDevice) : null;
 
         if (planetDisc.HasValue || sunDisc.HasValue)
         {
@@ -36,7 +40,7 @@ public class CelestialService : ICelestialService
             {
                 var p = planetDisc.Value;
                 var s = sunDisc.Value;
-                // If sun is farther than planet (view-space Z is more negative) 
+                // If sun is farther than planet (view-space Z is more negative)
                 // and projects inside the planet disc, it's occluded.
                 if (s.ViewZ < p.ViewZ)
                 {
@@ -72,10 +76,10 @@ public class CelestialService : ICelestialService
 
     private readonly record struct CelestialDisc(Vector3 WorldPosElite, Vector2 ScreenCenter, float ScreenRadius, float ViewZ);
 
-    private CelestialDisc? ComputeCelestialDisc(Vector3 worldPosElite, float radiusElite, Matrix view, Matrix projection, Vector3 cameraLookDir, GraphicsDevice graphicsDevice, float hudHeightFraction)
+    private CelestialDisc? ComputeCelestialDisc(Vector3 worldPosElite, float radiusElite, Matrix view, Matrix projection, Vector3 cameraLookDir, GraphicsDevice graphicsDevice)
     {
         Vector3 worldMg = new Vector3(worldPosElite.X, worldPosElite.Y, -worldPosElite.Z) * RenderScale;
-        
+
         // Visibility check relative to camera look direction
         if (worldMg.LengthSquared() >= 0.001f)
         {
@@ -89,33 +93,27 @@ public class CelestialService : ICelestialService
         if (viewPos.Z >= -0.001f)
             return null;
 
-        Vector2 screenPos = ProjectToScreenElite(worldPosElite, view, projection, graphicsDevice, hudHeightFraction);
+        Vector2 screenPos = ProjectToScreenElite(worldPosElite, view, projection);
         float dist = worldMg.Length();
         if (dist < 0.001f) return null;
 
-        int h = graphicsDevice.Viewport.Height;
-        int viewH = Math.Max(1, h - (int)MathF.Round(h * hudHeightFraction));
-
-        // FOV is 75 deg. tan(75/2) ≈ 0.767
-        float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / 0.767f) * (viewH / 2f);
+        int viewH = Math.Max(1, VirtualViewH - (int)MathF.Round(VirtualViewH * HudHeightFraction));
+        float screenRadius = ((radiusElite * RenderScale) / dist) * (1.0f / TanHalfFov) * (viewH / 2f);
         if (screenRadius <= 0 || screenRadius > 4000) return null;
 
         return new CelestialDisc(worldPosElite, screenPos, screenRadius, viewPos.Z);
     }
 
-    private Vector2 ProjectToScreenElite(Vector3 eliteWorldPos, Matrix view, Matrix projection, GraphicsDevice graphicsDevice, float hudHeightFraction)
+    private Vector2 ProjectToScreenElite(Vector3 eliteWorldPos, Matrix view, Matrix projection)
     {
         Vector3 worldPos = new Vector3(eliteWorldPos.X, eliteWorldPos.Y, -eliteWorldPos.Z) * RenderScale;
         Vector3 viewPos = Vector3.Transform(worldPos, view);
         Vector4 projected = Vector4.Transform(new Vector4(viewPos, 1f), projection);
-        
-        int w = graphicsDevice.Viewport.Width;
-        int h = graphicsDevice.Viewport.Height;
-        int viewH = Math.Max(1, h - (int)MathF.Round(h * hudHeightFraction));
-        
-        if (MathF.Abs(projected.W) < 0.001f) return new Vector2(w / 2f, viewH / 2f);
-        
-        float screenX = (projected.X / projected.W + 1f) * 0.5f * w;
+
+        int viewH = Math.Max(1, VirtualViewH - (int)MathF.Round(VirtualViewH * HudHeightFraction));
+        if (MathF.Abs(projected.W) < 0.001f) return new Vector2(VirtualViewW / 2f, viewH / 2f);
+
+        float screenX = (projected.X / projected.W + 1f) * 0.5f * VirtualViewW;
         float screenY = (1 - projected.Y / projected.W) * 0.5f * viewH;
 
         return new Vector2(screenX, screenY);

@@ -14,6 +14,7 @@ public class SpaceScene : GameScene
     private const float RenderScale = 0.001f; // Elite internal units -> MonoGame world units
     private WireframeRenderer _wireframeRenderer = null!;
     private PlanetRenderer _planetRenderer = null!; // NE-20: retained as actually used
+    private Texture2D _whitePixel = null!;
     private int _planetRotation;
     private int _planetRotationCounter;
     private Matrix _view;
@@ -43,11 +44,24 @@ public class SpaceScene : GameScene
         _graphicsDevice = graphicsDevice;
         _wireframeRenderer = new WireframeRenderer(_graphicsDevice);
         _planetRenderer = new PlanetRenderer(_graphicsDevice);
+        _whitePixel = new Texture2D(graphicsDevice, 1, 1);
+        _whitePixel.SetData(new[] { Color.White });
+        EnsureProjection();
+        _view = Matrix.CreateLookAt(new Vector3(0, 0, 5), Vector3.Zero, Vector3.Up);
+    }
+
+    private void EnsureProjection()
+    {
+        if (_graphicsDevice == null) return;
+        int vW = GameInstance.VirtualWidth;
+        int vH = GameInstance.VirtualHeight;
+        const float HudHeightFraction = 0.28f;
+        int hudH = (int)MathF.Round(vH * HudHeightFraction);
+        int viewH = Math.Max(1, vH - hudH);
         _projection = Matrix.CreatePerspectiveFieldOfView(
             MathHelper.ToRadians(75f),
-            _graphicsDevice.Viewport.AspectRatio,
+            vW / (float)viewH,
             0.1f, 1000f);
-        _view = Matrix.CreateLookAt(new Vector3(0, 0, 5), Vector3.Zero, Vector3.Up);
     }
 
     private void EnsureInitialized()
@@ -173,6 +187,7 @@ public class SpaceScene : GameScene
     public override void Draw(SpriteBatch spriteBatch)
     {
         EnsureInitialized();
+        EnsureProjection();
 
         if (_graphicsDevice != null)
             _graphicsDevice.Clear(Color.Black);
@@ -219,14 +234,18 @@ public class SpaceScene : GameScene
             _wireframeRenderer.Draw(_bubbleManager.SunOrStation.Blueprint.Model, world, _view, _projection, spriteBatch, drawHiddenEdges: _gameInstance?.DrawInvisible ?? false, drawWhite: _gameInstance?.DrawWhite ?? false);
         }
 
-        _font.DrawString(spriteBatch, "SPACE VIEW", new Vector2(10, 10), Color.Lime, 1.5f);
-        _font.DrawString(spriteBatch, $"Entities: {_bubbleManager.GetAllActive().Count()}", new Vector2(10, 30), Color.Cyan, 1f);
-        _font.DrawString(spriteBatch, $"Cam: ({_view.Translation.X:F1}, {_view.Translation.Y:F1}, {_view.Translation.Z:F1})", new Vector2(10, 300), Color.Magenta, 1f);
-        _font.DrawString(spriteBatch, "Arrows: Pitch/Roll  +/-: Zoom  P: Pause  T: Station  V: View", new Vector2(10, 50), Color.White, 1f);
+        // HUD strip below 3D view: debug info.
+        int vH = GameInstance.VirtualHeight;
+        const float HudHeightFraction = 0.28f;
+        int hudH = (int)MathF.Round(vH * HudHeightFraction);
+        int hudY = vH - hudH;
+        spriteBatch.Draw(_whitePixel, new Rectangle(0, hudY, GameInstance.VirtualWidth, hudH), new Color(10, 10, 30));
+        _font.DrawString(spriteBatch, "SPACE VIEW", new Vector2(12, hudY + 6), Color.Lime, 1.2f);
+        _font.DrawString(spriteBatch, $"Entities: {_bubbleManager.GetAllActive().Count()}  Cam: ({_view.Translation.X:F1},{_view.Translation.Y:F1},{_view.Translation.Z:F1})", new Vector2(160, hudY + 8), Color.Cyan, 0.8f);
+        _font.DrawString(spriteBatch, "Arrows: Pitch/Roll  +/-: Zoom  P: Pause  T: Station  V: View  ESC: Back", new Vector2(12, hudY + 30), Color.White, 0.8f);
         if (_lastControl.IsPaused)
         {
-            _font.DrawString(spriteBatch, "PAUSED", new Vector2(10, 70), Color.Red, 1.5f);
-            _font.DrawString(spriteBatch, $"Edge: {_debugHighlightedEdge}  Up/Down: cycle", new Vector2(10, 90), Color.Orange, 1f);
+            _font.DrawString(spriteBatch, $"PAUSED  Edge: {_debugHighlightedEdge}  (Up/Down cycles)", new Vector2(12, hudY + 52), Color.Orange, 0.85f);
         }
         spriteBatch.End();
     }

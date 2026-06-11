@@ -39,13 +39,18 @@ public class GalaxyMapScene : GameScene
     public override void LoadContent(ContentManager content, BitmapFont font, GraphicsDevice graphicsDevice)
     {
         _font = font;
-        _screenW = graphicsDevice.Viewport.Width;
-        _screenH = graphicsDevice.Viewport.Height;
+        // Map fills the top 72% of the 1024x768 virtual frame; HUD strip is the bottom 28%.
+        int vW = GameInstance.VirtualWidth;
+        int vH = GameInstance.VirtualHeight;
+        const float HudHeightFraction = 0.28f;
+        int hudH = (int)MathF.Round(vH * HudHeightFraction);
+        _screenW = vW;
+        _screenH = Math.Max(1, vH - hudH);
         var generator = new GalaxyGenerator();
         _galaxies = generator.GenerateAllGalaxies();
         _currentGalaxy = 0;
         // Center galaxy on screen: coords span 0-255 x 0-127, center at (128, 64)
-        // Zoom 3.0 makes 256 units ≈ 768 pixels wide, fitting 1024x768
+        // Zoom 3.0 makes 256 units ≈ 768 pixels wide, fitting the 1024-wide map area.
         _zoom = 3.0f;
         _scrollOffset = new Vector2(_screenW / 2f - 128 * _zoom, _screenH / 2f - 64 * _zoom);
 
@@ -115,8 +120,9 @@ public class GalaxyMapScene : GameScene
     {
         spriteBatch.Begin();
 
-        _font.DrawString(spriteBatch, $"GALAXY {_currentGalaxy + 1}/8", new Vector2(10, 10), Color.Lime, 1.5f);
-        _font.DrawString(spriteBatch, "CURSOR KEYS: SELECT  ENTER: LOCK  +/-: ZOOM  I: DATA  ESC: BACK", new Vector2(10, 35), Color.White, 1f);
+        _font.DrawString(spriteBatch, $"GALAXY {_currentGalaxy + 1}/8", new Vector2(10, 10), Color.Lime, 1.4f);
+        _font.DrawString(spriteBatch, "ARROWS: SELECT  ENTER: LOCK  +/-: ZOOM  I: DATA  ESC: BACK",
+            new Vector2(10, 34), Color.White, 0.85f);
 
         var galaxy = _galaxies[_currentGalaxy];
         foreach (var system in galaxy.Systems)
@@ -154,26 +160,49 @@ public class GalaxyMapScene : GameScene
             spriteBatch.Draw(_whitePixel, new Rectangle((int)c.X - 10, (int)c.Y - 1, 20, 2), Color.White);
         }
 
-        // Bottom line: selected system + distance.
+        // Bottom readout: selected system + distance.
         if (_cursorSystem.HasValue && _originSystem.HasValue)
         {
             float dist = DistanceLightYears(_originSystem.Value, _cursorSystem.Value);
             string name = _cursorSystem.Value.Name.ToUpperInvariant();
-            // Lift readout off the bottom edge (closer to reference bottom bar).
             int readoutTopY = Math.Max(0, _screenH - 64);
-            _font.DrawString(spriteBatch, $"{name}", new Vector2(10, readoutTopY), Color.White, 1.2f);
-            _font.DrawString(spriteBatch, $"Distance: {dist:F1} Light Years", new Vector2(10, readoutTopY + 22), Color.White, 1.0f);
+            _font.DrawString(spriteBatch, $"{name}", new Vector2(10, readoutTopY), Color.White, 1.1f);
+            _font.DrawString(spriteBatch, $"Distance: {dist:F1} Light Years", new Vector2(10, readoutTopY + 20), Color.White, 0.9f);
 
             if (_lockedSystem.HasValue)
             {
                 const string lockedText = "LOCKED";
                 const int pad = 10;
-                float lockedScale = 1.1f;
+                float lockedScale = 1.0f;
                 float textW = _font.MeasureString(lockedText).X * lockedScale;
                 float x = MathF.Max(pad, _screenW - pad - textW);
                 _font.DrawString(spriteBatch, lockedText, new Vector2(x, readoutTopY + 10), Color.Cyan, lockedScale);
             }
         }
+
+        // HUD strip below 3D view: system info.
+        int vH = GameInstance.VirtualHeight;
+        const float HudHeightFraction = 0.28f;
+        int hudH = (int)MathF.Round(vH * HudHeightFraction);
+        int hudY = vH - hudH;
+        spriteBatch.Draw(_whitePixel, new Rectangle(0, hudY, GameInstance.VirtualWidth, hudH), new Color(10, 10, 30));
+        _font.DrawString(spriteBatch, $"GALAXY {_currentGalaxy + 1}/8", new Vector2(12, hudY + 6), Color.Lime, 1.1f);
+        _font.DrawString(spriteBatch, "CURRENT:", new Vector2(12, hudY + 28), Color.Gray, 0.75f);
+        if (_originSystem.HasValue)
+            _font.DrawString(spriteBatch, _originSystem.Value.Name.ToUpperInvariant(), new Vector2(80, hudY + 26), Color.White, 1f);
+        _font.DrawString(spriteBatch, "TARGET:", new Vector2(220, hudY + 28), Color.Gray, 0.75f);
+        if (_cursorSystem.HasValue)
+        {
+            _font.DrawString(spriteBatch, _cursorSystem.Value.Name.ToUpperInvariant(), new Vector2(280, hudY + 26), Color.Yellow, 1f);
+            float dist = DistanceLightYears(_originSystem!.Value, _cursorSystem.Value);
+            _font.DrawString(spriteBatch, $"{dist:F1} LY", new Vector2(440, hudY + 28), Color.White, 0.9f);
+        }
+        if (_lockedSystem.HasValue)
+        {
+            _font.DrawString(spriteBatch, "LOCKED", new Vector2(540, hudY + 28), Color.Cyan, 1.1f);
+        }
+        _font.DrawString(spriteBatch, "ARROWS: SELECT  ENTER: LOCK  +/-: ZOOM  I: DATA  ESC: BACK",
+            new Vector2(640, hudY + 28), Color.White, 0.75f);
 
         spriteBatch.End();
     }

@@ -54,10 +54,8 @@ public class FlightScene : GameScene
     private bool _planetHit;
     private float _lastMoveStep;
     private float _lastDt;
-    private int _lastBackBufferW;
-    private int _lastBackBufferH;
-    private int _lastViewH;
-    private const float HudHeightFraction = 0.28f; // dashboard height, matches Legend reference proportions
+    private bool _projectionInitialized;
+    private const float HudHeightFraction = 0.28f; // bottom HUD strip inside the 1024x768 virtual frame
     private static readonly Color EliteGreen = new Color(0, 210, 0); // authentic green for reticle and view title
     private readonly RasterizerState _scissorRasterizer = new RasterizerState { ScissorTestEnable = true };
 
@@ -106,23 +104,18 @@ public class FlightScene : GameScene
 
     private void EnsureProjectionMatchesViewport()
     {
-        if (_graphicsDevice == null) return;
-        int w = _graphicsDevice.Viewport.Width;
-        int h = _graphicsDevice.Viewport.Height;
-        int hudH = (int)MathF.Round(h * HudHeightFraction);
-        int viewH = Math.Max(1, h - hudH);
-
-        if (w == _lastBackBufferW && h == _lastBackBufferH && viewH == _lastViewH)
-            return;
-
-        _lastBackBufferW = w;
-        _lastBackBufferH = h;
-        _lastViewH = viewH;
-
+        // Scene draws into a fixed 1024x768 virtual RT. The 3D view occupies the
+        // top 72% of the virtual frame; HUD strip is the bottom 28%. Aspect is constant.
+        if (_projectionInitialized) return;
+        int vW = GameInstance.VirtualWidth;
+        int vH = GameInstance.VirtualHeight;
+        int hudH = (int)MathF.Round(vH * HudHeightFraction);
+        int viewH = Math.Max(1, vH - hudH);
         _projection = Matrix.CreatePerspectiveFieldOfView(
             MathHelper.ToRadians(75f),
-            w / (float)viewH,
+            vW / (float)viewH,
             0.1f, 1000f);
+        _projectionInitialized = true;
     }
 
     private void EnsureInitialized()
@@ -298,8 +291,9 @@ public class FlightScene : GameScene
         _graphicsDevice.Clear(_damageFlashTimer > 0 ? Color.DarkRed : Color.Black);
         EnsureProjectionMatchesViewport();
 
-        int screenW = _graphicsDevice.Viewport.Width, screenH = _graphicsDevice.Viewport.Height;
-        int hudH = (int)MathF.Round(screenH * HudHeightFraction), viewH = Math.Max(1, screenH - hudH);
+        int screenW = GameInstance.VirtualWidth, screenH = GameInstance.VirtualHeight;
+        int hudH = (int)MathF.Round(screenH * HudHeightFraction);
+        int viewH = Math.Max(1, screenH - hudH);
         var screenRect = new Rectangle(0, 0, screenW, screenH);
         var viewRect = new Rectangle(0, 0, screenW, viewH);
         var hudRect = new Rectangle(0, viewH, screenW, hudH);
@@ -326,7 +320,7 @@ public class FlightScene : GameScene
             _wireframeRenderer.Draw(entity.Blueprint.Model, world, _view, _projection, spriteBatch, drawHiddenEdges: _showHiddenEdges, drawWhite: _gameInstance.DrawWhite);
         }
 
-        _gameInstance.Celestial.Draw(spriteBatch, _bubbleManager, _view, _projection, _cameraLookDir, _graphicsDevice!, HudHeightFraction, _gameInstance.DrawWhite);
+        _gameInstance.Celestial.Draw(spriteBatch, _bubbleManager, _view, _projection, _cameraLookDir, _graphicsDevice!, _gameInstance.DrawWhite);
 
         if (_damageFlashTimer > 0)
         {
@@ -378,6 +372,7 @@ public class FlightScene : GameScene
             _gameInstance.Messages.GeneralTimer,
             _showHiddenEdges);
 
+        // HUD strip spans full width; gauges fill it, scanner sits in the center column.
         _hudRenderer.Draw(spriteBatch, hudState, _font, hudRect, screenRect);
 
         int sideW = (int)MathF.Round(hudRect.Width * HudRenderer.SideFraction);
@@ -433,12 +428,15 @@ public class FlightScene : GameScene
 
     private Vector2 ProjectToScreenElite(Vector3 eliteWorldPos)
     {
+        // Project into the 1024x768 virtual RT; the 3D view area is the top portion
+        // (hudHeightFraction of the height is reserved for the HUD strip).
         Vector3 worldPos = ToMonoGameWorld(eliteWorldPos);
         Vector3 viewPos = Vector3.Transform(worldPos, _view);
         Vector4 projected = Vector4.Transform(new Vector4(viewPos, 1f), _projection);
-        int w = _graphicsDevice?.Viewport.Width ?? 1024;
-        int h = _graphicsDevice?.Viewport.Height ?? 768;
-        int viewH = Math.Max(1, h - (int)MathF.Round(h * HudHeightFraction));
+        const int w = GameInstance.VirtualWidth;
+        const int vh = GameInstance.VirtualHeight;
+        int hudH = (int)MathF.Round(vh * HudHeightFraction);
+        int viewH = Math.Max(1, vh - hudH);
         if (MathF.Abs(projected.W) < 0.001f) return new Vector2(w / 2f, viewH / 2f);
         return new Vector2((projected.X / projected.W + 1f) * 0.5f * w, (1 - projected.Y / projected.W) * 0.5f * viewH);
     }

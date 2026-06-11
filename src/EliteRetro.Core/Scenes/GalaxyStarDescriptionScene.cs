@@ -26,8 +26,8 @@ public class GalaxyStarDescriptionScene : GameScene
     public override void LoadContent(ContentManager content, BitmapFont font, GraphicsDevice graphicsDevice)
     {
         _font = font;
-        _screenW = graphicsDevice.Viewport.Width;
-        _screenH = graphicsDevice.Viewport.Height;
+        _screenW = GameInstance.VirtualWidth;
+        _screenH = GameInstance.VirtualHeight;
         _whitePixel = new Texture2D(graphicsDevice, 1, 1);
         _whitePixel.SetData(new[] { Color.White });
     }

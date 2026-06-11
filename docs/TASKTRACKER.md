@@ -130,6 +130,7 @@
 - [ ] **8.4** Add top pilots leaderboard — generated from galaxy data
 - [ ] **8.5** Add options menu — key bindings, difficulty settings
 - [ ] **8.6** Performance optimization — object pooling, batched rendering
+- [x] **8.10** Aspect-preserving virtual 1024×768 frame with BBC Elite vertical layout (3D top 72% + HUD bottom 28%); pillarbox/letterbox via `RenderTarget2D` blit; all scenes use `VirtualWidth/Height`
 - [ ] **8.7** Cougar easter egg — 1 in 9,000 spawn chance
 - [x] **8.8** Laser targeting system — cone-based hit detection (~32°), shields-first damage, cargo canister drops from destroyed ships
 - [x] **8.9** Target practice mode — L key spawns stationary target for testing, clears other ships, collision-safe cargo canisters
@@ -138,7 +139,7 @@
 
 ## Current Focus
 
-**Phase 8: Polish & Integration** — 6 of 9 tasks complete:
+**Phase 8: Polish & Integration** — 7 of 10 tasks complete:
 - AudioManager: procedural audio (laser, explosion) via DynamicSoundEffectInstance
 - SaveGameManager: 256-byte binary commander file with CHECK/CHK2 checksums
 - MainMenuScene: "LOAD GAME" menu item, FlightScene: F5 save, ESC to menu

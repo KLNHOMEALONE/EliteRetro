@@ -6,12 +6,14 @@ using EliteRetro.Core.Managers;
 using EliteRetro.Core.Systems;
 using EliteRetro.Core.Entities;
 using EliteRetro.Core.Audio;
+using EliteRetro.Core.Rendering;
 
 namespace EliteRetro.Core;
 
 public class GameInstance : Game, IGameContext
 {
     private readonly GraphicsDeviceManager _graphics;
+    private RenderTarget2D _virtualTarget = null!;
     private SpriteBatch _spriteBatch = null!;
     private SceneManager _sceneManager = null!;
     private BitmapFont _font = null!;
@@ -144,6 +146,28 @@ public class GameInstance : Game, IGameContext
         _graphics.PreferredBackBufferWidth = w;
         _graphics.PreferredBackBufferHeight = h;
         _graphics.ApplyChanges();
+    }
+
+    public const int VirtualWidth = 1024;
+    public const int VirtualHeight = 768;
+    public const int VirtualHudWidth = 256;
+
+    int IGameContext.VirtualWidth => VirtualWidth;
+    int IGameContext.VirtualHeight => VirtualHeight;
+    int IGameContext.VirtualHudWidth => VirtualHudWidth;
+
+    private void RecreateVirtualTarget()
+    {
+        _virtualTarget?.Dispose();
+        _virtualTarget = new RenderTarget2D(
+            GraphicsDevice,
+            VirtualWidth,
+            VirtualHeight,
+            false,
+            SurfaceFormat.Color,
+            DepthFormat.Depth24,
+            0,
+            RenderTargetUsage.DiscardContents);
     }
 
     private void EnumerateResolutions()
@@ -362,6 +386,8 @@ public class GameInstance : Game, IGameContext
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _font = new BitmapFont(GraphicsDevice);
+        RecreateVirtualTarget();
+        _graphics.DeviceReset += (_, _) => RecreateVirtualTarget();
 
         // Load persistent options
         if (Systems.OptionsManager.TryLoad(out bool drawWhite, out bool drawInvisible, out int resIndex, out bool fullscreen))
@@ -395,8 +421,21 @@ public class GameInstance : Game, IGameContext
 
     protected override void Draw(GameTime gameTime)
     {
+        // 1. Render scene stack into the virtual target.
+        GraphicsDevice.SetRenderTarget(_virtualTarget);
         GraphicsDevice.Clear(Color.Black);
         _sceneManager.Draw(_spriteBatch);
+
+        // 2. Blit to backbuffer with letterbox/pillarbox.
+        GraphicsDevice.SetRenderTarget(null);
+        int screenW = GraphicsDevice.Viewport.Width;
+        int screenH = GraphicsDevice.Viewport.Height;
+        GraphicsDevice.Clear(Color.Black);
+        var dest = VirtualFrame.GetBackbufferDestRect(screenW, screenH, VirtualWidth, VirtualHeight);
+        _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.PointClamp);
+        _spriteBatch.Draw(_virtualTarget, dest, Color.White);
+        _spriteBatch.End();
+
         base.Draw(gameTime);
     }
 
@@ -424,6 +463,7 @@ public class GameInstance : Game, IGameContext
             _stardustService?.Dispose();
             _celestialService?.Dispose();
             _simulationService?.Dispose();
+            _virtualTarget?.Dispose();
         }
         base.Dispose(disposing);
     }

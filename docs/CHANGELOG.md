@@ -7,6 +7,30 @@ All notable changes to this project.
 ## [Unreleased]
 
 ### Added
+- **Virtual 1024×768 frame with original BBC Elite layout** — aspect-preserving pillarbox/letterbox
+  - `GameInstance` owns a fixed `RenderTarget2D` (1024×768) and blits it to the backbuffer with letterbox math (`Rendering/VirtualFrame.cs`)
+  - All scenes render into the virtual target; backbuffer is cleared black outside the centered gameplay rect
+  - Inside the virtual frame: 3D view on top (1024×~553, 72% height), HUD strip below (1024×~215, 28% height) — same vertical stack as BBC Micro Elite
+  - At wider-than-4:3 resolutions (e.g. 1920×1080 16:9), the virtual frame is centered and black bars appear on left/right; at native 1024×768 there are no bars
+  - `IGameContext.VirtualWidth/VirtualHeight/VirtualHudWidth` exposed for scene layout
+  - Render target recreated automatically on `GraphicsDeviceManager.DeviceReset`
+  - Blit uses `SamplerState.PointClamp` for crisp pixel-art edges at integer scales
+
+### Changed
+- **FlightScene layout** — 3D view occupies the top 72% of the virtual frame, HUD strip the bottom 28%; both full width. Restored `HudHeightFraction = 0.28f`. Projection aspect ≈ 1.85 (1024/553).
+- **MainMenuScene** — restored original left-sidebar layout (30% width, full virtual height): ship name, edge info, HIDDEN toggle, RATING, menu list, instructions; right side shows the ship wireframe. Projection uses full 1024×768 virtual-frame aspect.
+  - Projection rebuilt each `Draw` (was cached in `LoadContent` — fixed stale-viewport bug)
+- **SpaceScene** — 3D viewer in the top 3D area; debug text in the bottom HUD strip.
+  - Projection rebuilt each `Draw` (same stale-viewport fix)
+- **GalaxyMapScene** — map fills the top 3D area; system info (current/target/locked) sits in the bottom HUD strip.
+- **HudRenderer** — kept the original horizontal-strip layout (left gauges / center scanner / right gauges) with `SideFraction = 0.22`.
+- **CelestialService** — projection targets the top 3D area (1024×553) instead of the full virtual frame.
+- **OptionsScene, GalaxyStarDescriptionScene** — layout uses `VirtualWidth/Height` instead of `DisplayWidth/Height` / cached viewport.
+
+### Fixed
+- **Stale projection in MainMenuScene/SpaceScene** — projection was built once in `LoadContent` from `Viewport.AspectRatio` and never updated on resolution change. Now rebuilt every `Draw` against the virtual frame.
+
+### Added
 - **Retro Experience Scaling** — drastic re-pacing and re-scaling to match BBC Micro Elite (1984)
   - **Distance Scaling:** Planet starting distance set to ~100,000 units (via 15-bit shift in `ComputeSolarSpawn`).
   - **Sun Positioning:** Sun placed ~150k-230k units behind player for correct retro depth.

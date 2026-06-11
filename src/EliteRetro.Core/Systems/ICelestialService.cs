@@ -13,5 +13,5 @@ public interface ICelestialService : IDisposable
     /// <summary>
     /// Render celestial bodies in the local bubble with correct ordering and projection.
     /// </summary>
-    void Draw(SpriteBatch spriteBatch, IBubbleManager bubbleManager, Matrix view, Matrix projection, Vector3 cameraLookDir, GraphicsDevice graphicsDevice, float hudHeightFraction, bool drawWhite);
+    void Draw(SpriteBatch spriteBatch, IBubbleManager bubbleManager, Matrix view, Matrix projection, Vector3 cameraLookDir, GraphicsDevice graphicsDevice, bool drawWhite);
 }

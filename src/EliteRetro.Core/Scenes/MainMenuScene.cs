@@ -56,10 +56,7 @@ public class MainMenuScene : GameScene
         _font = font;
         _graphicsDevice = graphicsDevice;
         _wireframeRenderer = new WireframeRenderer(_graphicsDevice);
-        _projection = Matrix.CreatePerspectiveFieldOfView(
-            MathHelper.PiOver4,
-            _graphicsDevice.Viewport.AspectRatio,
-            0.1f, 1000f);
+        EnsureProjection();
         // Camera positioned to show ship in top 2/3
         _view = Matrix.CreateLookAt(new Vector3(0, 10f, 6), new Vector3(0, -1f, 0), Vector3.Up);
 
@@ -225,45 +222,60 @@ public class MainMenuScene : GameScene
         }
     }
 
+    private void EnsureProjection()
+    {
+        if (_graphicsDevice == null) return;
+        int vW = GameInstance.VirtualWidth;
+        int vH = GameInstance.VirtualHeight;
+        // Ship rendered across the full virtual frame; the opaque left sidebar
+        // covers the left 30% afterward.
+        _projection = Matrix.CreatePerspectiveFieldOfView(
+            MathHelper.PiOver4,
+            vW / (float)vH,
+            0.1f, 1000f);
+    }
+
     public override void Draw(SpriteBatch spriteBatch)
     {
-        // Draw wireframe ship - takes up top 2/3 of screen
+        EnsureProjection();
+
+        const int vW = GameInstance.VirtualWidth;
+        const int vH = GameInstance.VirtualHeight;
+        // Left sidebar — 30% of width, full height (matches pre-virtual-frame layout).
+        int sidebarW = Math.Max(300, (int)(vW * 0.3f));
+        var sidebarRect = new Rectangle(0, 0, sidebarW, vH);
+
+        // Ship fills the full virtual frame; the opaque sidebar will cover its left 30%.
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
         _wireframeRenderer.Draw(_cobraModel, _world, _view, _projection, spriteBatch, useBackFaceCulling: true, _highlightedEdgeIndex, _showHiddenEdges);
         spriteBatch.End();
 
-        // Draw UI overlay - Elite-style left sidebar menu
+        // Sidebar background + menu overlay.
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
-
-        int displayW = _gameInstance?.DisplayWidth ?? 1024;
-        int displayH = _gameInstance?.DisplayHeight ?? 768;
-
-        // Left sidebar — 30% of width, full height, clamped to a sensible minimum
-        int sidebarW = Math.Max(300, (int)(displayW * 0.3f));
-        var sidebarRect = new Rectangle(0, 0, sidebarW, displayH);
         spriteBatch.Draw(_whitePixel, sidebarRect, new Color(10, 10, 30));
 
+        int mx = 20;
         // Ship name at top of sidebar
-        _font.DrawString(spriteBatch, _shipModels[_currentModelIndex].Name, new Vector2(20, 15), Color.Cyan, 1.2f);
+        _font.DrawString(spriteBatch, _shipModels[_currentModelIndex].Name, new Vector2(mx, 15), Color.Cyan, 1.2f);
 
         // Edge info
         if (_highlightedEdgeIndex >= 0)
-            _font.DrawString(spriteBatch, $"EDGE: {_highlightedEdgeIndex}/{_cobraModel.Edges.Count - 1}", new Vector2(20, 40), Color.Red, 0.9f);
+            _font.DrawString(spriteBatch, $"EDGE: {_highlightedEdgeIndex}/{_cobraModel.Edges.Count - 1}", new Vector2(mx, 40), Color.Red, 0.9f);
 
         // Hidden edges toggle
-        _font.DrawString(spriteBatch, _showHiddenEdges ? "HIDDEN: ON" : "HIDDEN: OFF", new Vector2(20, 60), Color.White, 0.8f);
+        _font.DrawString(spriteBatch, _showHiddenEdges ? "HIDDEN: ON" : "HIDDEN: OFF", new Vector2(mx, 60), Color.White, 0.8f);
 
-        // Separator line
+        // Separator
         spriteBatch.Draw(_whitePixel, new Rectangle(10, 85, sidebarW - 20, 2), Color.DarkCyan);
 
-        // Combat rating display (prominent, in sidebar)
-        _font.DrawString(spriteBatch, "RATING", new Vector2(20, 100), Color.Gray, 0.8f);
-        _font.DrawString(spriteBatch, _currentRating, new Vector2(20, 120), Color.Yellow, 1.5f);
+        // Combat rating (prominent, in sidebar)
+        _font.DrawString(spriteBatch, "RATING", new Vector2(mx, 100), Color.Gray, 0.8f);
+        _font.DrawString(spriteBatch, _currentRating, new Vector2(mx, 120), Color.Yellow, 1.5f);
 
         // Separator
         spriteBatch.Draw(_whitePixel, new Rectangle(10, 165, sidebarW - 20, 2), Color.DarkCyan);
 
-        // Menu items - left sidebar, vertical list
+        // Menu items - vertical list in left sidebar
         int menuStartY = 185;
         for (int i = 0; i < _menuItems.Length; i++)
         {
@@ -277,17 +289,17 @@ public class MainMenuScene : GameScene
         }
 
         // Instructions at bottom of sidebar
-        spriteBatch.Draw(_whitePixel, new Rectangle(10, displayH - 73, sidebarW - 20, 2), Color.DarkCyan);
-        _font.DrawString(spriteBatch, "UP/DOWN: SELECT", new Vector2(20, displayH - 58), Color.Gray, 0.75f);
-        _font.DrawString(spriteBatch, "ENTER: CHOOSE", new Vector2(20, displayH - 40), Color.Gray, 0.75f);
-        _font.DrawString(spriteBatch, "LEFT/RIGHT: SHIP", new Vector2(20, displayH - 22), Color.Gray, 0.75f);
+        spriteBatch.Draw(_whitePixel, new Rectangle(10, vH - 73, sidebarW - 20, 2), Color.DarkCyan);
+        _font.DrawString(spriteBatch, "UP/DOWN: SELECT", new Vector2(mx, vH - 58), Color.Gray, 0.75f);
+        _font.DrawString(spriteBatch, "ENTER: CHOOSE", new Vector2(mx, vH - 40), Color.Gray, 0.75f);
+        _font.DrawString(spriteBatch, "LEFT/RIGHT: SHIP", new Vector2(mx, vH - 22), Color.Gray, 0.75f);
 
         // Right-side info panel — anchored just past the sidebar
         _font.DrawString(spriteBatch, "SPACE: PAUSE   ESC: QUIT   [/]: EDGE   [I]: HIDDEN EDGES",
-            new Vector2(sidebarW + 20, displayH - 28), Color.Gray, 0.75f);
+            new Vector2(sidebarW + 20, vH - 28), Color.Gray, 0.75f);
 
         if (_lastControl.IsPaused)
-            _font.DrawString(spriteBatch, "PAUSED", new Vector2(sidebarW + 100, displayH / 2f), Color.Red, 2f);
+            _font.DrawString(spriteBatch, "PAUSED", new Vector2(vW / 2f - 60, vH / 2f), Color.Red, 2f);
 
         // Debug rotation info when paused
         if (_lastControl.IsPaused)

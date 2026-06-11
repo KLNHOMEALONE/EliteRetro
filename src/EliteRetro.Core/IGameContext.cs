@@ -79,4 +79,13 @@ public interface IGameContext
 
     /// <summary>Apply the current ResolutionIndex and IsFullScreen to the graphics device immediately.</summary>
     void ApplyDisplayMode();
+
+    /// <summary>Fixed virtual render-target width (1024). All scene layout uses this, not DisplayWidth.</summary>
+    int VirtualWidth { get; }
+
+    /// <summary>Fixed virtual render-target height (768). All scene layout uses this, not DisplayHeight.</summary>
+    int VirtualHeight { get; }
+
+    /// <summary>Width of the right-side HUD column in virtual pixels (256). 3D view = VirtualWidth - VirtualHudWidth.</summary>
+    int VirtualHudWidth { get; }
 }
